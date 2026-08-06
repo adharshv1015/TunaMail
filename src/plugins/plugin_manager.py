@@ -1,4 +1,4 @@
-from plugins.plugin_interface import Plugin
+from src.plugins.plugin_interface import Plugin
 
 
 class PluginManager:

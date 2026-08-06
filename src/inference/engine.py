@@ -1,7 +1,7 @@
 from typing import List, Optional
 
-from analysis.evidence import Evidence
-from reasoning.hypothesis import Hypothesis
+from src.analysis.evidence import Evidence
+from src.reasoning.hypothesis import Hypothesis
 
 
 class InferenceEngine:

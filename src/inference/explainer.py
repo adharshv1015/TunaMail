@@ -1,4 +1,4 @@
-from reasoning.hypothesis import Hypothesis
+from src.reasoning.hypothesis import Hypothesis
 
 EVIDENCE_DESCRIPTIONS = {
     "sender_domain": {
@@ -59,8 +59,31 @@ class ExplanationGenerator:
             
         return f"{evidence.evidence_type} = {evidence.value}"
 
-    def generate(self, hypothesis: Hypothesis) -> str:
+    def generate(self, hypothesis: Hypothesis, all_evidence: list = None) -> str:
         lines = []
+
+        if all_evidence is not None:
+            lines.append("Evidence Summary")
+            lines.append("")
+            
+            counts = {}
+            for e in all_evidence:
+                counts[e.source] = counts.get(e.source, 0) + 1
+                
+            presentation_order = [
+                "Sender Evidence",
+                "Authentication",
+                "Header Evidence",
+                "URL Evidence",
+                "Attachments"
+            ]
+            
+            for source in presentation_order:
+                count = counts.get(source, 0)
+                dots = "." * (26 - len(source))
+                lines.append(f"{source} {dots} {count}")
+                    
+            lines.append("")
 
         lines.append(f"Classification: {hypothesis.name}")
         lines.append(f"Confidence: {hypothesis.confidence:.2f}")
@@ -97,8 +120,16 @@ class ExplanationGenerator:
         else:
             likelihood = "unlikely to be"
 
-        display_name = hypothesis.display_name or hypothesis.name.lower()
-        lines.append(f"Overall, this email is {likelihood} a {display_name}.")
+        if hypothesis.category == "legitimate":
+            result_text = "legitimate"
+        elif hypothesis.category == "phishing":
+            result_text = "a phishing attempt"
+        elif hypothesis.category == "spam":
+            result_text = "spam"
+        else:
+            result_text = f"a {hypothesis.display_name or hypothesis.name.lower()}"
+
+        lines.append(f"Overall, this email is {likelihood} {result_text}.")
         lines.append("")
 
         assessment = ASSESSMENTS.get(hypothesis.category, ASSESSMENTS["unknown"])

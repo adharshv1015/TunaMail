@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+scikit-learn
+numpy
+pandas
+joblib
+nltk
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client

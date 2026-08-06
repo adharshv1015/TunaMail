@@ -11,7 +11,7 @@ class Evidence:
 
     evidence_type: str
     value: Any
-    source: str
+    source: str = ""
 
     confidence: float = 0.0
 

@@ -2,10 +2,10 @@ from email import policy
 from email.parser import BytesParser
 from pathlib import Path
 
-from entities.artifact import Artifact
+from src.entities.artifact import Artifact
 from email.utils import parseaddr
 
-from entities.email_address import EmailAddress
+from src.entities.email_address import EmailAddress
 
 
 class EMLExtractor:

@@ -1,4 +1,4 @@
-from reasoning.hypothesis import Hypothesis
+from src.reasoning.hypothesis import Hypothesis
 
 
 def load_default_hypotheses():

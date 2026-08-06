@@ -1,5 +1,5 @@
-from core.logger import get_logger
-from plugins.plugin_interface import Plugin
+from src.core.logger import get_logger
+from src.plugins.plugin_interface import Plugin
 
 logger = get_logger(__name__)
 

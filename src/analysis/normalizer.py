@@ -1,4 +1,4 @@
-from analysis.url_normalizer import URLNormalizer
+from src.analysis.url_normalizer import URLNormalizer
 
 
 class EvidenceNormalizer:

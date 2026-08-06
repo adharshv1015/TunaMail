@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List
 
-from analysis.evidence import Evidence
+from src.analysis.evidence import Evidence
 
 
 @dataclass

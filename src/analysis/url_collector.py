@@ -1,8 +1,8 @@
 import re
 from urllib.parse import urlparse
 
-from analysis.collector import EvidenceCollector
-from analysis.evidence import Evidence
+from src.analysis.collector import EvidenceCollector
+from src.analysis.evidence import Evidence
 
 
 class URLEvidenceCollector(EvidenceCollector):
