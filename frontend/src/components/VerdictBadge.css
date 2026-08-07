@@ -1,0 +1,45 @@
+.verdict-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  display: inline-block;
+}
+
+.badge-safe {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: var(--risk-safe);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+}
+
+.badge-low {
+  background-color: rgba(132, 204, 22, 0.2);
+  color: var(--risk-low);
+  border: 1px solid rgba(132, 204, 22, 0.5);
+}
+
+.badge-suspicious {
+  background-color: rgba(234, 179, 8, 0.2);
+  color: var(--risk-suspicious);
+  border: 1px solid rgba(234, 179, 8, 0.5);
+}
+
+.badge-high {
+  background-color: rgba(249, 115, 22, 0.2);
+  color: var(--risk-high);
+  border: 1px solid rgba(249, 115, 22, 0.5);
+}
+
+.badge-phishing {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: var(--risk-phishing);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+.badge-unknown {
+  background-color: rgba(148, 163, 184, 0.2);
+  color: var(--text-muted);
+  border: 1px solid rgba(148, 163, 184, 0.5);
+}

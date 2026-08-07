@@ -1,0 +1,75 @@
+# ==============================
+# Node.js & React (Frontend)
+# ==============================
+node_modules/
+dist/
+dist-ssr/
+*.local
+.npm/
+.venv
+# Vite build cache
+*.tsbuildinfo
+
+# ==============================
+# Python & FastAPI (Backend)
+# ==============================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Pytest / Coverage
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.tox/
+.nox/
+
+# Logs
+*.log
+logs/
+
+# ==============================
+# OS & IDE Files
+# ==============================
+# Mac
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+.settings/
+.classpath
+.project
+
+# AI Agents
+.gemini/
+.agents/
