@@ -53,7 +53,7 @@ class URLAnalyzer:
             "shortener": self.is_shortener(domain),
 
             "keywords":
-                self.detect_keywords(url)
+                self.detect_keywords(url, domain)
 
         }
 
@@ -89,7 +89,20 @@ class URLAnalyzer:
 
 
 
-    def detect_keywords(self, url):
+    def detect_keywords(self, url, domain):
+
+        trusted_domains = [
+            "google.com",
+            "microsoft.com",
+            "apple.com",
+            "amazon.com",
+            "paypal.com"
+        ]
+
+        # Do not penalize keywords if the domain is trusted
+        for trusted in trusted_domains:
+            if domain == trusted or domain.endswith("." + trusted):
+                return []
 
         keywords = [
             "login",
