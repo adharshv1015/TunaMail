@@ -235,6 +235,28 @@ export default function EmailDetails() {
           </ul>
         </div>
 
+        {/* WHOIS */}
+        <div className="glass" style={{ padding: '2rem', borderRadius: '12px', borderTop: '4px solid #10b981' }}>
+          <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>WHOIS</h2>
+          <ul style={{ paddingLeft: '0', listStyle: 'none', color: 'var(--text-main)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {(analysis.whois || []).length > 0 ? (
+              analysis.whois.map((whois, i) => (
+                <li key={i} style={{ fontSize: '0.9rem', marginBottom: i < analysis.whois.length - 1 ? '1rem' : '0' }}>
+                  <div style={{ fontWeight: 'bold', color: 'var(--accent-secondary)' }}>🌐 {whois.domain}</div>
+                  <div style={{ paddingLeft: '1.5rem', marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                    <div><span style={{ color: 'var(--text-muted)' }}>Age:</span> {whois.age_days != null ? `${whois.age_days.toLocaleString()} days` : 'Unknown'} <span style={{ color: whois.age_category === 'new' ? 'var(--risk-high)' : 'var(--risk-safe)', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.75rem', marginLeft: '0.5rem' }}>{whois.age_category?.replace(/_/g, ' ')}</span></div>
+                    <div><span style={{ color: 'var(--text-muted)' }}>Registrar:</span> {whois.registrar || 'Unknown'}</div>
+                    <div><span style={{ color: 'var(--text-muted)' }}>Country:</span> {whois.country || 'Unknown'}</div>
+                    {whois.error && <div style={{ color: 'var(--risk-high)' }}>⚠ {whois.error}</div>}
+                  </div>
+                </li>
+              ))
+            ) : (
+              <li style={{ color: 'var(--text-muted)' }}>No WHOIS data available.</li>
+            )}
+          </ul>
+        </div>
+
       </div>
 
       {/* ANALYSIS GRID */}

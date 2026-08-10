@@ -55,8 +55,8 @@ export default function Inbox() {
 
   useEffect(() => {
     const fetchHealth = () => {
-      axios
-        .get("http://127.0.0.1:8000/system/health")
+      api
+        .get("/system/health")
         .then((res) => setHealth(res.data))
         .catch(() => setHealth(null));
     };
