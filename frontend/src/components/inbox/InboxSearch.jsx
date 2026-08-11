@@ -53,8 +53,9 @@ function InboxSearch({
             className="w-full appearance-none rounded-lg border border-[var(--tm-border)] bg-[var(--tm-surface)] px-3 py-1.5 pr-8 text-[12px] font-medium text-[var(--tm-text-secondary)] outline-none focus:border-[var(--tm-accent)] focus:ring-[3px] focus:ring-[var(--tm-accent)]/10 transition-shadow cursor-pointer"
           >
             <option value="ALL">All Status</option>
-            <option value="SAFE">Safe</option>
-            <option value="LOW RISK">Low Risk</option>
+            <option value="VERIFIED LEGITIMATE">Verified Legitimate</option>
+            <option value="LIKELY LEGITIMATE">Likely Legitimate</option>
+            <option value="UNKNOWN">Unknown</option>
             <option value="SUSPICIOUS">Suspicious</option>
             <option value="HIGH RISK">High Risk</option>
             <option value="PHISHING">Phishing</option>

@@ -34,6 +34,7 @@ class TestTunaMailPipeline(unittest.TestCase):
         are_result = self.are.evaluate(
             auth_analysis,
             url_analysis,
+            [], # whois_analysis
             content_analysis,
             attachment_analysis,
             trust_analysis
@@ -60,32 +61,32 @@ class TestTunaMailPipeline(unittest.TestCase):
     # 1. Legitimate Google email
     def test_legitimate_google(self):
         mock = self.create_mock("Google <no-reply@accounts.google.com>", "Your account was updated successfully.")
-        self.assertEqual(self.run_pipeline(mock), "SAFE")
+        self.assertIn(self.run_pipeline(mock), ["SAFE", "VERIFIED LEGITIMATE", "LIKELY LEGITIMATE"])
 
     # 2. Microsoft email
     def test_microsoft_email(self):
         mock = self.create_mock("Microsoft Security <security@microsoft.com>", "Your security info was changed.")
-        self.assertEqual(self.run_pipeline(mock), "SAFE")
+        self.assertIn(self.run_pipeline(mock), ["SAFE", "VERIFIED LEGITIMATE", "LIKELY LEGITIMATE"])
 
     # 3. GitHub email
     def test_github_email(self):
         mock = self.create_mock("GitHub <notifications@github.com>", "You have a new pull request.")
-        self.assertEqual(self.run_pipeline(mock), "SAFE")
+        self.assertIn(self.run_pipeline(mock), ["SAFE", "VERIFIED LEGITIMATE", "LIKELY LEGITIMATE"])
 
     # 4. Amazon OTP
     def test_amazon_otp(self):
         mock = self.create_mock("Amazon <otp@amazon.com>", "Your OTP is 123456.")
-        self.assertEqual(self.run_pipeline(mock), "SAFE")
+        self.assertIn(self.run_pipeline(mock), ["SAFE", "VERIFIED LEGITIMATE", "LIKELY LEGITIMATE"])
 
     # 5. PayPal receipt
     def test_paypal_receipt(self):
         mock = self.create_mock("PayPal <service@paypal.com>", "Here is your receipt for your recent transaction of $50.")
-        self.assertEqual(self.run_pipeline(mock), "SAFE")
+        self.assertIn(self.run_pipeline(mock), ["SAFE", "VERIFIED LEGITIMATE", "LIKELY LEGITIMATE"])
 
     # 6. Banking OTP
     def test_banking_otp(self):
         mock = self.create_mock("Bank <alerts@genericbank.com>", "Your OTP code is 999999.")
-        self.assertEqual(self.run_pipeline(mock), "SAFE")
+        self.assertIn(self.run_pipeline(mock), ["SAFE", "VERIFIED LEGITIMATE", "LIKELY LEGITIMATE"])
 
     # 7. Fake PayPal phishing
     def test_fake_paypal_phishing(self):

@@ -95,12 +95,52 @@ function EvidenceColumn({ title, items, color }) {
   );
 }
 
-function SecurityReasoning({ reasoning }) {
+function SecurityReasoning({ reasoning, ai }) {
   const data = reasoning || {};
 
   return (
     <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-6 shadow-sm">
       <SectionHeader icon="🧩" title="Analysis Evidence" subtitle="Evidence accumulated by the Analysis & Risk Engine" />
+      
+      {ai && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {ai.brand_intelligence?.some(b => b.impersonation_risk) && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-600 dark:text-red-400 border border-red-500/20">
+              🎭 Brand Impersonation Detected
+            </span>
+          )}
+          {ai.adversarial?.length > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-600 dark:text-orange-400 border border-orange-500/20">
+              🛡️ Adversarial Tactics Detected
+            </span>
+          )}
+          {ai.contradictions_engine?.contradiction_detected && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-yellow-500/10 px-3 py-1 text-xs font-semibold text-yellow-600 dark:text-yellow-400 border border-yellow-500/20">
+              ⚖️ Evidence Contradictions Found
+            </span>
+          )}
+          {ai.homoglyph?.length > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/10 px-3 py-1 text-xs font-semibold text-purple-600 dark:text-purple-400 border border-purple-500/20">
+              🔤 Homoglyph/Lookalike URL
+            </span>
+          )}
+          {ai.sender_reputation && ai.sender_reputation.reputation !== "UNKNOWN" && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+              👤 Reputation: {ai.sender_reputation.reputation.replace("_", " ")}
+            </span>
+          )}
+          {ai.campaign?.length > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-500/10 px-3 py-1 text-xs font-semibold text-teal-600 dark:text-teal-400 border border-teal-500/20">
+              📊 Campaign Activity Detected
+            </span>
+          )}
+          {ai.behavioral?.length > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-pink-500/10 px-3 py-1 text-xs font-semibold text-pink-600 dark:text-pink-400 border border-pink-500/20">
+              🔄 Sender Behavior Change
+            </span>
+          )}
+        </div>
+      )}
       
       <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
         <EvidenceColumn title="Technical" items={data.technical} color="red" />

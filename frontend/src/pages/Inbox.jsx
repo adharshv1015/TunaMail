@@ -20,13 +20,14 @@ export default function Inbox() {
     setLoading(true);
     try {
       const response = await api.get("/gmail/messages");
-      
+
       const formattedEmails = response.data.messages.map(msg => ({
         id: msg.id,
         sender: msg.from || "Unknown",
         subject: msg.subject || "No Subject",
         snippet: msg.snippet || "No snippet available...",
         verdict: msg.analysis?.decision?.verdict || "UNKNOWN",
+        detail_verdict: msg.analysis?.decision?.detail_verdict || null,
         riskScore: msg.analysis?.decision?.risk_score || 0,
         confidence: msg.analysis?.decision?.confidence || 0,
         time: msg.date || "Just now",
@@ -68,14 +69,15 @@ export default function Inbox() {
   const filteredEmails = emails.filter((email) => {
     const query = search.toLowerCase();
     const matchesSearch = email.subject?.toLowerCase().includes(query) ||
-                          email.sender?.toLowerCase().includes(query);
-                          
+      email.sender?.toLowerCase().includes(query);
+
     if (!matchesSearch) return false;
-    
+
     if (filterVerdict === "all") return true;
-    
+
     const v = email.verdict.toUpperCase();
-    if (filterVerdict === "safe") return v === "SAFE" || v === "LOW RISK";
+    if (filterVerdict === "safe") return v === "VERIFIED LEGITIMATE" || v === "LIKELY LEGITIMATE";
+    if (filterVerdict === "unknown") return v === "UNKNOWN";
     if (filterVerdict === "suspicious") return v === "SUSPICIOUS";
     if (filterVerdict === "phishing") return v === "PHISHING" || v === "HIGH RISK";
 
@@ -99,35 +101,36 @@ export default function Inbox() {
   });
 
   const totalEmails = emails.length;
-  const safeCount = emails.filter(e => e.verdict.toUpperCase() === "SAFE" || e.verdict.toUpperCase() === "LOW RISK").length;
+  const safeCount = emails.filter(e => e.verdict.toUpperCase() === "VERIFIED LEGITIMATE" || e.verdict.toUpperCase() === "LIKELY LEGITIMATE").length;
+  const unknownCount = emails.filter(e => e.verdict.toUpperCase() === "UNKNOWN").length;
   const suspiciousCount = emails.filter(e => e.verdict.toUpperCase() === "SUSPICIOUS").length;
   const phishingCount = emails.filter(e => e.verdict.toUpperCase() === "PHISHING" || e.verdict.toUpperCase() === "HIGH RISK").length;
 
   const totalRisk = emails.reduce((sum, email) => sum + (email.riskScore || 0), 0);
   const averageRisk = totalEmails > 0 ? Math.round(totalRisk / totalEmails) : 0;
 
-  const highestRiskEmail = emails.length > 0 
-    ? emails.reduce((max, email) => (email.riskScore || 0) > (max.riskScore || 0) ? email : max, emails[0]) 
+  const highestRiskEmail = emails.length > 0
+    ? emails.reduce((max, email) => (email.riskScore || 0) > (max.riskScore || 0) ? email : max, emails[0])
     : null;
 
   return (
     <div className="inbox-page">
-      
+
       {/* SYSTEM HEALTH STRIP */}
       <div className="glass" style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', padding: '1rem 2rem', borderRadius: '12px', marginBottom: '2rem', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.9rem', fontWeight: 'bold' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: health?.status === 'online' ? 'var(--risk-safe)' : 'var(--risk-high)' }}>
           <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'currentColor', boxShadow: '0 0 5px currentColor' }}></div>
           Backend {health?.status === 'online' ? 'Online' : 'Offline'}
         </div>
-        
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: health?.engine === 'ready' ? 'var(--risk-safe)' : 'var(--risk-high)' }}>
           🧠 Engine {health?.engine === 'ready' ? 'Ready' : 'Offline'}
         </div>
-        
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: health?.gmail === 'connected' ? 'var(--risk-safe)' : 'var(--risk-suspicious)' }}>
           📧 Gmail {health?.gmail === 'connected' ? 'Connected' : 'Disconnected'}
         </div>
-        
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
           🏷️ Version {health?.version || '1.0.0'}
         </div>
@@ -139,7 +142,7 @@ export default function Inbox() {
             <h1>Inbox</h1>
             <p>Review and analyze your recent incoming messages.</p>
           </div>
-          <button 
+          <button
             onClick={fetchEmails}
             disabled={loading}
             style={{
@@ -160,7 +163,7 @@ export default function Inbox() {
             {loading ? '↻ Loading...' : '↻ Refresh Inbox'}
           </button>
         </div>
-        
+
         {/* STATISTICS CARDS */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginTop: '1.5rem' }}>
           <div className="glass" style={{ padding: '1.5rem', borderRadius: '12px', textAlign: 'center', borderLeft: '4px solid var(--accent-primary)' }}>
@@ -175,6 +178,10 @@ export default function Inbox() {
             <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>Safe</div>
             <div style={{ fontSize: '2.5rem', fontWeight: '900', color: 'var(--risk-safe)' }}>{safeCount}</div>
           </div>
+          <div className="glass" style={{ padding: '1.5rem', borderRadius: '12px', textAlign: 'center', borderLeft: '4px solid var(--tm-text-secondary)' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>Unknown</div>
+            <div style={{ fontSize: '2.5rem', fontWeight: '900', color: 'var(--tm-text-secondary)' }}>{unknownCount}</div>
+          </div>
           <div className="glass" style={{ padding: '1.5rem', borderRadius: '12px', textAlign: 'center', borderLeft: '4px solid var(--risk-suspicious)' }}>
             <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>Suspicious</div>
             <div style={{ fontSize: '2.5rem', fontWeight: '900', color: 'var(--risk-suspicious)' }}>{suspiciousCount}</div>
@@ -184,8 +191,8 @@ export default function Inbox() {
             <div style={{ fontSize: '2.5rem', fontWeight: '900', color: 'var(--risk-phishing)' }}>{phishingCount}</div>
           </div>
           {highestRiskEmail && (
-            <div 
-              className="glass" 
+            <div
+              className="glass"
               style={{ padding: '1.5rem', borderRadius: '12px', textAlign: 'center', borderLeft: '4px solid var(--risk-high)', cursor: 'pointer' }}
               onClick={() => navigate(`/email/${highestRiskEmail.id}`)}
               onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
@@ -199,18 +206,18 @@ export default function Inbox() {
         </div>
 
         <div style={{ marginTop: '2rem' }}>
-          <RiskChart 
-            safeCount={safeCount} 
-            suspiciousCount={suspiciousCount} 
-            phishingCount={phishingCount} 
+          <RiskChart
+            safeCount={safeCount}
+            suspiciousCount={suspiciousCount}
+            phishingCount={phishingCount}
           />
         </div>
 
         <div style={{ marginTop: '2rem', display: 'flex', alignItems: 'center' }}>
           <span style={{ position: 'absolute', marginLeft: '1rem', color: 'var(--text-muted)' }}>🔍</span>
-          <input 
-            type="text" 
-            placeholder="Search emails by subject or sender..." 
+          <input
+            type="text"
+            placeholder="Search emails by subject or sender..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{
@@ -229,21 +236,25 @@ export default function Inbox() {
 
         {/* FILTERS AND SORTING */}
         <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          
+
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <button 
+            <button
               onClick={() => setFilterVerdict('all')}
               style={{ padding: '0.5rem 1rem', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s', backgroundColor: filterVerdict === 'all' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', color: 'white' }}
             >All</button>
-            <button 
+            <button
               onClick={() => setFilterVerdict('safe')}
               style={{ padding: '0.5rem 1rem', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s', backgroundColor: filterVerdict === 'safe' ? 'var(--risk-safe)' : 'rgba(255,255,255,0.1)', color: 'white' }}
             >Safe</button>
-            <button 
+            <button
+              onClick={() => setFilterVerdict('unknown')}
+              style={{ padding: '0.5rem 1rem', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s', backgroundColor: filterVerdict === 'unknown' ? '#71717a' : 'rgba(255,255,255,0.1)', color: 'white' }}
+            >Unknown</button>
+            <button
               onClick={() => setFilterVerdict('suspicious')}
               style={{ padding: '0.5rem 1rem', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s', backgroundColor: filterVerdict === 'suspicious' ? 'var(--risk-suspicious)' : 'rgba(255,255,255,0.1)', color: 'white' }}
             >Suspicious</button>
-            <button 
+            <button
               onClick={() => setFilterVerdict('phishing')}
               style={{ padding: '0.5rem 1rem', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s', backgroundColor: filterVerdict === 'phishing' ? 'var(--risk-phishing)' : 'rgba(255,255,255,0.1)', color: 'white' }}
             >Phishing</button>
@@ -251,8 +262,8 @@ export default function Inbox() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span style={{ color: 'var(--text-muted)' }}>Sort by:</span>
-            <select 
-              value={sortOrder} 
+            <select
+              value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
               style={{
                 padding: '0.5rem 1rem',
@@ -274,7 +285,7 @@ export default function Inbox() {
 
         </div>
       </div>
-      
+
       {loading ? (
         <Loading />
       ) : (
@@ -289,7 +300,7 @@ export default function Inbox() {
                 {emails.length === 0 ? "Try refreshing your inbox to fetch new messages." : "Try adjusting your search or verdict filters."}
               </p>
               {emails.length === 0 && (
-                <button 
+                <button
                   onClick={fetchEmails}
                   style={{ marginTop: '1rem', padding: '0.75rem 1.5rem', borderRadius: '8px', border: 'none', backgroundColor: 'var(--accent-primary)', color: 'white', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
                   onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}

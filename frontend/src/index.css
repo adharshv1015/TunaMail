@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
 
 @layer base {
   :root {
@@ -58,6 +60,9 @@
     height: 8px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  .dark .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {

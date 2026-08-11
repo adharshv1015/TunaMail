@@ -1,19 +1,34 @@
 import { useState, useEffect } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { logout } from "./api/api";
+import { logout, checkSessionStatus } from "./api/api";
 import Topbar from "./components/layout/Topbar";
 import Inbox from "./components/Inbox";
 import EmailDetail from "./components/EmailDetail";
 
 function App() {
   const [selectedMessageId, setSelectedMessageId] = useState(null);
-  const [isConnected, setIsConnected] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem("tunamail-theme");
     if (saved) return saved;
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   });
+
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        const { authenticated } = await checkSessionStatus();
+        setIsConnected(authenticated);
+      } catch (err) {
+        setIsConnected(false);
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+    initAuth();
+  }, []);
 
   useEffect(() => {
     if (theme === "dark") {
@@ -52,15 +67,23 @@ function App() {
     }
   };
 
+  if (isInitializing) {
+    return (
+      <div className="flex h-screen w-full flex-col bg-[var(--tm-bg)] text-[var(--tm-text)] items-center justify-center">
+        <div className="text-xl font-medium animate-pulse">Initializing Security Session...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen w-full flex-col bg-[var(--tm-bg)] text-[var(--tm-text)] overflow-hidden font-sans transition-colors duration-200">
-      <Topbar 
-        isConnected={isConnected} 
-        theme={theme} 
-        toggleTheme={toggleTheme} 
-        handleLogout={handleLogout} 
-      />
-      <ToastContainer theme={theme === "dark" ? "dark" : "light"} position="bottom-right" />
+      <Topbar
+          isConnected={isConnected}
+          theme={theme}
+          toggleTheme={toggleTheme}
+          handleLogout={handleLogout}
+        />
+        <ToastContainer theme={theme === "dark" ? "dark" : "light"} position="bottom-right" />
 
       <main className="flex flex-1 overflow-hidden relative">
         {/* LEFT SIDEBAR (Inbox) */}

@@ -1,7 +1,8 @@
 import re
+import logging
 
-print("Authentication Analyzer Loaded")
-
+logger = logging.getLogger(__name__)
+logger.info("Authentication Analyzer Loaded")
 class AuthenticationAnalyzer:
 
     def analyze(self, headers):

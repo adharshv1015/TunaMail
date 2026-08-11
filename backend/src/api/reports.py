@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Response, Request
 from fastapi.responses import StreamingResponse
 import io
 import json
-from src.api.gmail import gmail_sessions, get_message
+from src.api.gmail import get_message
+from src.api.session import session_manager
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
@@ -102,12 +103,13 @@ def generate_pdf_report(parsed_data: dict) -> io.BytesIO:
 
 
 @router.get("/json/{message_id}")
-def export_json(message_id: str):
-    # Security note: in a real app, this would use a proper token, but this follows the existing memory pattern
-    if "credentials" not in gmail_sessions:
+def export_json(request: Request, message_id: str):
+    session_id = request.session.get("session_id")
+    server_session = session_manager.get_session(session_id)
+    if not server_session or not server_session.get("authenticated"):
         raise HTTPException(status_code=401, detail="Please login first.")
         
-    parsed_data = get_message(message_id)
+    parsed_data = get_message(request, message_id)
     json_str = json.dumps(parsed_data, indent=2)
     return Response(
         content=json_str,
@@ -117,11 +119,13 @@ def export_json(message_id: str):
 
 
 @router.get("/pdf/{message_id}")
-def export_pdf(message_id: str):
-    if "credentials" not in gmail_sessions:
+def export_pdf(request: Request, message_id: str):
+    session_id = request.session.get("session_id")
+    server_session = session_manager.get_session(session_id)
+    if not server_session or not server_session.get("authenticated"):
         raise HTTPException(status_code=401, detail="Please login first.")
         
-    parsed_data = get_message(message_id)
+    parsed_data = get_message(request, message_id)
     pdf_buffer = generate_pdf_report(parsed_data)
     
     return StreamingResponse(

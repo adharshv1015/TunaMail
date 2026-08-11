@@ -99,6 +99,9 @@ export default function EmailCard({ email }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                   <span className="label" style={{ textTransform: 'uppercase', fontSize: '0.75rem' }}>Verdict</span>
                   <div><VerdictBadge verdict={email.verdict} /></div>
+                  {email.detail_verdict && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>{email.detail_verdict.replace(/_/g, ' ')}</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -381,6 +384,11 @@ export default function EmailCard({ email }) {
                 {/* Final Verdict */}
                 <div className="path-verdict-block">
                   <VerdictBadge verdict={email.verdict} />
+                  {email.detail_verdict && (
+                    <div style={{ marginTop: '0.25rem', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>
+                      {email.detail_verdict.replace(/_/g, ' ')}
+                    </div>
+                  )}
                   <div className="path-confidence">Confidence {email.confidence}%</div>
                 </div>
               </div>

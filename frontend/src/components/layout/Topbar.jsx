@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 
-function Topbar({ isConnected = true, theme = "dark", toggleTheme, handleLogout }) {
+function Topbar({ isConnected = true, theme = "dark", toggleTheme, handleLogout, onOpenInvestigation }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleConnect = () => {
-    window.location.href = "http://127.0.0.1:8000/auth/login";
+    window.location.href = "http://localhost:8000/auth/login";
   };
 
   const onLogout = async () => {
@@ -58,6 +58,8 @@ function Topbar({ isConnected = true, theme = "dark", toggleTheme, handleLogout 
             </span>
           </button>
         )}
+
+
 
         <div className="h-6 w-px bg-[var(--tm-border)] mx-1"></div>
 

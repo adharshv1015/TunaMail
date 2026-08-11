@@ -1,0 +1,13 @@
+{
+  "test@test.com": {
+    "normal_domains": [
+      "test.com"
+    ],
+    "normal_authentication": {
+      "spf": "pass"
+    },
+    "messages_analyzed": 1,
+    "first_seen": "2026-08-11T12:12:30.200861",
+    "last_seen": "2026-08-11T12:12:30.200873"
+  }
+}

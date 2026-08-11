@@ -1,0 +1,10 @@
+{
+  "msg_123": {
+    "message_id": "msg_123",
+    "analyst_label": "CONFIRMED_PHISHING",
+    "timestamp": "2026-08-11T12:07:50.079920",
+    "previous_verdict": "UNKNOWN",
+    "previous_risk_score": 50,
+    "reason": "I checked the URL manually"
+  }
+}

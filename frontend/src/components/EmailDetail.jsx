@@ -9,7 +9,12 @@ import WhoisAnalysis from "./email/WhoisAnalysis";
 import AttachmentAnalysis from "./email/AttachmentAnalysis";
 import TrustAnalysis from "./email/TrustAnalysis";
 import SecurityReasoning from "./email/SecurityReasoning";
+import FinalDecision from "./email/FinalDecision";
+import AnalystExplanation from "./email/AnalystExplanation";
 import EmailContent from "./email/EmailContent";
+import TechnicalHeaders from "./email/TechnicalHeaders";
+import IntelligenceCard from "./email/IntelligenceCard";
+import AdaptiveIntelligence from "./email/AdaptiveIntelligence";
 
 import LoadingSkeleton from "./common/LoadingSkeleton";
 
@@ -90,6 +95,7 @@ function EmailDetail({ messageId }) {
   const attachment = analysis.attachment || {};
   const trust = analysis.trust || {};
   const reasoning = analysis.reasoning || {};
+  const intelligence = analysis.intelligence || {};
 
   return (
     <div className="min-h-full w-full max-w-[1200px] mx-auto space-y-6 p-8">
@@ -101,8 +107,19 @@ function EmailDetail({ messageId }) {
       <WhoisAnalysis whois={whois} />
       <AttachmentAnalysis attachmentData={attachment} rawAttachments={message.attachments} />
       <TrustAnalysis trust={trust} />
-      <SecurityReasoning reasoning={reasoning} />
+      <SecurityReasoning reasoning={reasoning} ai={analysis.ai} />
+      <FinalDecision decision={decision} />
+      <AnalystExplanation messageId={message.id} decision={decision} sender={message.sender} />
+      <IntelligenceCard
+        intelligence={intelligence}
+        messageId={message.id}
+        automatedVerdict={decision.verdict}
+      />
+      {analysis?.ai?.adaptive && (
+        <AdaptiveIntelligence adaptive={analysis.ai.adaptive} />
+      )}
       <EmailContent body={message.body} htmlBody={message.html_body} />
+      <TechnicalHeaders headers={message.headers} />
     </div>
   );
 }

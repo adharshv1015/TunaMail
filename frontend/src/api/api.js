@@ -1,11 +1,9 @@
-const API_BASE =
-  "http://127.0.0.1:8000";
+const API_BASE = "http://localhost:8000";
 
 export async function getMessages() {
-
-  const response = await fetch(
-    `${API_BASE}/gmail/messages`
-  );
+  const response = await fetch(`${API_BASE}/gmail/messages`, {
+    credentials: "include"
+  });
 
   if (!response.ok) {
     if (response.status === 401) throw new Error("UNAUTHORIZED");
@@ -16,10 +14,9 @@ export async function getMessages() {
 }
 
 export async function getMessage(id) {
-
-  const response = await fetch(
-    `${API_BASE}/gmail/message/${id}`
-  );
+  const response = await fetch(`${API_BASE}/gmail/message/${id}`, {
+    credentials: "include"
+  });
 
   if (!response.ok) {
     if (response.status === 401) throw new Error("UNAUTHORIZED");
@@ -32,11 +29,24 @@ export async function getMessage(id) {
 export async function logout() {
   const response = await fetch(`${API_BASE}/auth/logout`, {
     method: "POST",
+    credentials: "include"
   });
 
   if (!response.ok) {
     throw new Error(`Failed to logout: ${response.status}`);
   }
 
+  return response.json();
+}
+
+export async function checkSessionStatus() {
+  const response = await fetch(`${API_BASE}/auth/status`, {
+    credentials: "include"
+  });
+  
+  if (!response.ok) {
+    return { authenticated: false };
+  }
+  
   return response.json();
 }
