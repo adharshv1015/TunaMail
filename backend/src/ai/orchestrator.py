@@ -1,4 +1,7 @@
 import copy
+import logging
+
+logger = logging.getLogger(__name__)
 from .inference import analyze_email
 from .reasoning import AIReasoningEngine
 from .adversarial_analyzer import AdversarialAnalyzer
@@ -197,31 +200,48 @@ class AIOrchestrator:
 _ai_orchestrator = None
 
 def analyze_email_with_ai(parsed_email: dict, existing_analysis: dict) -> dict:
-    global _ai_orchestrator
-    if _ai_orchestrator is None:
-        _ai_orchestrator = AIOrchestrator()
-    try:
-        return _ai_orchestrator.analyze_email_with_ai(parsed_email, existing_analysis)
-    except Exception as e:
-        import logging
-        import traceback
-        err_msg = f"Local AI analysis failed: {e}\n{traceback.format_exc()}"
-        logging.getLogger(__name__).error(err_msg)
-        print("ORCHESTRATOR EXCEPTION:", err_msg)
-        return {
-            "enabled": False,
-            "model_type": "local-mlp-v1",
-            "reasoning_state": "INSUFFICIENT_EVIDENCE",
-            "confidence": 0.0,
-            "signals": [],
-            "positive_evidence": [],
-            "negative_evidence": [],
-            "contradictions": [],
-            "context": {
-                "link_only": False,
-                "limited_context": False,
-                "has_meaningful_body": False
-            },
-            "reasoning_summary": "Local AI analysis unavailable.",
-            "recommended_classification": "UNKNOWN"
-        }
+    from .inference_cache import InferenceCache
+    cache = InferenceCache()
+    
+    cache_key, lock = cache.get_lock(parsed_email, existing_analysis)
+    
+    with lock:
+        cached_result = cache.get(cache_key)
+        if cached_result:
+            return cached_result
+            
+        global _ai_orchestrator
+        if _ai_orchestrator is None:
+            _ai_orchestrator = AIOrchestrator()
+            
+        try:
+            result = _ai_orchestrator.analyze_email_with_ai(parsed_email, existing_analysis)
+            # Remove objects that cannot be serialized or deep-copied trivially if necessary
+            # For safety, let's keep it as is, but we might want to pop `structured_evidence` or `evidence_graph` if they are complex objects, 
+            # though they are currently passed to the frontend or later stages.
+            # In Python, dictionaries containing objects can be cached in memory perfectly fine.
+            cache.set(cache_key, result)
+            return result
+        except Exception as e:
+            import logging
+            import traceback
+            err_msg = f"Local AI analysis failed: {e}\n{traceback.format_exc()}"
+            logging.getLogger(__name__).error(err_msg)
+            logger.error(f"ORCHESTRATOR EXCEPTION: {err_msg}")
+            return {
+                "enabled": False,
+                "model_type": "local-mlp-v1",
+                "reasoning_state": "INSUFFICIENT_EVIDENCE",
+                "confidence": 0.0,
+                "signals": [],
+                "positive_evidence": [],
+                "negative_evidence": [],
+                "contradictions": [],
+                "context": {
+                    "link_only": False,
+                    "limited_context": False,
+                    "has_meaningful_body": False
+                },
+                "reasoning_summary": "Local AI analysis unavailable.",
+                "recommended_classification": "UNKNOWN"
+            }

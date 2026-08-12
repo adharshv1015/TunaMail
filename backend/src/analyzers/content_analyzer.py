@@ -9,6 +9,9 @@ class ContentAnalyzer:
                 "google.com",
                 "gmail.com",
                 "googlemail.com",
+                "accounts.google.com",
+                "notifications.google.com",
+                "no-reply.accounts.google.com",
             },
             "url_domains": {
                 "google.com",
@@ -16,6 +19,9 @@ class ContentAnalyzer:
                 "googleusercontent.com",
                 "gstatic.com",
                 "googleapis.com",
+                "accounts.google.com",
+                "myaccount.google.com",
+                "mail.google.com",
             },
         },
 
@@ -24,6 +30,8 @@ class ContentAnalyzer:
                 "microsoft.com",
                 "outlook.com",
                 "office.com",
+                "account.microsoft.com",
+                "accountprotection.microsoft.com",
             },
             "url_domains": {
                 "microsoft.com",
@@ -31,6 +39,7 @@ class ContentAnalyzer:
                 "office.com",
                 "live.com",
                 "outlook.com",
+                "account.microsoft.com",
             },
         },
 
@@ -38,10 +47,12 @@ class ContentAnalyzer:
             "sender_domains": {
                 "apple.com",
                 "icloud.com",
+                "id.apple.com",
             },
             "url_domains": {
                 "apple.com",
                 "icloud.com",
+                "appleid.apple.com",
             },
         },
 
@@ -75,7 +86,12 @@ class ContentAnalyzer:
         text = body.lower()
         sender_lower = sender.lower()
 
+        # Detect LINK_ONLY / LIMITED_CONTEXT
+        non_url_text = re.sub(r'https?://\S+', '', text).strip()
+        is_link_only = len(non_url_text) < 20 and len(urls) > 0
+
         result = {
+            "link_only": is_link_only,
             "urgency": self.contains(
                 text,
                 [
@@ -97,7 +113,11 @@ class ContentAnalyzer:
                     "verify account",
                     "confirm account",
                     "sign in",
-                    "username"
+                    "username",
+                    "otp",
+                    "one-time password",
+                    "mfa",
+                    "code"
                 ]
             ),
 
@@ -122,7 +142,8 @@ class ContentAnalyzer:
                     "locked",
                     "disabled",
                     "terminated",
-                    "blocked"
+                    "blocked",
+                    "hacked"
                 ]
             )
         }
@@ -165,10 +186,23 @@ class ContentAnalyzer:
     def _extract_domain(self, value):
         """
         Extract a normalized domain from an email address or URL.
+        Handles formats like:
+          - "Display Name <email@domain.com>"
+          - "email@domain.com"
+          - "https://domain.com/path"
+          - "domain.com"
         """
 
         if not value:
             return ""
+
+        value = value.strip()
+
+        # Handle "Display Name <email@domain.com>" format
+        if "<" in value and ">" in value:
+            start = value.index("<")
+            end = value.index(">")
+            value = value[start + 1:end]
 
         value = value.lower().strip()
 
@@ -184,7 +218,8 @@ class ContentAnalyzer:
         value = value.split("/")[0]
         value = value.split(":")[0]
 
-        return value.strip(" .")
+        # Strip any remaining angle brackets or whitespace
+        return value.strip(" .<>")
 
     def _is_same_or_subdomain(
         self,

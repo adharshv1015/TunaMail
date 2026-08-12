@@ -1,8 +1,9 @@
 const API_BASE = "http://localhost:8000";
 
-export async function getMessages() {
+export async function getMessages(options = {}) {
   const response = await fetch(`${API_BASE}/gmail/messages`, {
-    credentials: "include"
+    credentials: "include",
+    signal: options.signal
   });
 
   if (!response.ok) {
@@ -13,9 +14,10 @@ export async function getMessages() {
   return response.json();
 }
 
-export async function getMessage(id) {
+export async function getMessage(id, options = {}) {
   const response = await fetch(`${API_BASE}/gmail/message/${id}`, {
-    credentials: "include"
+    credentials: "include",
+    signal: options.signal
   });
 
   if (!response.ok) {
@@ -26,10 +28,11 @@ export async function getMessage(id) {
   return response.json();
 }
 
-export async function logout() {
+export async function logout(options = {}) {
   const response = await fetch(`${API_BASE}/auth/logout`, {
     method: "POST",
-    credentials: "include"
+    credentials: "include",
+    signal: options.signal
   });
 
   if (!response.ok) {
@@ -39,9 +42,10 @@ export async function logout() {
   return response.json();
 }
 
-export async function checkSessionStatus() {
+export async function checkSessionStatus(options = {}) {
   const response = await fetch(`${API_BASE}/auth/status`, {
-    credentials: "include"
+    credentials: "include",
+    signal: options.signal
   });
   
   if (!response.ok) {

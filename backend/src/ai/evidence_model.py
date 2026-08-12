@@ -74,12 +74,12 @@ class EvidenceItem:
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
-            "category": self.category.value,
+            "category": getattr(self.category, "value", self.category),
             "type": self.type,
-            "severity": self.severity.value,
+            "severity": getattr(self.severity, "value", self.severity),
             "confidence": self.confidence,
-            "reliability": self.reliability.value,
-            "direction": self.direction.value,
+            "reliability": getattr(self.reliability, "value", self.reliability),
+            "direction": getattr(self.direction, "value", self.direction),
             "supports": self.supports,
             "source": self.source,
             "observation": self.observation,

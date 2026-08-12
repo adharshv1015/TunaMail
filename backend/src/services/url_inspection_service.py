@@ -1,216 +1,205 @@
-import re
+import time
 import socket
 import ssl
-import ipaddress
-import requests
-from requests.exceptions import RequestException
-import dns.resolver
+import threading
+import logging
+from typing import Dict, Any, List
 from urllib.parse import urlparse
 import tldextract
-from datetime import datetime, timezone
+from .url_jobs import url_queue, URLInspectionJob
+from .page_cache import page_cache
+from .url_worker.worker import URLWorker
+
+logger = logging.getLogger(__name__)
+
+
+def _resolve_dns(hostname: str) -> Dict[str, Any]:
+    """Resolve hostname to IPs. Returns dns dict for URLAnalyzer schema."""
+    import ipaddress
+    result = {"resolved": False, "a": [], "aaaa": [], "private_ip_detected": False}
+    if not hostname:
+        return result
+    try:
+        addr_infos = socket.getaddrinfo(hostname, None)
+        for info in addr_infos:
+            ip = info[4][0]
+            try:
+                ip_obj = ipaddress.ip_address(ip)
+                if ip_obj.is_private or ip_obj.is_loopback:
+                    result["private_ip_detected"] = True
+                if isinstance(ip_obj, ipaddress.IPv4Address):
+                    if ip not in result["a"]:
+                        result["a"].append(ip)
+                else:
+                    if ip not in result["aaaa"]:
+                        result["aaaa"].append(ip)
+            except ValueError:
+                pass
+        result["resolved"] = bool(result["a"] or result["aaaa"])
+    except socket.gaierror:
+        result["resolved"] = False
+    return result
+
+
+def _check_tls(hostname: str, port: int = 443) -> Dict[str, Any]:
+    """Quick TLS certificate check. Returns tls dict for URLAnalyzer schema."""
+    result = {"https": False, "certificate_valid": False, "issuer": None}
+    if not hostname or port != 443:
+        return result
+    try:
+        ctx = ssl.create_default_context()
+        with ctx.wrap_socket(
+            socket.create_connection((hostname, port), timeout=5),
+            server_hostname=hostname,
+        ) as ssock:
+            cert = ssock.getpeercert()
+            issuer_tuples = cert.get("issuer", ())
+            issuer_dict = {k: v for pair in issuer_tuples for k, v in [pair[0]]}
+            result["https"] = True
+            result["certificate_valid"] = True
+            result["issuer"] = issuer_dict.get("organizationName") or issuer_dict.get("commonName")
+    except ssl.SSLCertVerificationError:
+        result["https"] = True
+        result["certificate_valid"] = False
+    except Exception:
+        pass
+    return result
 
 class URLInspectionService:
-    def __init__(self):
-        self.timeout = 3.0
-        self.max_redirects = 5
+    MAX_URLS_PER_EMAIL = 50
+    MAX_CONCURRENT_INSPECTIONS = 3
+    INSPECTION_TIMEOUT = 10 # seconds
+    
+    _worker_thread = None
+    _stop_event = threading.Event()
 
-    def is_safe_ip(self, ip_str):
+    def inspect(self, url: str) -> Dict[str, Any]:
+        """
+        Synchronous per-URL inspection called by URLAnalyzer.analyze_url().
+        Performs DNS resolution and TLS checking and returns the schema
+        that URLAnalyzer expects:
+          { url, domain, registered_domain, dns, tls, redirects, threat_intelligence }
+        """
         try:
-            ip = ipaddress.ip_address(ip_str)
-            # Block all loopback, private, link-local, multicast, and reserved ranges
-            if ip.is_loopback or ip.is_private or ip.is_link_local or ip.is_multicast or ip.is_reserved or ip.is_unspecified:
-                return False
-            # Block IPv4-mapped IPv6
-            if ip.version == 6 and ip.ipv4_mapped:
-                return self.is_safe_ip(str(ip.ipv4_mapped))
-            return True
-        except ValueError:
-            return False
+            parsed = urlparse(url)
+            hostname = (parsed.hostname or "").lower().rstrip(".")
+            port = parsed.port or (443 if parsed.scheme == "https" else 80)
 
-    def is_safe_hostname(self, hostname):
-        if not hostname:
-            return False
-            
-        hostname = hostname.lower()
-        if hostname in ("localhost", "localhost.localdomain", "broadcasthost"):
-            return False
-            
-        # If it's literally an IP address representation, check it
-        try:
-            ipaddress.ip_address(hostname)
-            return self.is_safe_ip(hostname)
-        except ValueError:
-            pass
+            ext = tldextract.extract(url)
+            registered_domain = ext.registered_domain or hostname
 
-        return True
+            dns = _resolve_dns(hostname)
+            tls = _check_tls(hostname, port)
 
-    def _resolve_dns(self, hostname, record_type):
-        try:
-            resolver = dns.resolver.Resolver()
-            resolver.timeout = self.timeout
-            resolver.lifetime = self.timeout
-            answers = resolver.resolve(hostname, record_type)
-            return [rdata.to_text() for rdata in answers]
-        except Exception:
-            return []
-
-    def inspect(self, url_string):
-        parsed = urlparse(url_string)
-        hostname = parsed.hostname
-        port = parsed.port or (443 if parsed.scheme == "https" else 80)
-        
-        result = {
-            "url": url_string,
-            "normalized_url": parsed.geturl(),
-            "domain": hostname,
-            "registered_domain": None,
-            "dns": {
-                "a": [],
-                "aaaa": [],
-                "mx": [],
-                "ns": [],
-                "resolved": False,
-                "private_ip_detected": False,
-                "status": "unavailable"
-            },
-            "tls": {
-                "https": parsed.scheme == "https",
-                "certificate_valid": False,
-                "hostname_match": False,
-                "expired": False,
-                "issuer": None,
-                "status": "unavailable"
-            },
-            "http": {
-                "status_code": None,
-                "final_url": None,
-                "content_type": None,
-                "reachable": False
-            },
-            "redirects": {
+            # Build redirect info — we don't follow here, just note the initial URL
+            redirects = {
                 "detected": False,
                 "chain": [],
-                "external_domain_change": False
-            },
-            "threat_intelligence": {
+                "external_domain_change": False,
+            }
+
+            # Threat intelligence stub — populated by future integration (VirusTotal etc.)
+            threat_intelligence = {
                 "status": "unavailable",
                 "detections": 0,
-                "providers": []
+                "engines": [],
             }
-        }
 
-        if not hostname or not self.is_safe_hostname(hostname):
-            result["dns"]["private_ip_detected"] = True
-            return result
+            return {
+                "url": url,
+                "domain": hostname,
+                "registered_domain": registered_domain,
+                "dns": dns,
+                "tls": tls,
+                "redirects": redirects,
+                "threat_intelligence": threat_intelligence,
+            }
+        except Exception as e:
+            logger.warning(f"URLInspectionService.inspect() failed for {url}: {e}")
+            return {
+                "url": url,
+                "domain": "",
+                "registered_domain": "",
+                "dns": {"resolved": False, "a": [], "aaaa": [], "private_ip_detected": False},
+                "tls": {"https": False, "certificate_valid": False, "issuer": None},
+                "redirects": {"detected": False, "chain": [], "external_domain_change": False},
+                "threat_intelligence": {"status": "unavailable", "detections": 0, "engines": []},
+            }
 
-        # 1. Registered Domain (Brand analysis support)
-        ext = tldextract.extract(hostname)
-        if ext.registered_domain:
-            result["registered_domain"] = ext.registered_domain
-        else:
-            result["registered_domain"] = hostname
 
-        # 2. DNS Analysis + SSRF Check
-        a_records = self._resolve_dns(hostname, "A")
-        aaaa_records = self._resolve_dns(hostname, "AAAA")
-        
-        result["dns"]["a"] = a_records
-        result["dns"]["aaaa"] = aaaa_records
-        
-        if a_records or aaaa_records:
-            result["dns"]["resolved"] = True
-            result["dns"]["status"] = "available"
-            
-            # SSRF check: Verify no IPs point to internal networks
-            for ip in a_records + aaaa_records:
-                if not self.is_safe_ip(ip):
-                    result["dns"]["private_ip_detected"] = True
-                    return result
-        
-        result["dns"]["mx"] = self._resolve_dns(result["registered_domain"], "MX")
-        result["dns"]["ns"] = self._resolve_dns(result["registered_domain"], "NS")
+    @classmethod
+    def start_local_worker(cls):
+        """Starts a background thread to process jobs in the local queue."""
+        if cls._worker_thread is None or not cls._worker_thread.is_alive():
+            cls._stop_event.clear()
+            cls._worker_thread = threading.Thread(target=cls._worker_loop, daemon=True)
+            cls._worker_thread.start()
+            logger.info("Local URL worker thread started.")
 
-        # 3. TLS Analysis
-        if result["tls"]["https"]:
-            try:
-                context = ssl.create_default_context()
-                context.check_hostname = True
-                with socket.create_connection((hostname, port), timeout=self.timeout) as sock:
-                    with context.wrap_socket(sock, server_hostname=hostname) as ssock:
-                        cert = ssock.getpeercert()
-                        result["tls"]["certificate_valid"] = True
-                        result["tls"]["hostname_match"] = True
-                        result["tls"]["status"] = "available"
+    @classmethod
+    def _worker_loop(cls):
+        while not cls._stop_event.is_set():
+            job = url_queue.dequeue()
+            if job:
+                url_queue.update_job(job.job_id, "RUNNING")
+                try:
+                    result = URLWorker.inspect(job.url)
+                    url_queue.update_job(job.job_id, "COMPLETED", result=result)
+                    
+                    # Cache public intelligence
+                    if result and not result.get("security", {}).get("error"):
+                        page_cache.set(job.url, result)
                         
-                        # Check Expiration
-                        not_after = cert.get("notAfter")
-                        if not_after:
-                            exp_date = ssl.cert_time_to_seconds(not_after)
-                            if datetime.now(timezone.utc).timestamp() > exp_date:
-                                result["tls"]["expired"] = True
-                                result["tls"]["certificate_valid"] = False
+                except Exception as e:
+                    logger.error(f"Worker failed on {job.url}: {e}")
+                    url_queue.update_job(job.job_id, "FAILED", error=str(e))
+            else:
+                time.sleep(0.1)
 
-                        # Extract issuer
-                        issuer_info = cert.get("issuer", [])
-                        for item in issuer_info:
-                            for field in item:
-                                if field[0] == "organizationName":
-                                    result["tls"]["issuer"] = field[1]
-                                    break
-            except Exception as e:
-                result["tls"]["status"] = "failed"
-                result["tls"]["certificate_valid"] = False
-
-        # 4. HTTP & Redirect Analysis
-        current_url = url_string
-        visited = set()
+    @classmethod
+    def inspect_urls(cls, urls: List[str], message_id: str, user_id: str = "system") -> Dict[str, Any]:
+        """
+        Orchestrates inspection of multiple URLs.
+        Checks cache, queues missing URLs, waits for completion.
+        """
+        cls.start_local_worker()
         
-        try:
-            for hop in range(self.max_redirects):
-                visited.add(current_url)
+        results = {}
+        jobs_to_wait = []
+        
+        # Deduplicate and limit
+        unique_urls = list(set(urls))[:cls.MAX_URLS_PER_EMAIL]
+        
+        for url in unique_urls:
+            cached = page_cache.get(url)
+            if cached:
+                results[url] = cached
+                continue
                 
-                # Double-check SSRF for the current URL before fetching
-                parsed_current = urlparse(current_url)
-                if not parsed_current.hostname or not self.is_safe_hostname(parsed_current.hostname):
-                    break
-                    
-                cur_a = self._resolve_dns(parsed_current.hostname, "A")
-                if cur_a and not self.is_safe_ip(cur_a[0]):
-                    break
-                    
-                # Use HEAD to avoid downloading large bodies
-                resp = requests.head(current_url, timeout=self.timeout, allow_redirects=False, headers={'User-Agent': 'TunaMail-Security-Bot/1.0'})
-                
-                result["http"]["reachable"] = True
-                result["http"]["status_code"] = resp.status_code
-                result["http"]["content_type"] = resp.headers.get("Content-Type", "").split(";")[0]
-                result["http"]["final_url"] = current_url
-                
-                if resp.is_redirect:
-                    location = resp.headers.get("Location")
-                    if not location:
-                        break
-                    
-                    # Handle relative redirects
-                    if location.startswith("/"):
-                        location = f"{parsed_current.scheme}://{parsed_current.netloc}{location}"
-                        
-                    if location in visited:
-                        break
-                        
-                    result["redirects"]["detected"] = True
-                    result["redirects"]["chain"].append(location)
-                    
-                    # Check if domain changed
-                    new_ext = tldextract.extract(urlparse(location).hostname)
-                    if new_ext.registered_domain != result["registered_domain"]:
-                        result["redirects"]["external_domain_change"] = True
-                        
-                    current_url = location
+            job = URLInspectionJob(message_id=message_id, url=url, user_id=user_id)
+            url_queue.enqueue(job)
+            jobs_to_wait.append(job)
+
+        # Wait for pending jobs
+        start_time = time.time()
+        while jobs_to_wait and time.time() - start_time < cls.INSPECTION_TIMEOUT:
+            still_waiting = []
+            for job in jobs_to_wait:
+                updated_job = url_queue.get_job(job.job_id)
+                if updated_job.status in ["COMPLETED", "FAILED", "BLOCKED", "TIMEOUT"]:
+                    if updated_job.result:
+                        results[job.url] = updated_job.result
+                    else:
+                        results[job.url] = {"security": {"error": updated_job.error or "Unknown failure"}}
                 else:
-                    break
-                    
-        except RequestException:
-            pass
-
-        return result
+                    still_waiting.append(job)
+            jobs_to_wait = still_waiting
+            if jobs_to_wait:
+                time.sleep(0.2)
+                
+        # Handle timeouts
+        for job in jobs_to_wait:
+            url_queue.update_job(job.job_id, "TIMEOUT")
+            results[job.url] = {"security": {"error": "INSPECTION_TIMEOUT", "blocked": False}}
+            
+        return results

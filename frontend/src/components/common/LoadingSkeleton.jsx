@@ -3,7 +3,7 @@ import React from "react";
 function SkeletonCard({ className }) {
   return (
     <div className={`rounded-xl border border-[var(--tm-border)] bg-[var(--tm-surface)] p-6 ${className}`}>
-      <div className="flex animate-pulse space-x-4">
+      <div className="flex animate-[pulse_0.8s_ease-in-out_infinite] space-x-4">
         <div className="h-10 w-10 rounded-full bg-slate-800"></div>
         <div className="flex-1 space-y-3 py-1">
           <div className="h-3 w-3/4 rounded bg-slate-800"></div>
@@ -23,10 +23,10 @@ function LoadingSkeleton() {
       {/* Header Skeleton */}
       <div className="flex items-center justify-between">
         <div className="space-y-3 w-1/2">
-          <div className="h-6 w-3/4 animate-pulse rounded bg-slate-800"></div>
-          <div className="h-4 w-1/2 animate-pulse rounded bg-slate-800/50"></div>
+          <div className="h-6 w-3/4 animate-[pulse_0.8s_ease-in-out_infinite] rounded bg-slate-800"></div>
+          <div className="h-4 w-1/2 animate-[pulse_0.8s_ease-in-out_infinite] rounded bg-slate-800/50"></div>
         </div>
-        <div className="h-10 w-24 animate-pulse rounded-lg bg-slate-800"></div>
+        <div className="h-10 w-24 animate-[pulse_0.8s_ease-in-out_infinite] rounded-lg bg-slate-800"></div>
       </div>
       
       {/* Cards Grid Skeleton */}

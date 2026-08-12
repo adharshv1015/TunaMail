@@ -149,7 +149,7 @@ function UrlCard({ item }) {
   );
 }
 
-function URLIntelligence({ urlAnalysis }) {
+function URLIntelligence({ urlAnalysis, urlPageIntelligence }) {
   const data = urlAnalysis || {};
   const analyzedUrls = data.analysis || [];
   const isLimitedContext = data.limited_context === true;
@@ -177,6 +177,52 @@ function URLIntelligence({ urlAnalysis }) {
           {analyzedUrls.map((item, index) => (
             <UrlCard key={`${item.url}-${index}`} item={item} />
           ))}
+        </div>
+      )}
+
+      {/* Deep Page Inspection */}
+      {urlPageIntelligence && Object.keys(urlPageIntelligence).length > 0 && (
+        <div className="mt-6 border-t border-[var(--tm-border)]/50 pt-4">
+          <div className="text-[13px] font-bold text-[var(--tm-text)] uppercase tracking-wider mb-4 flex items-center gap-2">
+            <span className="text-[var(--tm-accent)]">👁</span> Deep Page Inspection (Worker Results)
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Object.entries(urlPageIntelligence).map(([url, pageData], i) => (
+              <div key={i} className="flex flex-col gap-2 rounded-lg border border-[var(--tm-border)] bg-[var(--tm-surface-secondary)] p-4">
+                <div className="text-[12px] font-mono text-[var(--tm-accent)] break-all border-b border-[var(--tm-border)]/50 pb-2 mb-2">
+                  {url}
+                </div>
+                
+                {pageData.security?.error ? (
+                  <div className="text-[12px] font-bold text-red-500">
+                    Fetch Blocked/Failed: {pageData.security.error}
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-[12px]">
+                      <span className="text-[var(--tm-text-secondary)] font-bold">Title:</span>
+                      <span className="text-[var(--tm-text)]">{pageData.title || <span className="italic text-gray-500">None</span>}</span>
+                      
+                      <span className="text-[var(--tm-text-secondary)] font-bold">Word Count:</span>
+                      <span className="text-[var(--tm-text)]">{pageData.word_count || 0}</span>
+                      
+                      <span className="text-[var(--tm-text-secondary)] font-bold">Forms:</span>
+                      <span className={`font-bold ${(pageData.forms?.password_fields > 0 || pageData.forms?.email_fields > 0) ? "text-orange-500" : "text-[var(--tm-text)]"}`}>
+                        {pageData.forms?.password_fields > 0 && <span>Password ({pageData.forms.password_fields}) </span>}
+                        {pageData.forms?.email_fields > 0 && <span>Email/Login ({pageData.forms.email_fields}) </span>}
+                        {pageData.forms?.password_fields === 0 && pageData.forms?.email_fields === 0 && <span>None</span>}
+                      </span>
+                    </div>
+                    {pageData.visible_text && (
+                      <div className="mt-2 text-[11px] text-[var(--tm-text-muted)] italic line-clamp-3 bg-[var(--tm-surface)] p-2 rounded">
+                        "{pageData.visible_text}"
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </section>

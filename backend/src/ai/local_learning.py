@@ -12,6 +12,10 @@ class LocalLearning:
         self.detector = CampaignDetector()
 
     def learn(self, parsed_email: dict, existing_analysis: dict, final_verdict: str):
+        message_id = parsed_email.get("id")
+        if not message_id:
+            return
+
         sender_email = parsed_email.get("from", "")
         # extract email
         if "<" in sender_email and ">" in sender_email:
@@ -31,8 +35,19 @@ class LocalLearning:
                 "legitimate_count": 0,
                 "suspicious_count": 0,
                 "phishing_count": 0,
-                "reputation": "UNKNOWN"
+                "reputation": "UNKNOWN",
+                "seen_message_ids": []
             }
+            
+        if "seen_message_ids" not in rep_profile:
+            rep_profile["seen_message_ids"] = []
+            
+        if message_id in rep_profile["seen_message_ids"]:
+            return
+            
+        rep_profile["seen_message_ids"].append(message_id)
+        if len(rep_profile["seen_message_ids"]) > 100:
+            rep_profile["seen_message_ids"] = rep_profile["seen_message_ids"][-100:]
             
         rep_profile["messages_seen"] += 1
         

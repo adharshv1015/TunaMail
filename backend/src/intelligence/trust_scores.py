@@ -11,7 +11,7 @@ They feed into the explanation and are visible to analysts.
 import logging
 from typing import Dict
 
-from src.intelligence.knowledge_base import get_knowledge_base
+from .knowledge_base import get_knowledge_base
 
 logger = logging.getLogger(__name__)
 

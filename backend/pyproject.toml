@@ -1,0 +1,11 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "src"]
+addopts = "-v --tb=short"
+markers = [
+    "stage12: Stage 12 regression tests",
+    "ssrf: SSRF protection tests",
+    "auth: Authentication flow tests",
+    "verdict: Verdict safety assertion tests",
+    "edge: Edge case and malformed input tests",
+]

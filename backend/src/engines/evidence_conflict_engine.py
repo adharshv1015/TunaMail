@@ -8,7 +8,8 @@ class EvidenceConflictEngine:
         content_analysis: dict,
         attachment_analysis: dict,
         trust_analysis: dict,
-        ai_analysis: dict
+        ai_analysis: dict,
+        url_page_intelligence: dict = None
     ) -> dict:
         
         evidence_list = []

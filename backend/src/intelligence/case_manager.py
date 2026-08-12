@@ -12,7 +12,7 @@ import json
 import uuid
 import logging
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional
 
 from src.intelligence.db import get_db, rows_to_list
 from src.intelligence.audit_log import AuditLog

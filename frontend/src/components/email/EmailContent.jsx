@@ -50,7 +50,7 @@ function EmailContent({ body, htmlBody }) {
               srcDoc={htmlBody}
               title="Rendered Email Content"
               className="w-full h-full border-none rounded-[12px]"
-              sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin"
+              sandbox="allow-popups allow-popups-to-escape-sandbox"
             />
           </div>
         )}

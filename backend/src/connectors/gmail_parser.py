@@ -14,7 +14,7 @@ class GmailParser:
             payload
         )
 
-        body = self.extract_body(
+        body_dict = self.extract_body(
             payload
         )
 
@@ -47,9 +47,8 @@ class GmailParser:
             ),
 
             "headers": headers,
-
-            "body": body,
-
+            "body": body_dict.get("text/plain", "").strip() or body_dict.get("text/html", "").strip(),
+            "html_body": body_dict.get("text/html", "").strip(),
             "attachments": attachments
         }
 
@@ -74,54 +73,32 @@ class GmailParser:
 
 
     def extract_body(self, payload):
+        body_parts = {"text/plain": "", "text/html": ""}
 
-        body = ""
+        def traverse_parts(parts):
+            for part in parts:
+                mime_type = part.get("mimeType", "")
+                if mime_type in ["text/plain", "text/html"]:
+                    data = part.get("body", {}).get("data")
+                    if data:
+                        text = base64.urlsafe_b64decode(data).decode(errors="ignore")
+                        body_parts[mime_type] += text + "\n"
+                elif "parts" in part:
+                    traverse_parts(part["parts"])
 
-        # Simple email
-        if "body" in payload:
+        if "body" in payload and payload["body"].get("data"):
+            data = payload["body"].get("data")
+            mime_type = payload.get("mimeType", "text/plain")
+            text = base64.urlsafe_b64decode(data).decode(errors="ignore")
+            if mime_type in body_parts:
+                body_parts[mime_type] += text + "\n"
+            else:
+                body_parts["text/plain"] += text + "\n"
 
-            data = payload["body"].get(
-                "data"
-            )
+        if "parts" in payload:
+            traverse_parts(payload["parts"])
 
-            if data:
-
-                body += (
-                    base64.urlsafe_b64decode(data)
-                    .decode(
-                        errors="ignore"
-                    )
-                )
-
-
-        # Multipart email
-        for part in payload.get(
-            "parts",
-            []
-        ):
-
-            if part.get(
-                "mimeType"
-            ) == "text/plain":
-
-                data = part.get(
-                    "body",
-                    {}
-                ).get(
-                    "data"
-                )
-
-                if data:
-
-                    body += (
-                        base64.urlsafe_b64decode(data)
-                        .decode(
-                            errors="ignore"
-                        )
-                    )
-
-
-        return body
+        return body_parts
 
 
 

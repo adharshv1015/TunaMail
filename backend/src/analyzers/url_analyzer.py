@@ -1,15 +1,38 @@
 import re
 import ipaddress
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse, unquote, parse_qs
 from email.utils import parseaddr
 import tldextract
+try:
+    from bs4 import BeautifulSoup
+    _BS4_AVAILABLE = True
+except ImportError:
+    _BS4_AVAILABLE = False
 
 from src.services.url_inspection_service import URLInspectionService
+
+# Known tracking/safety-redirect wrappers that encode the real URL in a query param
+_REDIRECT_PATTERNS = [
+    # Google Safety redirect: https://www.google.com/url?q=https%3A%2F%2F...
+    ("google.com", "q"),
+    ("google.com", "url"),
+    # Outlook/Microsoft SafeLinks: https://nam.safelinks.protection.outlook.com/?url=...
+    ("safelinks.protection.outlook.com", "url"),
+    # Proofpoint URLDefense
+    ("urldefense.com", "u"),
+    # Generic tracking redirectors
+    (None, "redirect_uri"),
+    (None, "redirect_url"),
+    (None, "target_url"),
+]
 
 class URLAnalyzer:
 
     TRUSTED_DOMAINS = [
         "google.com",
+        "googleapis.com",
+        "gstatic.com",
+        "googleusercontent.com",
         "microsoft.com",
         "apple.com",
         "amazon.com",
@@ -74,16 +97,69 @@ class URLAnalyzer:
             return True
         return False
 
+    def _unwrap_redirect(self, url):
+        """
+        Unwrap known tracking/safety-redirect wrappers (e.g. Google's
+        https://www.google.com/url?q=<encoded>) to reveal the real URL.
+        Returns the inner URL if found, otherwise returns the original url.
+        """
+        try:
+            parsed = urlparse(url)
+            hostname = (parsed.hostname or "").lower().lstrip("www.")
+            qs = parse_qs(parsed.query)
+
+            for domain, param in _REDIRECT_PATTERNS:
+                # domain=None means we check the param on any host
+                if domain is not None and not hostname.endswith(domain):
+                    continue
+                if param in qs:
+                    inner = unquote(qs[param][0]).strip()
+                    # Must look like a real URL
+                    if inner.startswith(("http://", "https://")):
+                        return inner
+        except Exception:
+            pass
+        return url
+
     def extract_urls(self, text):
         if not text:
             return []
-        pattern = r'https?://[^\s<>"]+'
-        urls = re.findall(pattern, text)
+
+        raw_urls = []
+
+        # --- Pass 1: Parse HTML href/src attributes directly (most reliable for HTML email) ---
+        if _BS4_AVAILABLE and ("<a " in text or "<A " in text or "href=" in text):
+            try:
+                soup = BeautifulSoup(text, "html.parser")
+                for tag in soup.find_all(["a", "link", "img", "iframe", "form"]):
+                    for attr in ("href", "src", "action", "data-url"):
+                        val = tag.get(attr, "")
+                        if val and isinstance(val, str) and val.startswith(("http://", "https://")):
+                            raw_urls.append(val.strip())
+            except Exception:
+                pass
+
+        # --- Pass 2: Regex fallback — catches URLs in plain text and any missed by BS4 ---
+        pattern1 = r'https?://[^\s<>"\']+'  
+        pattern2 = r'(?<!/)\bwww\.[^\s<>"\']+'  
+
+        raw_urls.extend(re.findall(pattern1, text))
+        www_urls = re.findall(pattern2, text)
+        for w in www_urls:
+            raw_urls.append("http://" + w)
+
+        # --- Pass 3: Clean, deduplicate, and unwrap redirect wrappers ---
         cleaned_urls = []
-        for url in urls:
-            url = url.rstrip(".,;:!?)]}>")
-            if url not in cleaned_urls:
+        seen = set()
+        for url in raw_urls:
+            url = url.rstrip(".,;:!?)]}<>'\"")
+            # Unwrap tracking/safety redirectors (e.g. Google safety links)
+            url = self._unwrap_redirect(url)
+            url = url.rstrip(".,;:!?)]}<>'\"")
+            if url not in seen and url.startswith("http"):
+                seen.add(url)
                 cleaned_urls.append(url)
+
         return cleaned_urls
 
     def analyze_url(self, url, sender_headers, auth_results):
@@ -160,23 +236,24 @@ class URLAnalyzer:
         return "misaligned"
 
     def evaluate_brand_relationship(self, inspection_data):
+        import difflib
         hostname = (inspection_data.get("domain") or "").lower()
         registered_domain = (inspection_data.get("registered_domain") or "").lower()
         
         if not hostname or not registered_domain:
             return "UNKNOWN"
             
+        # First pass: check for exact match or subdomain of any trusted domain
         for trusted in self.TRUSTED_DOMAINS:
-            trusted_brand = trusted.split(".")[0]
-            
-            # Exact match
             if hostname == trusted:
                 return "OFFICIAL"
-                
-            # Subdomain of trusted
             if hostname.endswith("." + trusted):
                 return "SUBDOMAIN_OF_OFFICIAL"
                 
+        # Second pass: check for impersonation and lookalikes
+        for trusted in self.TRUSTED_DOMAINS:
+            trusted_brand = trusted.split(".")[0]
+            
             # Impersonation (contains brand name but different registered domain)
             if trusted_brand in hostname and trusted not in registered_domain:
                 return "IMPERSONATION"
@@ -186,6 +263,15 @@ class URLAnalyzer:
             lookalike_host = hostname.replace("1", "l").replace("0", "o")
             if trusted_brand in lookalike_host and trusted not in registered_domain:
                 return "LOOKALIKE"
+            
+            # Typo-squatting via SequenceMatcher (e.g., 'gogle' for 'google')
+            for part in hostname.split("."):
+                # Avoid matching very short parts to prevent false positives
+                if len(part) < 4:
+                    continue
+                ratio = difflib.SequenceMatcher(None, trusted_brand, part).ratio()
+                if ratio > 0.8 and trusted not in registered_domain:
+                    return "LOOKALIKE"
                 
         return "UNKNOWN"
 
@@ -218,16 +304,30 @@ class URLAnalyzer:
 
     def is_obfuscated(self, url):
         parsed = urlparse(url)
+
+        # Trusted domains are never considered obfuscated
+        domain = (parsed.hostname or "").lower()
+        if self.is_trusted_domain(domain):
+            return False
+
+        # Credentials embedded in the URL (e.g. http://user@evil.com)
         if "@" in parsed.netloc:
             return True
-        if "%" in url:
+
+        # Percent encoding in the DOMAIN/NETLOC is suspicious
+        # (e.g. http://g%6f%6fgle.com) — but NOT in path or query string
+        # which is perfectly normal (e.g. ?continue=...%3D...)
+        if "%" in parsed.netloc:
             return True
+
+        # IP-literal hostname
         if parsed.hostname:
             try:
                 if parsed.hostname.isdigit():
                     return True
             except Exception:
                 pass
+
         return False
 
     def is_punycode(self, domain):

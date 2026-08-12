@@ -72,7 +72,11 @@ const AnalystExplanation = ({ messageId, decision, sender }) => {
     }
   };
 
-  if (!decision || !explanation.summary) return null;
+  // Support both Stage 13 (groups) and legacy (summary) schemas
+  const hasStage13 = explanation && explanation.groups;
+  const hasLegacy  = explanation && explanation.summary;
+
+  if (!decision || (!hasStage13 && !hasLegacy)) return null;
 
   return (
     <div className="mt-6 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 overflow-hidden">
@@ -198,3 +202,4 @@ const AnalystExplanation = ({ messageId, decision, sender }) => {
     </div>
   );
 };
+export default AnalystExplanation;

@@ -1,1 +1,93 @@
-{}
+{
+  "https://fake-phish-login.com": {
+    "senders": [
+      "trust21@test.com",
+      "trust22@test.com"
+    ],
+    "last_seen": "2026-08-12T05:01:33.517075"
+  },
+  "https://google-security-alert.com": {
+    "senders": [
+      "trust23@test.com"
+    ],
+    "last_seen": "2026-08-12T05:01:39.698144"
+  },
+  "http://bit.ly/xyz": {
+    "senders": [
+      "trust24@test.com"
+    ],
+    "last_seen": "2026-08-12T05:01:40.999988"
+  },
+  "https://random-login.com": {
+    "senders": [
+      "trust25@test.com"
+    ],
+    "last_seen": "2026-08-12T05:01:41.179914"
+  },
+  "https://example.com/account-verification": {
+    "senders": [
+      "adharshv1015@gmail.com"
+    ],
+    "last_seen": "2026-08-12T12:02:25.798226"
+  },
+  "https://coccyxwickimp.com/": {
+    "senders": [
+      "adharshv1015@gmail.com"
+    ],
+    "last_seen": "2026-08-12T12:02:27.566239"
+  },
+  "http://100percentworkingoil.com": {
+    "senders": [
+      "tuntunsahur19992000@gmail.com"
+    ],
+    "last_seen": "2026-08-12T12:02:32.808582"
+  },
+  "https://docs.google.com/document/d/1u9abSQg7aDEeY5eYSklwCAusuJKjdl4m4TSIU13nSY4/edit": {
+    "senders": [
+      "adharshv1015@gmail.com"
+    ],
+    "last_seen": "2026-08-12T12:02:37.449209"
+  },
+  "https://accounts.google.com/AccountChooser": {
+    "senders": [
+      "no-reply@accounts.google.com"
+    ],
+    "last_seen": "2026-08-12T12:02:45.961878"
+  },
+  "https://myaccount.google.com/notifications": {
+    "senders": [
+      "no-reply@accounts.google.com"
+    ],
+    "last_seen": "2026-08-12T12:02:45.957577"
+  },
+  "http://gogle.accounts.com": {
+    "senders": [
+      "tuntunsahur19992000@gmail.com"
+    ],
+    "last_seen": "2026-08-12T12:02:22.616681"
+  },
+  "b''://b''b''": {
+    "senders": [
+      "test@example.com"
+    ],
+    "last_seen": "2026-08-12T10:03:35.576082"
+  },
+  "http://100percentfedup.com": {
+    "senders": [
+      "tuntunsahur19992000@gmail.com"
+    ],
+    "last_seen": "2026-08-12T12:02:31.280192"
+  },
+  "https://www.gstatic.com/images/branding/googlelogo/2x/googlelogo_color_74x24dp.png": {
+    "senders": [
+      "no-reply@accounts.google.com"
+    ],
+    "last_seen": "2026-08-12T12:02:45.949273"
+  },
+  "https://lh3.googleusercontent.com/a/ACg8ocLySWLsNMsdktnSur9CLdHLnknR0S6dLXLLWdjtwlVcPYh-_g=s96-c": {
+    "senders": [
+      "no-reply@accounts.google.com"
+    ],
+    "last_seen": "2026-08-12T12:02:45.953434"
+  }
+}

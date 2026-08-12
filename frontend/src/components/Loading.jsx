@@ -8,7 +8,7 @@ export default function Loading() {
             50% { opacity: 0.4; }
           }
           .skeleton-pulse {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
             background-color: rgba(255, 255, 255, 0.1);
             border-radius: 6px;
           }

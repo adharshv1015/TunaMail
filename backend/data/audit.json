@@ -143,6 +143,140 @@
         "previous_risk_score": 50,
         "reason": "I checked the URL manually"
       }
+    },
+    {
+      "timestamp": "2026-08-12T04:27:51.442009",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_123",
+        "analyst_label": "CONFIRMED_PHISHING",
+        "timestamp": "2026-08-12T04:27:51.424116",
+        "previous_verdict": "UNKNOWN",
+        "previous_risk_score": 50,
+        "reason": "I checked the URL manually"
+      }
+    },
+    {
+      "timestamp": "2026-08-12T04:50:38.779360",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_123",
+        "analyst_label": "CONFIRMED_PHISHING",
+        "timestamp": "2026-08-12T04:50:38.776319",
+        "previous_verdict": "UNKNOWN",
+        "previous_risk_score": 50,
+        "reason": "I checked the URL manually"
+      }
+    },
+    {
+      "timestamp": "2026-08-12T04:52:47.732945",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_123",
+        "analyst_label": "CONFIRMED_PHISHING",
+        "timestamp": "2026-08-12T04:52:47.730717",
+        "previous_verdict": "UNKNOWN",
+        "previous_risk_score": 50,
+        "reason": "I checked the URL manually"
+      }
+    },
+    {
+      "timestamp": "2026-08-12T04:58:29.361895",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_123",
+        "analyst_label": "CONFIRMED_PHISHING",
+        "timestamp": "2026-08-12T04:58:29.359477",
+        "previous_verdict": "UNKNOWN",
+        "previous_risk_score": 50,
+        "reason": "I checked the URL manually"
+      }
+    },
+    {
+      "timestamp": "2026-08-12T05:01:41.183914",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_123",
+        "analyst_label": "CONFIRMED_PHISHING",
+        "timestamp": "2026-08-12T05:01:41.181748",
+        "previous_verdict": "UNKNOWN",
+        "previous_risk_score": 50,
+        "reason": "I checked the URL manually"
+      }
+    }
+  ],
+  "msg_f1": [
+    {
+      "timestamp": "2026-08-12T10:01:58.709924",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "MALICIOUS",
+        "timestamp": "2026-08-12T10:01:58.691736",
+        "previous_verdict": "UNKNOWN",
+        "previous_risk_score": 0,
+        "reason": "Test 1"
+      }
+    },
+    {
+      "timestamp": "2026-08-12T10:01:58.724670",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "SAFE",
+        "timestamp": "2026-08-12T10:01:58.714549",
+        "previous_verdict": "MALICIOUS",
+        "previous_risk_score": 100,
+        "reason": "Test 2"
+      }
+    },
+    {
+      "timestamp": "2026-08-12T10:03:00.085937",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "MALICIOUS",
+        "timestamp": "2026-08-12T10:03:00.058927",
+        "previous_verdict": "UNKNOWN",
+        "previous_risk_score": 0,
+        "reason": "Test 1"
+      }
+    },
+    {
+      "timestamp": "2026-08-12T10:03:00.100421",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "SAFE",
+        "timestamp": "2026-08-12T10:03:00.090412",
+        "previous_verdict": "MALICIOUS",
+        "previous_risk_score": 100,
+        "reason": "Test 2"
+      }
+    },
+    {
+      "timestamp": "2026-08-12T10:03:38.014890",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "MALICIOUS",
+        "timestamp": "2026-08-12T10:03:37.987668",
+        "previous_verdict": "UNKNOWN",
+        "previous_risk_score": 0,
+        "reason": "Test 1"
+      }
+    },
+    {
+      "timestamp": "2026-08-12T10:03:38.031809",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "SAFE",
+        "timestamp": "2026-08-12T10:03:38.019466",
+        "previous_verdict": "MALICIOUS",
+        "previous_risk_score": 100,
+        "reason": "Test 2"
+      }
     }
   ]
 }

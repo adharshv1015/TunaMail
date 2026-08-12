@@ -29,23 +29,36 @@ function EmailDetail({ messageId }) {
       return;
     }
 
+    const controller = new AbortController();
+    const { signal } = controller;
+
     const loadMessage = async () => {
       try {
         setLoading(true);
         setError("");
         console.log("Fetching message:", messageId);
-        const data = await getMessage(messageId);
+        const data = await getMessage(messageId, { signal });
         console.log("Message detail:", data);
         setMessage(data);
       } catch (err) {
+        if (err.name === 'AbortError') {
+            console.log("Fetch aborted for message:", messageId);
+            return;
+        }
         console.error(err);
         setError("Failed to load email analysis.");
       } finally {
-        setLoading(false);
+        if (!signal.aborted) {
+            setLoading(false);
+        }
       }
     };
 
     loadMessage();
+    
+    return () => {
+        controller.abort();
+    };
   }, [messageId]);
 
   /* --------------------------------------------- */
@@ -96,6 +109,7 @@ function EmailDetail({ messageId }) {
   const trust = analysis.trust || {};
   const reasoning = analysis.reasoning || {};
   const intelligence = analysis.intelligence || {};
+  const urlPageIntelligence = analysis.url_page_intelligence || {};
 
   return (
     <div className="min-h-full w-full max-w-[1200px] mx-auto space-y-6 p-8">
@@ -103,11 +117,11 @@ function EmailDetail({ messageId }) {
       <ThreatOverview decision={decision} />
       <AuthenticationCard authentication={authentication} />
       <ContentAnalysisCard content={content} />
-      <URLIntelligence urlAnalysis={urlAnalysis} />
+      <URLIntelligence urlAnalysis={urlAnalysis} urlPageIntelligence={urlPageIntelligence} />
       <WhoisAnalysis whois={whois} />
       <AttachmentAnalysis attachmentData={attachment} rawAttachments={message.attachments} />
       <TrustAnalysis trust={trust} />
-      <SecurityReasoning reasoning={reasoning} ai={analysis.ai} />
+      <SecurityReasoning reasoning={reasoning} ai={analysis.ai} explanation={analysis.explanation} />
       <FinalDecision decision={decision} />
       <AnalystExplanation messageId={message.id} decision={decision} sender={message.sender} />
       <IntelligenceCard

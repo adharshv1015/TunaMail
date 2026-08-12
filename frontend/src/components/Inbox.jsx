@@ -4,7 +4,7 @@ import InboxHeader from "./inbox/InboxHeader";
 import InboxSearch from "./inbox/InboxSearch";
 import EmailList from "./inbox/EmailList";
 
-function Inbox({ selectedMessageId, onSelectMessage, onAuthError }) {
+function Inbox({ selectedMessageId, onSelectMessage, onAuthError, isConnected }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -14,24 +14,38 @@ function Inbox({ selectedMessageId, onSelectMessage, onAuthError }) {
   const [sortOption, setSortOption] = useState("NEWEST");
 
   useEffect(() => {
-    loadMessages();
-  }, []);
+    if (isConnected === false) {
+      setMessages([]);
+      setLoading(false);
+      return;
+    }
+    
+    const controller = new AbortController();
+    loadMessages(controller.signal);
+    return () => {
+        controller.abort();
+    };
+  }, [isConnected]);
 
-  async function loadMessages() {
+  async function loadMessages(signal) {
     try {
       setLoading(true);
-      const data = await getMessages();
+      const data = await getMessages({ signal });
       const loadedMessages = data.messages || [];
       setMessages(loadedMessages);
 
-
     } catch (error) {
+      if (error.name === 'AbortError') {
+          return;
+      }
       if (error.message && (error.message.includes("UNAUTHORIZED") || error.message.includes("Failed to fetch") || error.message.includes("401"))) {
         onAuthError?.();
       }
       console.error("Failed to load messages:", error);
     } finally {
-      setLoading(false);
+      if (!signal || !signal.aborted) {
+          setLoading(false);
+      }
     }
   }
 
@@ -99,6 +113,7 @@ function Inbox({ selectedMessageId, onSelectMessage, onAuthError }) {
         loading={loading}
         selectedMessageId={selectedMessageId}
         onSelectMessage={onSelectMessage}
+        isConnected={isConnected}
       />
     </div>
   );

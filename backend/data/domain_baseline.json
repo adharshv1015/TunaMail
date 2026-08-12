@@ -1,7 +1,22 @@
 {
   "test.com": {
-    "messages_analyzed": 1,
-    "first_seen": "2026-08-11T12:12:30.201792",
-    "last_seen": "2026-08-11T12:12:30.201797"
+    "messages_analyzed": 10,
+    "first_seen": "2026-08-12T05:01:33.021135",
+    "last_seen": "2026-08-12T05:01:41.171356"
+  },
+  "gmail.com": {
+    "messages_analyzed": 220,
+    "first_seen": "2026-08-12T05:05:17.748693",
+    "last_seen": "2026-08-12T12:02:37.445742"
+  },
+  "accounts.google.com": {
+    "messages_analyzed": 57,
+    "first_seen": "2026-08-12T05:06:04.594386",
+    "last_seen": "2026-08-12T12:02:45.941417"
+  },
+  "example.com": {
+    "messages_analyzed": 28,
+    "first_seen": "2026-08-12T09:44:49.951273",
+    "last_seen": "2026-08-12T10:03:38.345843"
   }
 }

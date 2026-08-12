@@ -201,6 +201,49 @@ export default function EmailCard({ email }) {
               </div>
             )}
 
+            {/* Section: Deep Page Inspection */}
+            {analysis.url_page_intelligence && Object.keys(analysis.url_page_intelligence).length > 0 && (
+              <div className="detail-section">
+                <h4>Deep Page Inspection</h4>
+                <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))' }}>
+                  {Object.entries(analysis.url_page_intelligence).map(([url, pageData], i) => (
+                    <div key={i} style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ wordBreak: 'break-all', marginBottom: '0.75rem', color: 'var(--accent-secondary)', fontWeight: '600' }}>
+                        {url}
+                      </div>
+                      
+                      {pageData.security?.error ? (
+                        <div style={{ color: 'var(--risk-phishing)', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                          Fetch Failed: {pageData.security.error}
+                        </div>
+                      ) : (
+                        <div className="detail-grid" style={{ gridTemplateColumns: 'max-content 1fr', rowGap: '0.5rem', fontSize: '0.8rem' }}>
+                          <span className="label">Title:</span>
+                          <span style={{ color: 'var(--text-main)' }}>{pageData.title || 'None'}</span>
+                          
+                          <span className="label">Words:</span>
+                          <span style={{ color: 'var(--text-main)' }}>{pageData.word_count || 0}</span>
+                          
+                          <span className="label">Login Forms:</span>
+                          <span style={{ color: (pageData.forms?.password_fields > 0 || pageData.forms?.email_fields > 0) ? 'var(--risk-high)' : 'var(--text-main)', fontWeight: (pageData.forms?.password_fields > 0 || pageData.forms?.email_fields > 0) ? 'bold' : 'normal' }}>
+                            {pageData.forms?.password_fields > 0 ? 'Password ' : ''}
+                            {pageData.forms?.email_fields > 0 ? 'Email ' : ''}
+                            {pageData.forms?.password_fields === 0 && pageData.forms?.email_fields === 0 ? 'None' : ''}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {pageData.visible_text && (
+                        <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic', maxHeight: '60px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                          "{pageData.visible_text}"
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Section: WHOIS Domain Intelligence */}
             {analysis.whois?.length > 0 && (
               <div className="whois-section">

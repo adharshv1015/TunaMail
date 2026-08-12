@@ -1,1 +1,140 @@
-{}
+{
+  "est2@test.com": {
+    "sender": "est2@test.com",
+    "messages_seen": 5,
+    "legitimate_count": 5,
+    "suspicious_count": 0,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN"
+  },
+  "trust3@test.com": {
+    "sender": "trust3@test.com",
+    "messages_seen": 15,
+    "legitimate_count": 15,
+    "suspicious_count": 0,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN"
+  },
+  "susp4@test.com": {
+    "sender": "susp4@test.com",
+    "messages_seen": 4,
+    "legitimate_count": 0,
+    "suspicious_count": 4,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN"
+  },
+  "hr5@test.com": {
+    "sender": "hr5@test.com",
+    "messages_seen": 3,
+    "legitimate_count": 0,
+    "suspicious_count": 0,
+    "phishing_count": 3,
+    "reputation": "UNKNOWN"
+  },
+  "trust21@test.com": {
+    "sender": "trust21@test.com",
+    "messages_seen": 20,
+    "legitimate_count": 20,
+    "suspicious_count": 0,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN"
+  },
+  "trust22@test.com": {
+    "sender": "trust22@test.com",
+    "messages_seen": 20,
+    "legitimate_count": 20,
+    "suspicious_count": 0,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN"
+  },
+  "trust23@test.com": {
+    "sender": "trust23@test.com",
+    "messages_seen": 20,
+    "legitimate_count": 20,
+    "suspicious_count": 0,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN"
+  },
+  "trust24@test.com": {
+    "sender": "trust24@test.com",
+    "messages_seen": 20,
+    "legitimate_count": 20,
+    "suspicious_count": 0,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN"
+  },
+  "trust25@test.com": {
+    "sender": "trust25@test.com",
+    "messages_seen": 20,
+    "legitimate_count": 20,
+    "suspicious_count": 0,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN"
+  },
+  "test@test.com": {
+    "total_messages": 1,
+    "legitimate_count": 0,
+    "suspicious_count": 0,
+    "phishing_count": 1,
+    "reputation": "UNKNOWN",
+    "score": 50,
+    "first_seen": "2026-08-12T05:01:41.182751",
+    "last_seen": "2026-08-12T05:01:41.182774"
+  },
+  "tuntunsahur19992000@gmail.com": {
+    "sender": "tuntunsahur19992000@gmail.com",
+    "messages_seen": 49,
+    "legitimate_count": 24,
+    "suspicious_count": 25,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN",
+    "seen_message_ids": [
+      "19ff467ac8fdaf80",
+      "19ff45fe5f740d34",
+      "19ff04f1d6c4b008",
+      "19feb0a04b83dcbe",
+      "19feb07acb23cf50"
+    ]
+  },
+  "adharshv1015@gmail.com": {
+    "sender": "adharshv1015@gmail.com",
+    "messages_seen": 35,
+    "legitimate_count": 2,
+    "suspicious_count": 25,
+    "phishing_count": 8,
+    "reputation": "UNKNOWN",
+    "seen_message_ids": [
+      "19fef1c21d75f053",
+      "19feb15d053c58bf",
+      "19fea40acb1bc151"
+    ]
+  },
+  "no-reply@accounts.google.com": {
+    "sender": "no-reply@accounts.google.com",
+    "messages_seen": 23,
+    "legitimate_count": 8,
+    "suspicious_count": 0,
+    "phishing_count": 15,
+    "reputation": "UNKNOWN",
+    "seen_message_ids": [
+      "19fd6f157661bf87",
+      "19fd6f15612105a0"
+    ]
+  },
+  "test@example.com": {
+    "sender": "test@example.com",
+    "messages_seen": 12,
+    "legitimate_count": 0,
+    "suspicious_count": 0,
+    "phishing_count": 6,
+    "reputation": "HIGH_RISK",
+    "seen_message_ids": [
+      "msg_double_request",
+      "msg_simultaneous",
+      "msg_large",
+      "msg_many_urls",
+      "msg_timeout",
+      "msg_crash"
+    ]
+  }
+}

@@ -70,7 +70,7 @@ function App() {
   if (isInitializing) {
     return (
       <div className="flex h-screen w-full flex-col bg-[var(--tm-bg)] text-[var(--tm-text)] items-center justify-center">
-        <div className="text-xl font-medium animate-pulse">Initializing Security Session...</div>
+        <div className="text-xl font-medium animate-[pulse_0.8s_ease-in-out_infinite]">Initializing Security Session...</div>
       </div>
     );
   }
@@ -92,6 +92,7 @@ function App() {
             selectedMessageId={selectedMessageId}
             onSelectMessage={handleSelectMessage}
             onAuthError={handleAuthError}
+            isConnected={isConnected}
           />
         </div>
 

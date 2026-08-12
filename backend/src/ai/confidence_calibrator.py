@@ -16,6 +16,7 @@ class ConfidenceCalibrator:
         
         has_contradiction = any(r["type"] in ["AUTHENTICATION_CONTRADICTS", "CONTENT_CONTRADICTS_URL", "BRAND_DOMAIN_MISMATCH"] for r in graph["relationships"])
         has_insufficient_context = any(e.type == "insufficient_context" for e in evidence_items)
+        malicious_count = sum(1 for e in evidence_items if e.direction == EvidenceDirection.NEGATIVE and e.type != "insufficient_context")
         
         # Start with a base confidence of 50
         confidence = 50
@@ -23,7 +24,7 @@ class ConfidenceCalibrator:
 
         # Historical Evidence influence
         if reputation in ["TRUSTED", "ESTABLISHED"]:
-            if negative_count == 0:
+            if malicious_count == 0:
                 confidence = min(100, confidence + 20)
             else:
                 reasoning_state = "TRUST_HISTORY_CONFLICT"
@@ -31,9 +32,15 @@ class ConfidenceCalibrator:
         elif reputation in ["SUSPICIOUS", "HIGH_RISK"]:
             if negative_count > 0:
                 confidence = min(100, confidence + 20)
+        elif reputation == "NEW":
+            confidence = max(10, confidence - 20)
+        elif reputation == "UNKNOWN":
+            confidence = max(10, confidence - 30)
 
         if has_insufficient_context:
             confidence = min(confidence, 40) # Allow trust to keep it at 40
+            if reputation in ["NEW", "UNKNOWN"]:
+                confidence = min(confidence, 30)
             reasoning_state = "INSUFFICIENT_EVIDENCE" if reasoning_state != "TRUST_HISTORY_CONFLICT" else "TRUST_HISTORY_CONFLICT"
             return confidence, reasoning_state
 
@@ -64,6 +71,7 @@ class ConfidenceCalibrator:
             reasoning_state = "SUSPICIOUS_HISTORY"
         elif reputation == "NEW":
             reasoning_state = "NEW_SENDER"
-            confidence = max(10, confidence - 10)
+        elif reputation == "UNKNOWN":
+            reasoning_state = "UNKNOWN_SENDER"
 
         return confidence, reasoning_state

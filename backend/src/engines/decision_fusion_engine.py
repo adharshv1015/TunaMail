@@ -1,12 +1,17 @@
 class DecisionFusionEngine:
     def evaluate(self, are_result, conflict_result=None):
-        risk_score = are_result.get("risk_score", 0)
+        risk_score = max(0, are_result.get("risk_score", 0))
         
         # In Stage 7, we pull confidence and reasoning state directly from AI layer if available
         confidence = are_result.get("confidence", 50)
         detail_verdict = are_result.get("detail_verdict", "UNKNOWN")
         
         evidence = are_result.get("evidence", {})
+        
+        # Check for unavailable analyzers
+        is_unavailable = any("unavailable" in str(e).lower() for e in evidence.get("technical", []) + evidence.get("behavioral", []) + evidence.get("network", []))
+        if is_unavailable and detail_verdict not in ["LIMITED_CONTEXT", "INSUFFICIENT_EVIDENCE", "LINK_ONLY"]:
+            detail_verdict = "UNAVAILABLE"
         
         technical = len(evidence.get("technical", []))
         behavioral = len(evidence.get("behavioral", []))
@@ -42,17 +47,20 @@ class DecisionFusionEngine:
                 verdict = "VERIFIED LEGITIMATE"
             elif confidence >= 70:
                 verdict = "LIKELY LEGITIMATE"
-            elif confidence >= 40:
+            elif confidence >= 50:
                 verdict = "SAFE"
-            else:
+            elif confidence >= 40:
                 verdict = "LOW RISK"
+            else:
+                verdict = "UNKNOWN"
 
         # -----------------------------
         # Detail Verdict Overrides
         # -----------------------------
-        if detail_verdict in ["LIMITED_CONTEXT", "INSUFFICIENT_EVIDENCE", "LINK_ONLY"]:
-            if verdict in ["PHISHING", "HIGH RISK"]:
-                verdict = "SUSPICIOUS" if risk_score >= 40 else "UNKNOWN"
+        if detail_verdict in ["LIMITED_CONTEXT", "INSUFFICIENT_EVIDENCE", "LINK_ONLY", "UNAVAILABLE"]:
+            if verdict in ["VERIFIED LEGITIMATE", "LIKELY LEGITIMATE", "SAFE", "LOW RISK"]:
+                verdict = "UNKNOWN"
+                confidence = min(confidence, 30)
         elif detail_verdict == "CONFLICTING_EVIDENCE":
             if verdict in ["VERIFIED LEGITIMATE", "LIKELY LEGITIMATE", "LOW RISK", "SAFE"]:
                 verdict = "UNKNOWN"
@@ -61,10 +69,11 @@ class DecisionFusionEngine:
         elif detail_verdict == "TRUST_HISTORY_CONFLICT":
             if verdict in ["PHISHING", "HIGH RISK"]:
                 detail_verdict = "POSSIBLE_COMPROMISED_SENDER"
-            else:
+            elif risk_score >= 20:  # Only escalate if there's actual risk
                 verdict = "SUSPICIOUS"
         elif detail_verdict == "SUSPICIOUS_HISTORY":
-            if verdict in ["UNKNOWN", "LOW RISK", "SAFE"]:
+            # Only escalate to SUSPICIOUS if there is actual risk signal
+            if risk_score >= 20 and verdict in ["UNKNOWN", "LOW RISK", "SAFE"]:
                 verdict = "SUSPICIOUS"
         elif detail_verdict == "NEW_SENDER":
             if verdict in ["VERIFIED LEGITIMATE", "LIKELY LEGITIMATE"]:
@@ -72,7 +81,8 @@ class DecisionFusionEngine:
             elif verdict == "LOW RISK" and confidence == 0:
                 verdict = "UNKNOWN"
         elif detail_verdict in ["DOMAIN_DRIFT", "AUTHENTICATION_DRIFT"]:
-            if verdict in ["VERIFIED LEGITIMATE", "LIKELY LEGITIMATE", "SAFE", "LOW RISK", "UNKNOWN"]:
+            # Only escalate to SUSPICIOUS if there is actual risk signal
+            if risk_score >= 20 and verdict in ["VERIFIED LEGITIMATE", "LIKELY LEGITIMATE", "SAFE", "LOW RISK", "UNKNOWN"]:
                 verdict = "SUSPICIOUS"
 
         are_result["risk_score"] = risk_score

@@ -1,4 +1,5 @@
 import os
+import logging
 from .tokenizer import SecurityTokenizer
 from .vocabulary import Vocabulary
 from .features import FeatureExtractor
@@ -10,6 +11,8 @@ AI_DIR = os.path.dirname(os.path.abspath(__file__))
 VOCAB_PATH = os.path.join(AI_DIR, "models", "vocab.json")
 MODEL_PATH = os.path.join(AI_DIR, "models", "mlp_model.pkl")
 DEV_DATASET_PATH = os.path.join(AI_DIR, "data", "dev_dataset.json")
+
+logger = logging.getLogger(__name__)
 
 class TunaMailAIEngine:
     def __init__(self):
@@ -36,7 +39,7 @@ class TunaMailAIEngine:
             self.model.train(X_tokens, X_features, Y, self.vocab_size)
             self.model.save(MODEL_PATH)
         except Exception as e:
-            print(f"Warning: AI Model failed to bootstrap: {e}")
+            logger.warning(f"AI Model failed to bootstrap: {e}")
 
     def analyze_email(self, parsed_email: dict, analysis: dict = None) -> dict:
         """
@@ -50,7 +53,17 @@ class TunaMailAIEngine:
         feat_vector = self.feature_extractor.vector_format(feat_dict)
         
         # 2. Tokenization
-        text = f"{parsed_email.get('subject', '')} {parsed_email.get('body', '')}"
+        text_parts = [parsed_email.get('subject', ''), parsed_email.get('body', '')]
+        
+        # Incorporate page intelligence text if available
+        url_page_intel = analysis.get("url_page_intelligence", {})
+        for url, page_data in url_page_intel.items():
+            if not page_data.get("security", {}).get("error"):
+                visible_text = page_data.get("visible_text", "")
+                if visible_text:
+                    text_parts.append(visible_text)
+                    
+        text = " ".join(text_parts)
         tokens = self.tokenizer.tokenize(text)
         token_ids = self.vocab.encode(tokens)
         

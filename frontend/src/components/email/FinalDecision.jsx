@@ -3,7 +3,7 @@ import SectionHeader from "../common/SectionHeader";
 
 function FinalDecision({ decision }) {
   const data = decision || {};
-  const verdict = data.verdict || "SAFE";
+  const verdict = data.verdict || "UNKNOWN";
   
   const getStyles = () => {
     switch (verdict) {

@@ -8,7 +8,7 @@ class BrandIntelligence:
         # Local configurable brand dictionary
         self.brands = {
             "google": {
-                "domains": ["google.com", "gmail.com", "googlemail.com", "youtube.com"],
+                "domains": ["google.com", "gmail.com", "googlemail.com", "youtube.com", "googleapis.com", "gstatic.com", "googleusercontent.com"],
                 "subdomains": ["accounts.google.com", "mail.google.com", "drive.google.com", "security.google.com"],
             },
             "microsoft": {

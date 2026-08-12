@@ -45,9 +45,15 @@ class AttachmentAnalyzer:
 
         for attachment in attachments:
 
+            if not isinstance(attachment, dict):
+                continue
+
             filename = attachment.get("filename") or ""
             filename = filename.strip()
-            size = attachment.get("size", 0) or 0
+            try:
+                size = int(attachment.get("size", 0) or 0)
+            except (TypeError, ValueError):
+                size = 0
 
             if not filename:
                 continue

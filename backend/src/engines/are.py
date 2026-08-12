@@ -3,9 +3,36 @@ from src.config.scoring import SCORING
 
 class AnalyticalReasoningEngine:
 
-    def __init__(self):
+    TRUSTED_DOMAINS = [
+        "google.com",
+        "googleapis.com",
+        "gstatic.com",
+        "googleusercontent.com",
+        "accounts.google.com",
+        "myaccount.google.com",
+        "microsoft.com",
+        "microsoftonline.com",
+        "apple.com",
+        "icloud.com",
+        "paypal.com",
+        "github.com",
+        "linkedin.com",
+        "amazon.com",
+    ]
 
+    def __init__(self):
         self.rules = SCORING
+
+    def _is_trusted_domain(self, domain):
+        domain = (domain or "").lower().strip(".")
+        for trusted in self.TRUSTED_DOMAINS:
+            if domain == trusted or domain.endswith("." + trusted):
+                return True
+        return False
+
+    def _is_trusted_url_domain(self, url_analysis, url_item):
+        domain = url_item.get("domain", "")
+        return self._is_trusted_domain(domain)
 
     def evaluate(
         self,
@@ -15,7 +42,8 @@ class AnalyticalReasoningEngine:
         content_analysis,
         attachment_analysis,
         trust_analysis,
-        ai_analysis=None
+        ai_analysis=None,
+        url_page_intelligence=None
     ):
 
         score = 0
@@ -32,31 +60,41 @@ class AnalyticalReasoningEngine:
 
         auth = self.rules["authentication"]
 
-        if authentication["spf"] != "pass":
+        if authentication.get("analysis_status") == "UNAVAILABLE":
+            evidence["technical"].append("Authentication analysis unavailable")
+            score += 10  # Minor penalty for missing evidence, but not a fabricated SPF fail
+        else:
+            if authentication.get("spf") != "pass":
+                score += auth["spf_fail"]
+                evidence["technical"].append("SPF validation failed")
 
-            score += auth["spf_fail"]
+            if authentication.get("dkim") != "pass":
+                score += auth["dkim_fail"]
+                evidence["technical"].append("DKIM validation failed")
 
-            evidence["technical"].append(
-                "SPF validation failed"
-            )
-
-        if authentication["dkim"] != "pass":
-
-            score += auth["dkim_fail"]
-
-            evidence["technical"].append(
-                "DKIM validation failed"
-            )
-
-        if authentication["dmarc"] != "pass":
-
-            score += auth["dmarc_fail"]
-
-            evidence["technical"].append(
-                "DMARC validation failed"
-            )
+            if authentication.get("dmarc") != "pass":
+                score += auth["dmarc_fail"]
+                evidence["technical"].append("DMARC validation failed")
 
         url_rules = self.rules["url"]
+
+        # -------------------------------------------------------
+        # Trust Bonus: reduce score for verified trusted senders
+        # -------------------------------------------------------
+        trust_score = trust_analysis.get("trust_score", 0) if trust_analysis else 0
+        auth_fully_passed = (
+            authentication.get("analysis_status") != "UNAVAILABLE" and
+            authentication.get("spf") == "pass" and
+            authentication.get("dkim") in ["pass", "present_unverified"] and
+            authentication.get("dmarc") == "pass"
+        )
+        if auth_fully_passed and trust_score >= 40:
+            score -= 30
+            evidence["technical"].append("Trusted sender with full authentication")
+        elif auth_fully_passed and trust_score >= 20:
+            score -= 15
+            evidence["technical"].append("Authenticated sender with partial trust signal")
+
 
         for url in url_analysis.get("analysis", []):
 
@@ -109,7 +147,9 @@ class AnalyticalReasoningEngine:
             
             # Redirect Evidence
             redirects = url.get("redirects", {})
-            if redirects.get("external_domain_change"):
+            url_domain = url.get("domain", "")
+            is_trusted_url = self._is_trusted_url_domain(url_analysis, url)
+            if redirects.get("external_domain_change") and not is_trusted_url:
                 score += 20
                 evidence["network"].append(f"Suspicious external redirect chain: {url['domain']}")
 
@@ -148,56 +188,57 @@ class AnalyticalReasoningEngine:
                 evidence["network"].append(f"Recently registered domain: {domain}")
 
         content = self.rules["content"]
+        auth_failed = not auth_fully_passed
 
-        if content_analysis["urgency"]:
 
-            score += content["urgency"]
+        if content_analysis.get("analysis_status") == "UNAVAILABLE":
+            evidence["behavioral"].append("Content analysis unavailable")
+        else:
+            is_trusted_context = (not auth_failed) and (trust_score >= 40)
 
-            evidence["behavioral"].append(
-                "Urgency language detected"
-            )
+            if content_analysis.get("urgency"):
+                if is_trusted_context:
+                    evidence["behavioral"].append("Legitimate urgent notification")
+                else:
+                    score += content["urgency"]
+                    evidence["behavioral"].append("Urgency language detected")
 
-        if content_analysis["credential_request"]:
+            if content_analysis.get("credential_request"):
+                if is_trusted_context:
+                    evidence["behavioral"].append("Legitimate account management")
+                else:
+                    score += content["credential_request"]
+                    evidence["behavioral"].append("Credential harvesting attempt")
 
-            score += content["credential_request"]
+            if content_analysis.get("financial_request"):
+                if is_trusted_context:
+                    evidence["behavioral"].append("Legitimate financial communication")
+                else:
+                    score += content["financial_request"]
+                    evidence["behavioral"].append("Financial request detected")
 
-            evidence["behavioral"].append(
-                "Credential harvesting attempt"
-            )
+            if content_analysis.get("impersonation"):
+                score += content["impersonation"]
+                evidence["behavioral"].append("Possible impersonation")
 
-        if content_analysis["financial_request"]:
-
-            score += content["financial_request"]
-
-            evidence["behavioral"].append(
-                "Financial request detected"
-            )
-
-        if content_analysis["impersonation"]:
-
-            score += content["impersonation"]
-
-            evidence["behavioral"].append(
-                "Possible impersonation"
-            )
-
-        if content_analysis["threat_language"]:
-
-            score += content["threat_language"]
-
-            evidence["behavioral"].append(
-                "Threat language detected"
-            )
+            if content_analysis.get("threat_language"):
+                if is_trusted_context:
+                    evidence["behavioral"].append("Legitimate security warning")
+                else:
+                    score += content["threat_language"]
+                    evidence["behavioral"].append("Threat language detected")
 
         attachment = self.rules["attachment"]
 
-        score += (
-            attachment_analysis["risk_score"] *
-            attachment["risk_multiplier"]
-        )
-
-        for item in attachment_analysis["evidence"]:
-            evidence["technical"].append(item)
+        if attachment_analysis.get("analysis_status") == "UNAVAILABLE":
+            evidence["technical"].append("Attachment analysis unavailable")
+        else:
+            score += (
+                attachment_analysis.get("risk_score", 0) *
+                attachment["risk_multiplier"]
+            )
+            for item in attachment_analysis.get("evidence", []):
+                evidence["technical"].append(item)
 
         score = min(score, 100)
 
@@ -236,9 +277,33 @@ class AnalyticalReasoningEngine:
                 confidence = 70
 
         # Link-Only Context rule
-        if url_analysis.get("limited_context"):
+        if url_analysis.get("limited_context") or content_analysis.get("link_only"):
             confidence = max(10, confidence - 40)
             evidence["behavioral"].append("Limited context: Email contains mostly URLs with no body text")
+            
+            # Incorporate URL Page Intelligence if we have it
+            if url_page_intelligence:
+                page_risk_found = False
+                for url, page_data in url_page_intelligence.items():
+                    if page_data.get("security", {}).get("error"):
+                        # E.g. Blocked, timeout, etc
+                        evidence["network"].append(f"Page fetch failed/blocked for {url}")
+                        score += 15
+                    else:
+                        forms = page_data.get("forms", {})
+                        if forms.get("password_fields", 0) > 0:
+                            evidence["behavioral"].append(f"Destination page requests a password: {url}")
+                            score += 40
+                            page_risk_found = True
+                        elif forms.get("email_fields", 0) > 0:
+                            evidence["behavioral"].append(f"Destination page requests an email/login: {url}")
+                            score += 20
+                            page_risk_found = True
+                            
+                # If we scanned the pages and found no risk, we can increase confidence
+                if not page_risk_found and url_page_intelligence:
+                    confidence = min(80, confidence + 30)
+                    evidence["behavioral"].append("Deep URL inspection found no immediate risk on destination pages")
 
         if score >= 80:
             verdict = "PHISHING"
@@ -344,13 +409,13 @@ class AnalyticalReasoningEngine:
                     evidence["behavioral"].append("Insufficient historical baseline for this sender.")
 
             # AI states map to new detail verdicts
-            if original_ai_state in ["CONFLICTING_EVIDENCE", "LIMITED_CONTEXT", "INSUFFICIENT_EVIDENCE", "LINK_ONLY"]:
+            if original_ai_state in ["CONFLICTING_EVIDENCE", "LIMITED_CONTEXT", "INSUFFICIENT_EVIDENCE", "LINK_ONLY", "NEW_SENDER", "UNKNOWN_SENDER"]:
                 verdict = "UNKNOWN" if verdict not in ["PHISHING", "HIGH RISK", "SUSPICIOUS"] else verdict
                 evidence["behavioral"].append(f"AI downgraded certainty due to {original_ai_state}")
                 if original_ai_state == "LIMITED_CONTEXT" or original_ai_state == "LINK_ONLY":
                     confidence = max(10, min(confidence - 30, 40))
                 else:
-                    confidence = min(confidence, 50)
+                    confidence = min(confidence, int(ai_conf) if ai_conf else 50)
             
             # Boost confidence for positive legitimacy
             if ai_state == "SUFFICIENT_EVIDENCE" and verdict in ["VERIFIED LEGITIMATE", "LIKELY LEGITIMATE"]:
