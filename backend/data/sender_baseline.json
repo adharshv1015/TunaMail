@@ -116,9 +116,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 134,
+    "messages_analyzed": 139,
     "first_seen": "2026-08-12T05:05:17.740180",
-    "last_seen": "2026-08-12T12:02:32.800083"
+    "last_seen": "2026-08-12T12:14:14.819110"
   },
   "adharshv1015@gmail.com": {
     "normal_domains": [
@@ -127,9 +127,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 86,
+    "messages_analyzed": 89,
     "first_seen": "2026-08-12T05:05:20.808732",
-    "last_seen": "2026-08-12T12:02:37.441597"
+    "last_seen": "2026-08-12T12:14:20.027415"
   },
   "no-reply@accounts.google.com": {
     "normal_domains": [
@@ -138,9 +138,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 57,
+    "messages_analyzed": 59,
     "first_seen": "2026-08-12T05:06:04.585226",
-    "last_seen": "2026-08-12T12:02:45.937356"
+    "last_seen": "2026-08-12T12:14:33.204961"
   },
   "test@example.com": {
     "normal_domains": [

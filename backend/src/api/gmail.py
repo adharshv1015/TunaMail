@@ -261,14 +261,34 @@ def process_single_message(connector, msg_id, is_batch=False):
             "trust": trust_analysis,
         }
 
-        # URL Page Intelligence for LINK_ONLY
-        is_link_only = content_analysis.get("link_only", False)
+        # URL Page Intelligence — fetch and analyze for ALL emails (up to 5 URLs)
+        # Budget-guarded: skip if time is already tight
         url_page_intelligence = {}
-        if is_link_only:
-            urls_to_inspect = [item.get("url") for item in url_analysis.get("analysis", []) if item.get("url")]
+        url_items = url_analysis.get("analysis", [])
+        urls_to_inspect = [item.get("url") for item in url_items if item.get("url")][:5]
+
+        if urls_to_inspect and not tracker.is_over_budget():
             from src.services.url_inspection_service import URLInspectionService
-            url_page_intelligence = URLInspectionService.inspect_urls(urls_to_inspect, msg_id)
-        
+            from src.analyzers.page_phishing_analyzer import PagePhishingAnalyzer
+            page_phishing_analyzer = PagePhishingAnalyzer()
+
+            with tracker.measure("URLPageInspection"):
+                url_page_intelligence = URLInspectionService.inspect_urls(urls_to_inspect, msg_id)
+
+            # Enrich each URL analysis item with page phishing analysis
+            for item in url_items:
+                item_url = item.get("url", "")
+                page_data = url_page_intelligence.get(item_url)
+                if page_data is not None:
+                    item["page_analysis"] = page_phishing_analyzer.analyze(page_data, item_url)
+                else:
+                    item["page_analysis"] = {"available": False, "indicators": [], "page_risk_score": 0}
+        else:
+            if tracker.is_over_budget():
+                tracker.record_timeout("URLPageInspection", reason="Analysis budget exceeded before page inspection")
+            for item in url_items:
+                item["page_analysis"] = {"available": False, "indicators": [], "page_risk_score": 0}
+
         existing_analysis["url_page_intelligence"] = url_page_intelligence
 
         # Timeout check before expensive AI
