@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Query
 from pydantic import BaseModel
 import os
 
@@ -368,42 +368,127 @@ def process_single_message(connector, msg_id, is_batch=False):
 @router.get("/messages")
 def list_messages(
     request: Request,
-    period: str = "recent"
+    period: str = Query(default="recent"),
+    limit: int = Query(default=10, ge=1, le=100),
+    page_token: str = Query(default=None),
+    # Structured search fields — the backend builds the Gmail query
+    sender: str = Query(default=None, max_length=200),
+    subject: str = Query(default=None, max_length=200),
+    keyword: str = Query(default=None, max_length=200),
+    domain: str = Query(default=None, max_length=200),
+    after: str = Query(default=None, max_length=20),   # YYYY-MM-DD
+    before: str = Query(default=None, max_length=20),  # YYYY-MM-DD
 ):
+    import re
 
     session_id = request.session.get("session_id")
     server_session = session_manager.get_session(session_id)
-    
+
     if not server_session or not server_session.get("authenticated"):
-        raise HTTPException(
-            status_code=401,
-            detail="Please login first."
-        )
+        raise HTTPException(status_code=401, detail="Please login first.")
 
     credentials = server_session.get("credentials")
     if not credentials:
-        raise HTTPException(
-            status_code=401,
-            detail="Credentials missing from session."
-        )
+        raise HTTPException(status_code=401, detail="Credentials missing from session.")
 
+    # ----------------------------------------------------------------
+    # Build Gmail query server-side from validated structured fields.
+    # Only pass individual validated parts — never raw user syntax.
+    # ----------------------------------------------------------------
+    DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+    def _gmail_date(value: str) -> str:
+        """Convert YYYY-MM-DD to YYYY/MM/DD for Gmail search."""
+        return value.replace("-", "/")
+
+    query_parts = []
+    use_custom_query = any([sender, subject, keyword, domain, after, before])
+
+    if use_custom_query:
+        if sender:
+            query_parts.append(f"from:{sender.strip()}")
+        if subject:
+            query_parts.append(f"subject:{subject.strip()}")
+        if keyword:
+            query_parts.append(keyword.strip())
+        if domain:
+            # Search for the domain in the full message content
+            query_parts.append(domain.strip())
+        if after:
+            if DATE_RE.match(after):
+                query_parts.append(f"after:{_gmail_date(after)}")
+            else:
+                raise HTTPException(status_code=422, detail="Invalid 'after' date format. Use YYYY-MM-DD.")
+        if before:
+            if DATE_RE.match(before):
+                query_parts.append(f"before:{_gmail_date(before)}")
+            else:
+                raise HTTPException(status_code=422, detail="Invalid 'before' date format. Use YYYY-MM-DD.")
+
+    constructed_query = " ".join(query_parts) if query_parts else None
+
+    # ----------------------------------------------------------------
+    # Retrieve lightweight metadata list from Gmail
+    # ----------------------------------------------------------------
     connector = GmailConnector(credentials)
-
-    messages = connector.list_messages(
+    response = connector.list_messages(
         period=period,
-        max_results=10
+        max_results=limit,
+        page_token=page_token if page_token else None,
+        query=constructed_query,
     )
 
-    results = []
+    raw_messages = response["messages"]
+    next_page_token = response["next_page_token"]
 
-    for msg in messages:
-        parsed = process_single_message(connector, msg["id"], is_batch=True)
-        if parsed:
-            results.append(parsed)
+    # ----------------------------------------------------------------
+    # For each message, fetch lightweight metadata (no full body).
+    # If a cached verdict exists, attach it. Otherwise: UNANALYZED.
+    # ----------------------------------------------------------------
+    from src.services.analysis_cache import analysis_cache
+
+    results = []
+    for msg in raw_messages:
+        msg_id = msg["id"]
+        try:
+            meta = connector.get_message_metadata(msg_id)
+        except Exception:
+            continue
+
+        # Parse headers
+        headers = {h["name"]: h["value"] for h in meta.get("payload", {}).get("headers", [])}
+        item = {
+            "id": msg_id,
+            "thread_id": meta.get("threadId"),
+            "from": headers.get("From", ""),
+            "subject": headers.get("Subject", "(No subject)"),
+            "date": headers.get("Date", ""),
+            "snippet": meta.get("snippet", ""),
+            "analysis_status": "UNANALYZED",
+            "analysis": None,
+        }
+
+        # Check if a valid cached analysis exists
+        cached = analysis_cache.get_by_message_id(msg_id)
+        if cached is not None:
+            item["analysis_status"] = "ANALYZED"
+            item["analysis"] = cached.get("analysis")
+            item["decision"] = cached.get("decision")
+
+        results.append(item)
 
     return {
         "count": len(results),
-        "messages": results
+        "messages": results,
+        "retrieval": {
+            "mode": "SEARCH" if use_custom_query else "INBOX",
+            "query": constructed_query,
+            "page_size": limit,
+            "has_more": next_page_token is not None,
+        },
+        "pagination": {
+            "next_page_token": next_page_token,
+        }
     }
 
 

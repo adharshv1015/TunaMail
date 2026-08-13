@@ -127,7 +127,9 @@
       1786492459.222451,
       1786495956.464582,
       1786495961.055949,
-      1786495971.667568
+      1786495971.667568,
+      1786579542.630152,
+      1786579678.431576
     ],
     "url_domains": [
       "example.com",
@@ -135,7 +137,8 @@
       "docs.google.com"
     ],
     "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
+      "SPF:pass DKIM:pass DMARC:pass",
+      "SPF:unknown DKIM:unknown DMARC:unknown"
     ]
   },
   "no-reply@accounts.google.com": {
@@ -239,6 +242,167 @@
     ],
     "auth_summary": [
       "SPF:unknown DKIM:unknown DMARC:unknown"
+    ]
+  },
+  "jobalerts-noreply@linkedin.com": {
+    "timestamps": [
+      1786579693.086018,
+      1786582212.719415
+    ],
+    "url_domains": [
+      "www.linkedin.com",
+      "static.licdn.com",
+      "media.licdn.com",
+      "in.linkedin.com",
+      "www.w3.org"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "naukrialerts@naukri.com": {
+    "timestamps": [
+      1786579715.574074
+    ],
+    "url_domains": [
+      "fonts.googleapis.com",
+      "logs.naukri.com",
+      "www.naukri.com",
+      "static.naukimg.com",
+      "cm.naukri.com",
+      "www.ieplads.com",
+      "img.naukimg.com",
+      "www.ambitionbox.com"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "sbi@communications.sbi.co.in": {
+    "timestamps": [
+      1786579728.863039,
+      1786579770.982552,
+      1786581899.250072
+    ],
+    "url_domains": [
+      "imagescommunications.sbi.bank.in",
+      "deliveryalerts.sbi.co.in",
+      "imagescommunications.sbi.co.in",
+      "sbi.bank.in",
+      "play.google.com",
+      "apps.apple.com",
+      "onlinesbi.sbi.bank.in",
+      "www.w3.org",
+      "fonts.googleapis.com"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "updates-noreply@linkedin.com": {
+    "timestamps": [
+      1786579740.608661
+    ],
+    "url_domains": [
+      "www.linkedin.com",
+      "static.licdn.com",
+      "media.licdn.com"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "messages-noreply@linkedin.com": {
+    "timestamps": [
+      1786579748.394492
+    ],
+    "url_domains": [
+      "www.linkedin.com",
+      "static.licdn.com",
+      "apps.microsoft.com",
+      "itunes.apple.com",
+      "play.google.com",
+      "www.w3.org"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "hello@ollama.com": {
+    "timestamps": [
+      1786579764.758113
+    ],
+    "url_domains": [
+      "c.vialoops.com",
+      "images.vialoops.com",
+      "www.nvidia.com",
+      "ollama.com",
+      "discord.gg",
+      "app.loops.so",
+      "www.w3.org"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "help@acct.epicgames.com": {
+    "timestamps": [
+      1786579783.276129
+    ],
+    "url_domains": [
+      "fonts.googleapis.com",
+      "fonts.gstatic.com",
+      "epicgames.com",
+      "images.acct.epicgames.com",
+      "www.epicgames.com",
+      "help.epicgames.com",
+      "view.acct.epicgames.com",
+      "preferences.email.epicgames.com",
+      "www.w3.org"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "updates@account.ubisoft.com": {
+    "timestamps": [
+      1786579801.946336
+    ],
+    "url_domains": [
+      "www.ubisoft.com",
+      "static2.cdn.ubi.com",
+      "support.ubi.com",
+      "static-cp.akamaized.net"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "donotreply@match.indeed.com": {
+    "timestamps": [
+      1786582252.559401
+    ],
+    "url_domains": [
+      "cts.indeed.com",
+      "prod.statics.indeed.com",
+      "d3hbwax96mbv6t.cloudfront.net",
+      "go.onelink.me",
+      "engage.indeed.com",
+      "subscriptions.indeed.com",
+      "www.w3.org",
+      "fonts.googleapis.com"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "ansonkalleri@gmail.com": {
+    "timestamps": [
+      1786583057.063895
+    ],
+    "url_domains": [],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
     ]
   }
 }

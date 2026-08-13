@@ -26,6 +26,10 @@ logger = logging.getLogger(__name__)
 ANALYSIS_CACHE_TTL_SECONDS = int(os.environ.get("ANALYSIS_CACHE_TTL_SECONDS", "3600"))
 MAX_ANALYSIS_CACHE_ENTRIES = int(os.environ.get("MAX_ANALYSIS_CACHE_ENTRIES", "500"))
 
+# Increment this whenever the intelligence pipeline changes significantly.
+# Cache entries from a previous version will be automatically invalidated.
+ANALYSIS_VERSION = "15.1"
+
 
 def _content_fingerprint(parsed_email: dict) -> str:
     """
@@ -111,11 +115,11 @@ class AnalysisCache:
                 self._misses += 1
                 return None
 
-            # Check fingerprint — if message changed, invalidate
-            if entry["fingerprint"] != fingerprint:
+            # Check fingerprint + analysis version — if either changed, invalidate
+            if entry["fingerprint"] != fingerprint or entry.get("analysis_version") != ANALYSIS_VERSION:
                 del self._cache[message_id]
                 self._misses += 1
-                logger.debug("AnalysisCache: fingerprint mismatch for %s — invalidated", message_id)
+                logger.debug("AnalysisCache: fingerprint/version mismatch for %s — invalidated", message_id)
                 return None
 
             entry["last_accessed"] = time.time()
@@ -131,6 +135,7 @@ class AnalysisCache:
             self._cache[message_id] = {
                 "data": data,
                 "fingerprint": fingerprint,
+                "analysis_version": ANALYSIS_VERSION,
                 "timestamp": time.time(),
                 "last_accessed": time.time(),
             }
@@ -142,6 +147,27 @@ class AnalysisCache:
                 del self._cache[message_id]
             if message_id in self._locks:
                 del self._locks[message_id]
+
+    def get_by_message_id(self, message_id: str) -> Optional[Any]:
+        """Lightweight lookup for inbox listing — checks only TTL and analysis_version.
+        Does not validate the fingerprint (since we don't have parsed content here).
+        Returns the cached data if valid, or None if absent/stale/wrong version.
+        """
+        with self._lock:
+            entry = self._cache.get(message_id)
+            if entry is None:
+                return None
+            # Check TTL
+            if time.time() - entry["timestamp"] > ANALYSIS_CACHE_TTL_SECONDS:
+                del self._cache[message_id]
+                if message_id in self._locks:
+                    del self._locks[message_id]
+                return None
+            # Check analysis version
+            if entry.get("analysis_version") != ANALYSIS_VERSION:
+                del self._cache[message_id]
+                return None
+            return entry["data"]
 
     def clear(self) -> None:
         with self._lock:

@@ -41,35 +41,43 @@ def enforce_deterministic_priority(
 
     walk(analysis)
 
+    is_trusted_sender = decision.get("is_trusted_sender", False)
+
     if critical:
+        # For trusted senders (LinkedIn, Google, etc.) only apply the CRITICAL
+        # override when the base risk score is already ≥ 60. This prevents a
+        # single CRITICAL-tagged field (e.g. a tracking-link TLS warning) from
+        # incorrectly overriding a clean trusted-org verdict to PHISHING.
+        critical_applies = (not is_trusted_sender) or int(decision.get("risk_score", 0)) >= 60
 
-        decision["risk_score"] = max(
-            int(
-                decision.get(
-                    "risk_score",
-                    0,
-                )
-            ),
-            80,
-        )
+        if critical_applies:
+            decision["risk_score"] = max(
+                int(
+                    decision.get(
+                        "risk_score",
+                        0,
+                    )
+                ),
+                80,
+            )
 
-        decision["confidence"] = max(
-            int(
-                decision.get(
-                    "confidence",
-                    0,
-                )
-            ),
-            70,
-        )
+            decision["confidence"] = max(
+                int(
+                    decision.get(
+                        "confidence",
+                        0,
+                    )
+                ),
+                70,
+            )
 
-        decision["verdict"] = (
-            "PHISHING"
-        )
+            decision["verdict"] = (
+                "PHISHING"
+            )
 
-        decision["detail_verdict"] = (
-            "MALICIOUS_EVIDENCE"
-        )
+            decision["detail_verdict"] = (
+                "MALICIOUS_EVIDENCE"
+            )
 
         return decision
 

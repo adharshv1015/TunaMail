@@ -8,6 +8,11 @@ class DecisionFusionEngine:
         
         evidence = are_result.get("evidence", {})
         
+        # Trust signal from ARE — a fully authenticated, known-organization sender
+        # (LinkedIn, Google, Microsoft, etc.) should never be auto-escalated by
+        # heuristic count rules. Impersonation is still caught separately.
+        is_trusted_sender = are_result.get("is_trusted_sender", False)
+        
         # Check for unavailable analyzers
         is_unavailable = any("unavailable" in str(e).lower() for e in evidence.get("technical", []) + evidence.get("behavioral", []) + evidence.get("network", []))
         if is_unavailable and detail_verdict not in ["LIMITED_CONTEXT", "INSUFFICIENT_EVIDENCE", "LINK_ONLY"]:
@@ -30,10 +35,17 @@ class DecisionFusionEngine:
         ):
             verdict = "PHISHING"
             risk_score = max(risk_score, 85)
-        elif technical >= 2 and risk_score >= 40:
+        elif technical >= 2 and risk_score >= 40 and not is_trusted_sender:
+            # Only escalate to PHISHING via evidence count when the sender is NOT
+            # a verified trusted organisation. Trusted senders (LinkedIn, Google,
+            # Microsoft, etc.) need a genuinely high raw risk score instead.
             verdict = "PHISHING"
             risk_score = max(risk_score, 80)
-        elif behavioral >= 2 and network >= 1 and risk_score >= 60:
+        elif is_trusted_sender and risk_score >= 80:
+            # Even trusted senders are flagged if the raw score is genuinely high
+            # (e.g. a compromised LinkedIn account sending malicious payloads).
+            verdict = "PHISHING"
+        elif behavioral >= 2 and network >= 1 and risk_score >= 60 and not is_trusted_sender:
             verdict = "PHISHING"
             risk_score = max(risk_score, 80)
         elif risk_score >= 80:
@@ -115,7 +127,10 @@ class DecisionFusionEngine:
             "recommendation": recommendation,
             "reasoning": evidence,
             "explanation": explanation,
-            "evidence_quality": self.get_evidence_quality(confidence)
+            "evidence_quality": self.get_evidence_quality(confidence),
+            # Carry the trust signal forward so finalize_intelligence
+            # can pass it to the guard without re-computing it
+            "is_trusted_sender": is_trusted_sender,
         }
 
     def _build_explanation(self, verdict, detail_verdict, risk_score, structured_evidence, adaptive_factors=None):

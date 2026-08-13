@@ -55,7 +55,7 @@ class EvidenceItem:
         self.direction = direction
         self.source = source
         self.explanation = explanation
-        self.observation = observation or explanation
+        self.observation = observation
         self.impact = impact
         self.reliability = reliability
         self.confidence = confidence

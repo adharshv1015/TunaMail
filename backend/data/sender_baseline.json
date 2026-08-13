@@ -116,9 +116,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 139,
+    "messages_analyzed": 164,
     "first_seen": "2026-08-12T05:05:17.740180",
-    "last_seen": "2026-08-12T12:14:14.819110"
+    "last_seen": "2026-08-13T05:32:13.919737"
   },
   "adharshv1015@gmail.com": {
     "normal_domains": [
@@ -127,9 +127,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 89,
+    "messages_analyzed": 108,
     "first_seen": "2026-08-12T05:05:20.808732",
-    "last_seen": "2026-08-12T12:14:20.027415"
+    "last_seen": "2026-08-13T07:20:41.143929"
   },
   "no-reply@accounts.google.com": {
     "normal_domains": [
@@ -138,9 +138,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 59,
+    "messages_analyzed": 69,
     "first_seen": "2026-08-12T05:06:04.585226",
-    "last_seen": "2026-08-12T12:14:33.204961"
+    "last_seen": "2026-08-13T05:32:27.271041"
   },
   "test@example.com": {
     "normal_domains": [
@@ -149,5 +149,82 @@
     "messages_analyzed": 28,
     "first_seen": "2026-08-12T09:44:49.945931",
     "last_seen": "2026-08-12T10:03:38.341456"
+  },
+  "jobalerts-noreply@linkedin.com": {
+    "normal_domains": [
+      "linkedin.com"
+    ],
+    "normal_authentication": {
+      "spf": "pass"
+    },
+    "messages_analyzed": 3,
+    "first_seen": "2026-08-13T05:38:12.860920",
+    "last_seen": "2026-08-13T07:41:07.061603"
+  },
+  "sbi@communications.sbi.co.in": {
+    "normal_domains": [
+      "communications.sbi.co.in"
+    ],
+    "normal_authentication": {
+      "spf": "pass"
+    },
+    "messages_analyzed": 3,
+    "first_seen": "2026-08-13T05:38:48.748731",
+    "last_seen": "2026-08-13T06:14:59.124854"
+  },
+  "updates-noreply@linkedin.com": {
+    "normal_domains": [
+      "linkedin.com"
+    ],
+    "normal_authentication": {
+      "spf": "pass"
+    },
+    "messages_analyzed": 3,
+    "first_seen": "2026-08-13T05:39:00.365383",
+    "last_seen": "2026-08-13T07:41:55.011624"
+  },
+  "messages-noreply@linkedin.com": {
+    "normal_domains": [
+      "linkedin.com"
+    ],
+    "normal_authentication": {
+      "spf": "pass"
+    },
+    "messages_analyzed": 1,
+    "first_seen": "2026-08-13T05:39:08.171378",
+    "last_seen": "2026-08-13T05:39:08.171396"
+  },
+  "help@acct.epicgames.com": {
+    "normal_domains": [
+      "acct.epicgames.com"
+    ],
+    "normal_authentication": {
+      "spf": "pass"
+    },
+    "messages_analyzed": 1,
+    "first_seen": "2026-08-13T05:39:43.136195",
+    "last_seen": "2026-08-13T05:39:43.136213"
+  },
+  "donotreply@match.indeed.com": {
+    "normal_domains": [
+      "match.indeed.com"
+    ],
+    "normal_authentication": {
+      "spf": "pass"
+    },
+    "messages_analyzed": 1,
+    "first_seen": "2026-08-13T06:20:52.359313",
+    "last_seen": "2026-08-13T06:20:52.359324"
+  },
+  "ansonkalleri@gmail.com": {
+    "normal_domains": [
+      "gmail.com"
+    ],
+    "normal_authentication": {
+      "spf": "pass"
+    },
+    "messages_analyzed": 1,
+    "first_seen": "2026-08-13T06:34:17.042805",
+    "last_seen": "2026-08-13T06:34:17.042816"
   }
 }

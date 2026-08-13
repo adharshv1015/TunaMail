@@ -155,11 +155,28 @@ class AnalyticalReasoningEngine:
 
             # TLS Evidence
             tls = url.get("tls", {})
-            if not tls.get("certificate_valid") and tls.get("status") == "failed":
-                score += 10
-                evidence["network"].append(f"Invalid TLS certificate: {url['domain']}")
-            elif tls.get("certificate_valid"):
+            if tls.get("certificate_valid") is True:
                 score -= 5
+
+            if url.get("tls_policy_violation"):
+                severity = tls.get("severity", "MEDIUM")
+                violation = tls.get("violation", "Unknown Violation")
+                
+                if severity == "HIGH":
+                    score += 20
+                elif severity == "MEDIUM":
+                    score += 10
+                elif severity == "LOW":
+                    score += 5
+                    
+                evidence["network"].append(f"TLS Policy Violation ({violation}) on: {url.get('domain', '')}")
+                
+            elif url.get("http_policy_warning"):
+                score += 5
+                evidence["network"].append(f"Insecure transport (HTTP) on: {url.get('domain', '')}")
+                
+            elif url.get("tls_inspection_unavailable"):
+                evidence["network"].append(f"TLS inspection unavailable for: {url.get('domain', '')}")
 
             # Threat Intel Evidence
             threat = url.get("threat_intelligence", {})
@@ -245,7 +262,14 @@ class AnalyticalReasoningEngine:
         # -----------------------------
         # Consistency-Based Confidence
         # -----------------------------
-        auth_failed = len(evidence["technical"]) > 0
+        # auth_failed must only reflect ACTUAL authentication failures,
+        # not positive trust signals like "Trusted sender with full authentication"
+        # which are also stored in evidence["technical"].
+        _auth_failure_keywords = ("failed", "unavailable", "not pass", "invalid")
+        auth_failed = any(
+            any(kw in item.lower() for kw in _auth_failure_keywords)
+            for item in evidence["technical"]
+        )
         has_network_risk = len(evidence["network"]) > 0
         has_behavioral_risk = len(evidence["behavioral"]) > 0
         has_trust = trust_analysis.get("trust_score", 0) >= 20
@@ -444,7 +468,10 @@ class AnalyticalReasoningEngine:
             "explanation": explanation,
             "evidence": evidence,
             "adaptive_info": ai_analysis.get("adaptive", {}) if ai_analysis else {},
-            "structured_evidence": [e.to_dict() for e in ai_analysis.get("structured_evidence", [])] if ai_analysis else []
+            "structured_evidence": [e.to_dict() for e in ai_analysis.get("structured_evidence", [])] if ai_analysis else [],
+            # Pass trust signal to decision_fusion_engine so it can prevent
+            # legitimate trusted senders from being over-escalated
+            "is_trusted_sender": auth_fully_passed and trust_score >= 40,
         }
 
     def generate_explanation(

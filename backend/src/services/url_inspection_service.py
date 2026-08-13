@@ -42,27 +42,91 @@ def _resolve_dns(hostname: str) -> Dict[str, Any]:
 
 
 def _check_tls(hostname: str, port: int = 443) -> Dict[str, Any]:
-    """Quick TLS certificate check. Returns tls dict for URLAnalyzer schema."""
-    result = {"https": False, "certificate_valid": False, "issuer": None}
-    if not hostname or port != 443:
+    """Quick TLS certificate check with policy flags."""
+    result = {
+        "https": port == 443,
+        "certificate_present": False,
+        "certificate_valid": None,
+        "hostname_match": None,
+        "chain_trusted": None,
+        "expired": False,
+        "self_signed": False,
+        "violation": None,
+        "severity": "LOW" if port != 443 else None,
+        "issuer": None,
+        "error_detail": None
+    }
+    
+    if not hostname:
         return result
+
     try:
         ctx = ssl.create_default_context()
-        with ctx.wrap_socket(
-            socket.create_connection((hostname, port), timeout=5),
-            server_hostname=hostname,
-        ) as ssock:
-            cert = ssock.getpeercert()
-            issuer_tuples = cert.get("issuer", ())
-            issuer_dict = {k: v for pair in issuer_tuples for k, v in [pair[0]]}
-            result["https"] = True
-            result["certificate_valid"] = True
-            result["issuer"] = issuer_dict.get("organizationName") or issuer_dict.get("commonName")
-    except ssl.SSLCertVerificationError:
-        result["https"] = True
+        with socket.create_connection((hostname, port), timeout=5) as sock:
+            with ctx.wrap_socket(sock, server_hostname=hostname) as ssock:
+                cert = ssock.getpeercert()
+                issuer_tuples = cert.get("issuer", ())
+                issuer_dict = {k: v for pair in issuer_tuples for k, v in [pair[0]]}
+                
+                result["certificate_present"] = True
+                result["certificate_valid"] = True
+                result["hostname_match"] = True
+                result["chain_trusted"] = True
+                result["issuer"] = issuer_dict.get("organizationName") or issuer_dict.get("commonName")
+                
+    except ssl.SSLCertVerificationError as e:
+        result["certificate_present"] = True
         result["certificate_valid"] = False
-    except Exception:
-        pass
+        result["chain_trusted"] = False
+        
+        err_msg = str(e).lower()
+        if "hostname mismatch" in err_msg:
+            result["hostname_match"] = False
+            result["chain_trusted"] = True  # It matched the trust store but not the host
+            result["violation"] = "HOSTNAME_MISMATCH"
+            result["severity"] = "HIGH"
+            result["error_detail"] = "Hostname does not match certificate."
+        elif "expired" in err_msg or "not yet valid" in err_msg:
+            result["expired"] = True
+            result["violation"] = "EXPIRED_CERTIFICATE"
+            result["severity"] = "MEDIUM"
+            result["error_detail"] = "Certificate has expired."
+        elif "self signed" in err_msg or "self-signed" in err_msg:
+            result["self_signed"] = True
+            result["violation"] = "SELF_SIGNED_CERTIFICATE"
+            result["severity"] = "MEDIUM"
+            result["error_detail"] = "Certificate is self-signed."
+        elif "unable to get local issuer" in err_msg or "certificate verify failed" in err_msg:
+            result["violation"] = "UNTRUSTED_ISSUER"
+            result["severity"] = "MEDIUM"
+            result["error_detail"] = "Certificate chain is not trusted."
+        else:
+            result["violation"] = "CERTIFICATE_INVALID"
+            result["severity"] = "MEDIUM"
+            result["error_detail"] = "Certificate is invalid."
+
+    except ssl.CertificateError as e:
+        # Fallback for some Python versions for hostname mismatch
+        result["certificate_present"] = True
+        result["certificate_valid"] = False
+        result["chain_trusted"] = True
+        result["hostname_match"] = False
+        result["violation"] = "HOSTNAME_MISMATCH"
+        result["severity"] = "HIGH"
+        result["error_detail"] = "Hostname does not match certificate."
+
+    except ssl.SSLError as e:
+        result["certificate_present"] = False
+        result["violation"] = "TLS_HANDSHAKE_FAILED"
+        result["severity"] = "MEDIUM"
+        result["error_detail"] = "TLS handshake failed."
+        
+    except Exception as e:
+        result["certificate_present"] = False
+        result["violation"] = "TLS_UNAVAILABLE"
+        result["severity"] = "MEDIUM"
+        result["error_detail"] = "TLS connection unavailable."
+        
     return result
 
 class URLInspectionService:

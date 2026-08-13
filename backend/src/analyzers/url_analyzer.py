@@ -187,6 +187,27 @@ class URLAnalyzer:
         inspection_data["brand_impersonation"] = brand_rel in ["IMPERSONATION", "LOOKALIKE"]
         inspection_data["brand_match"] = brand_rel in ["OFFICIAL", "SUBDOMAIN_OF_OFFICIAL"]
 
+        # TLS Policy Evaluation
+        tls_info = inspection_data.get("tls", {})
+        violation = tls_info.get("violation")
+        
+        inspection_data["http_policy_warning"] = tls_info.get("https") is False
+        
+        policy_violations = [
+            "EXPIRED_CERTIFICATE", 
+            "HOSTNAME_MISMATCH", 
+            "SELF_SIGNED_CERTIFICATE", 
+            "UNTRUSTED_ISSUER", 
+            "CERTIFICATE_INVALID"
+        ]
+        inspection_data["tls_policy_violation"] = violation in policy_violations
+        
+        unavailable_issues = [
+            "TLS_HANDSHAKE_FAILED",
+            "TLS_UNAVAILABLE"
+        ]
+        inspection_data["tls_inspection_unavailable"] = violation in unavailable_issues
+
         return inspection_data
 
     def get_email_domain(self, email_str):
