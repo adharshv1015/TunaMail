@@ -4,9 +4,9 @@ import EmptyState from "../common/EmptyState";
 
 function WhoisField({ label, value }) {
   return (
-    <div className="rounded-[10px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-3">
+    <div className="rounded-[10px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-3 min-w-0">
       <div className="text-[10px] font-bold tracking-wider text-[var(--tm-text-secondary)] uppercase">{label}</div>
-      <div className="mt-1 truncate text-[13px] font-medium text-[var(--tm-text)]">{value || "Unknown"}</div>
+      <div className="mt-1 break-words [overflow-wrap:anywhere] text-[13px] font-medium text-[var(--tm-text)]">{value || "Unknown"}</div>
     </div>
   );
 }
@@ -38,9 +38,9 @@ function WhoisCard({ item }) {
       ) : (
         <div className={`mt-4 flex gap-3 rounded-[10px] border p-4 ${isUnavailable ? "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400" : "border-orange-500/20 bg-orange-500/10 text-orange-600 dark:text-orange-400"}`}>
           <div className="text-xl shrink-0 mt-0.5">{isUnavailable ? "ℹ️" : "⚠️"}</div>
-          <div>
+          <div className="min-w-0">
             <div className="text-[12px] font-bold uppercase tracking-wider">{isUnavailable ? "WHOIS lookup unavailable" : "WHOIS Error"}</div>
-            <p className="mt-1 break-all text-[13px] leading-relaxed opacity-90">{isUnavailable ? "Unable to retrieve registration information for this domain." : item.error}</p>
+            <p className="mt-1 break-words [overflow-wrap:anywhere] text-[13px] leading-relaxed opacity-90">{isUnavailable ? "Unable to retrieve registration information for this domain." : item.error}</p>
           </div>
         </div>
       )}
@@ -52,7 +52,7 @@ function WhoisAnalysis({ whois }) {
   const data = whois || [];
 
   return (
-    <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-6 shadow-sm">
+    <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-4 md:p-6 shadow-sm">
       <SectionHeader icon="🌐" title="WHOIS Analysis" subtitle="Domain registration intelligence" />
       
       {data.length === 0 ? (

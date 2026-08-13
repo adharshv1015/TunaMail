@@ -18,7 +18,7 @@ import AdaptiveIntelligence from "./email/AdaptiveIntelligence";
 
 import LoadingSkeleton from "./common/LoadingSkeleton";
 
-function EmailDetail({ messageId }) {
+function EmailDetail({ messageId, onBack, resultSet = [], currentIndex = -1, onNavigate, onMessageAnalyzed }) {
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -38,8 +38,11 @@ function EmailDetail({ messageId }) {
         setError("");
         console.log("Fetching message:", messageId);
         const data = await getMessage(messageId, { signal });
-        console.log("Message detail:", data);
         setMessage(data);
+        // Notify inbox to update this message's badge from UNANALYZED → real verdict
+        if (data && onMessageAnalyzed) {
+          onMessageAnalyzed(messageId, data);
+        }
       } catch (err) {
         if (err.name === 'AbortError') {
             console.log("Fetch aborted for message:", messageId);
@@ -112,7 +115,41 @@ function EmailDetail({ messageId }) {
   const urlPageIntelligence = analysis.url_page_intelligence || {};
 
   return (
-    <div className="min-h-full w-full max-w-[1200px] mx-auto space-y-6 p-8">
+    <div className="min-h-full w-full max-w-[1200px] mx-auto space-y-4 md:space-y-6 p-4 md:p-6 lg:p-8">
+      {onBack && (
+        <div className="lg:hidden sticky top-0 z-10 -mx-4 md:-mx-6 px-4 md:px-6 py-3 bg-[var(--tm-bg)]/95 backdrop-blur border-b border-[var(--tm-border)] mb-4 md:mb-6">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 text-sm font-medium text-[var(--tm-accent)]"
+          >
+            <span aria-hidden="true">←</span>
+            Back to Inbox
+          </button>
+        </div>
+      )}
+
+      {/* Scoped Prev / Next within current result set */}
+      {resultSet.length > 1 && currentIndex !== -1 && (
+        <div className="flex items-center justify-between rounded-xl border border-[var(--tm-border)] bg-[var(--tm-surface)] px-4 py-2.5">
+          <button
+            onClick={() => onNavigate?.(currentIndex - 1)}
+            disabled={currentIndex <= 0}
+            className="flex items-center gap-1.5 text-xs font-semibold text-[var(--tm-text-secondary)] hover:text-[var(--tm-accent)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            ← Previous
+          </button>
+          <span className="text-[11px] text-[var(--tm-text-muted)]">
+            {currentIndex + 1} / {resultSet.length}
+          </span>
+          <button
+            onClick={() => onNavigate?.(currentIndex + 1)}
+            disabled={currentIndex >= resultSet.length - 1}
+            className="flex items-center gap-1.5 text-xs font-semibold text-[var(--tm-text-secondary)] hover:text-[var(--tm-accent)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            Next →
+          </button>
+        </div>
+      )}
       <EmailHeaders message={message} />
       <ThreatOverview decision={decision} />
       <AuthenticationCard authentication={authentication} />

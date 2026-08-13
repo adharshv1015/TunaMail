@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { logout, checkSessionStatus } from "./api/api";
@@ -8,8 +8,12 @@ import EmailDetail from "./components/EmailDetail";
 
 function App() {
   const [selectedMessageId, setSelectedMessageId] = useState(null);
+  const [inboxResultSet, setInboxResultSet] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  // Callback ref: Inbox registers its badge-update fn here so EmailDetail can call it
+  const inboxAnalyzedRef = useRef(null);
+
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem("tunamail-theme");
     if (saved) return saved;
@@ -43,9 +47,16 @@ function App() {
     setTheme(prev => prev === "dark" ? "light" : "dark");
   };
 
-  const handleSelectMessage = (messageId) => {
+  const handleSelectMessage = (messageId, resultSet = []) => {
     setSelectedMessageId(messageId);
+    if (resultSet.length > 0) setInboxResultSet(resultSet);
   };
+
+  // EmailDetail notifies App when analysis is done;
+  // App forwards it to Inbox's badge-update function
+  const handleMessageAnalyzed = useCallback((messageId, data) => {
+    inboxAnalyzedRef.current?.(messageId, data);
+  }, []);
 
   const handleAuthError = () => {
     if (isConnected) {
@@ -78,12 +89,12 @@ function App() {
   return (
     <div className="flex h-screen w-full flex-col bg-[var(--tm-bg)] text-[var(--tm-text)] overflow-hidden font-sans transition-colors duration-200">
       <Topbar
-          isConnected={isConnected}
-          theme={theme}
-          toggleTheme={toggleTheme}
-          handleLogout={handleLogout}
-        />
-        <ToastContainer theme={theme === "dark" ? "dark" : "light"} position="bottom-right" />
+        isConnected={isConnected}
+        theme={theme}
+        toggleTheme={toggleTheme}
+        handleLogout={handleLogout}
+      />
+      <ToastContainer theme={theme === "dark" ? "dark" : "light"} position="bottom-right" />
 
       <main className="flex flex-1 overflow-hidden relative">
         {/* LEFT SIDEBAR (Inbox) */}
@@ -93,12 +104,24 @@ function App() {
             onSelectMessage={handleSelectMessage}
             onAuthError={handleAuthError}
             isConnected={isConnected}
+            // Inbox registers its own badge-update fn here
+            onRegisterAnalyzedCallback={(fn) => { inboxAnalyzedRef.current = fn; }}
           />
         </div>
 
         {/* RIGHT ANALYSIS AREA (EmailDetail) */}
         <div className="flex-1 overflow-y-auto custom-scrollbar relative bg-[var(--tm-bg)] transition-colors duration-200">
-          <EmailDetail messageId={selectedMessageId} />
+          <EmailDetail
+            messageId={selectedMessageId}
+            onBack={() => setSelectedMessageId(null)}
+            resultSet={inboxResultSet}
+            currentIndex={inboxResultSet.findIndex(m => m.id === selectedMessageId)}
+            onNavigate={(idx) => {
+              const msg = inboxResultSet[idx];
+              if (msg) setSelectedMessageId(msg.id);
+            }}
+            onMessageAnalyzed={handleMessageAnalyzed}
+          />
         </div>
       </main>
     </div>

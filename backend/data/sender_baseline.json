@@ -168,9 +168,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 4,
+    "messages_analyzed": 5,
     "first_seen": "2026-08-13T05:38:48.748731",
-    "last_seen": "2026-08-13T09:00:16.580899"
+    "last_seen": "2026-08-13T11:45:46.019108"
   },
   "updates-noreply@linkedin.com": {
     "normal_domains": [
@@ -226,5 +226,16 @@
     "messages_analyzed": 1,
     "first_seen": "2026-08-13T06:34:17.042805",
     "last_seen": "2026-08-13T06:34:17.042816"
+  },
+  "no-reply@info.bookmyshow.com": {
+    "normal_domains": [
+      "info.bookmyshow.com"
+    ],
+    "normal_authentication": {
+      "spf": "pass"
+    },
+    "messages_analyzed": 1,
+    "first_seen": "2026-08-13T12:13:22.921173",
+    "last_seen": "2026-08-13T12:13:22.921183"
   }
 }

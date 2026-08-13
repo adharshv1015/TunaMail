@@ -14,7 +14,7 @@ export default function AdaptiveIntelligence({ adaptive }) {
   const hasShift = anomalies.length > 0;
 
   return (
-    <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-6 shadow-sm mt-6">
+    <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-4 md:p-6 shadow-sm mt-6">
       <SectionHeader icon="🧠" title="Adaptive Intelligence" subtitle="Local historical correlation & behavioral learning" />
       
       <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -55,7 +55,7 @@ export default function AdaptiveIntelligence({ adaptive }) {
           </div>
           <ul className="list-disc pl-5 text-sm space-y-1">
             {anomalies.map((anom, i) => (
-              <li key={i}>{anom.explanation}</li>
+              <li key={i} className="break-words [overflow-wrap:anywhere]">{anom.explanation}</li>
             ))}
           </ul>
         </div>
@@ -96,7 +96,7 @@ export default function AdaptiveIntelligence({ adaptive }) {
               <span>{senderBaseline.last_seen ? new Date(senderBaseline.last_seen).toLocaleDateString() : 'N/A'}</span>
               
               <span className="font-semibold">Normal Domains:</span>
-              <span className="truncate">{senderBaseline.normal_domains?.join(', ') || 'N/A'}</span>
+              <span className="break-all">{senderBaseline.normal_domains?.join(', ') || 'N/A'}</span>
             </div>
           </div>
           

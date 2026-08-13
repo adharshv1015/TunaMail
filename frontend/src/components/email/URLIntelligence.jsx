@@ -13,7 +13,7 @@ function EvidenceRow({ type, text }) {
   return (
     <div className="flex items-start text-sm py-1 border-b border-[var(--tm-border)]/50 last:border-0">
       <StatusIcon type={type} />
-      <span className="text-[var(--tm-text-secondary)]">{text}</span>
+      <span className="text-[var(--tm-text-secondary)] break-words [overflow-wrap:anywhere] min-w-0">{text}</span>
     </div>
   );
 }
@@ -152,7 +152,7 @@ function PageAnalysisPanel({ pageAnalysis }) {
                 <span className="font-bold uppercase tracking-wide text-[10px]">
                   {INDICATOR_LABELS[ind.type] || ind.type}
                 </span>
-                <span className="leading-relaxed opacity-90">{ind.detail}</span>
+                <span className="leading-relaxed opacity-90 break-words [overflow-wrap:anywhere]">{ind.detail}</span>
               </div>
             </div>
           ))}
@@ -176,61 +176,98 @@ function UrlCard({ item }) {
   const pageAnalysis = item.page_analysis;
   const pageHasRisk = pageAnalysis?.available && (pageAnalysis.page_risk_score > 0 || (pageAnalysis.indicators || []).length > 0);
   
-  const hasRisk = item.ip_based || item.shortener || item.obfuscated || item.punycode || item.suspicious_port || (item.keywords && item.keywords.length > 0) || item.brand_impersonation || (item.threat_intelligence && item.threat_intelligence.detections > 0) || pageHasRisk;
+  const hasRisk = item.ip_based || item.shortener || item.obfuscated || item.punycode || item.suspicious_port || (item.keywords && item.keywords.length > 0) || item.brand_impersonation || (item.threat_intelligence && item.threat_intelligence.detections > 0) || pageHasRisk || item.tls_policy_violation;
+
+  const getRiskFlags = () => {
+    let flags = [];
+    if (item.ip_based) flags.push("IP-Based");
+    if (item.shortener) flags.push("Shortener");
+    if (item.obfuscated) flags.push("Obfuscated");
+    if (item.punycode) flags.push("Punycode");
+    if (item.brand_impersonation) flags.push("Impersonation");
+    if (item.tls_policy_violation) flags.push("TLS Violation");
+    if (pageHasRisk) flags.push("Page Risk");
+    return flags;
+  };
+  
+  const flags = getRiskFlags();
 
   return (
-    <div className={`flex flex-col gap-3 rounded-[12px] border bg-[var(--tm-surface-secondary)] p-4 ${hasRisk ? "border-orange-500/30" : "border-[var(--tm-border)]"}`}>
-      <div className="flex flex-col">
-        <div className="text-[11px] font-bold text-[var(--tm-text-secondary)] uppercase tracking-wider">URL</div>
-        <div className="mt-1 break-all font-mono text-[13px] text-[var(--tm-text)]" style={{ wordBreak: "break-word" }}>{item.url}</div>
-      </div>
+    <div className={`flex flex-col rounded-[8px] border bg-[var(--tm-surface-secondary)] overflow-hidden transition-all duration-200 ${hasRisk ? "border-orange-500/30" : "border-[var(--tm-border)]"}`}>
       
-      <div className="flex flex-col md:flex-row gap-4 mt-2">
-        <div className="flex-1">
-          <div className="text-[11px] font-bold text-[var(--tm-text-secondary)] uppercase tracking-wider">Domain Information</div>
-          <div className="mt-1 font-mono text-[13px] text-[var(--tm-accent)]">{item.domain || "Unknown"}</div>
-          {item.registered_domain && item.registered_domain !== item.domain && (
-            <div className="mt-1 text-[11px] text-[var(--tm-text-muted)] font-mono opacity-80">Root: {item.registered_domain}</div>
-          )}
-        </div>
-        
-        <div className="flex-1">
-          <div className="text-[11px] font-bold text-[var(--tm-text-secondary)] uppercase tracking-wider mb-1.5">Contextual Indicators</div>
-          <div className="flex flex-wrap gap-2">
-            {!hasRisk && <span className="inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">NO FLAGS</span>}
-            
-            <IndicatorBadge label="IP-Based" isSuspicious={item.ip_based} type="warning" />
-            <IndicatorBadge label="Shortener" isSuspicious={item.shortener} type="warning" />
-            <IndicatorBadge label="Obfuscated" isSuspicious={item.obfuscated} type="error" />
-            <IndicatorBadge label="Punycode" isSuspicious={item.punycode} type="error" />
-            <IndicatorBadge label="Brand Impersonation" isSuspicious={item.brand_impersonation} type="error" />
-            <IndicatorBadge label="Suspicious Port" isSuspicious={item.suspicious_port} type="warning" />
-            
-            {item.keywords && item.keywords.length > 0 && (
-              <IndicatorBadge label={`KEYWORDS: ${item.keywords.join(", ")}`} isSuspicious={true} type="warning" />
-            )}
-            
-            {item.email_alignment === "misaligned" && (
-              <IndicatorBadge label="Sender Misalignment" isSuspicious={true} type="warning" />
-            )}
+      {/* Compact Header (Always Visible) */}
+      <button 
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center justify-between w-full p-3 text-left hover:bg-[var(--tm-surface)] transition-colors focus:outline-none"
+      >
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className={`shrink-0 w-2 h-2 rounded-full ${hasRisk ? "bg-orange-500" : "bg-emerald-500"}`} />
+          <div className="font-mono text-[13px] text-[var(--tm-accent)] font-semibold truncate max-w-[200px]">
+            {item.domain || "Unknown"}
+          </div>
+          <div className="text-[12px] text-[var(--tm-text-muted)] truncate min-w-0 flex-1 opacity-70">
+            {item.url}
           </div>
         </div>
-      </div>
-
-      {/* Page Analysis Panel — always shown when available */}
-      {pageAnalysis && <PageAnalysisPanel pageAnalysis={pageAnalysis} />}
-      
-      <div className="mt-2 pt-3 border-t border-[var(--tm-border)]/50">
-        <button 
-          onClick={() => setExpanded(!expanded)}
-          className="text-[12px] font-medium text-[var(--tm-accent)] hover:underline flex items-center gap-1 focus:outline-none"
-        >
-          {expanded ? "Hide URL Evidence" : "View URL Evidence"}
-          <span className="text-[10px]">{expanded ? "▲" : "▼"}</span>
-        </button>
         
-        {expanded && (
-          <div className="mt-4 flex flex-col gap-1 bg-[var(--tm-surface)] p-3 rounded-lg border border-[var(--tm-border)]/50">
+        <div className="flex items-center gap-3 shrink-0 ml-4">
+          {flags.length > 0 ? (
+            <span className="text-[10px] font-bold uppercase tracking-wider text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
+              {flags.length} Flag{flags.length !== 1 ? "s" : ""}
+            </span>
+          ) : (
+             <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500 opacity-80">
+              Clean
+            </span>
+          )}
+          <span className="text-[10px] text-[var(--tm-text-muted)] w-4 text-center">
+            {expanded ? "▲" : "▼"}
+          </span>
+        </div>
+      </button>
+
+      {/* Expanded Content */}
+      {expanded && (
+        <div className="p-4 border-t border-[var(--tm-border)]/50 bg-[var(--tm-surface-secondary)]/50 flex flex-col gap-4">
+          <div className="flex flex-col">
+            <div className="text-[11px] font-bold text-[var(--tm-text-secondary)] uppercase tracking-wider mb-1">Full URL</div>
+            <div className="break-all font-mono text-[12px] text-[var(--tm-text)] opacity-90 leading-relaxed bg-[var(--tm-surface)] p-2 rounded border border-[var(--tm-border)]/50" style={{ wordBreak: "break-word" }}>
+              {item.url}
+            </div>
+          </div>
+          
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="text-[11px] font-bold text-[var(--tm-text-secondary)] uppercase tracking-wider mb-1.5">Domain Context</div>
+              {item.registered_domain && item.registered_domain !== item.domain && (
+                <div className="text-[11px] text-[var(--tm-text-muted)] font-mono opacity-80">Root: {item.registered_domain}</div>
+              )}
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {!hasRisk && <span className="inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">NO FLAGS</span>}
+                <IndicatorBadge label="IP-Based" isSuspicious={item.ip_based} type="warning" />
+                <IndicatorBadge label="Shortener" isSuspicious={item.shortener} type="warning" />
+                <IndicatorBadge label="Obfuscated" isSuspicious={item.obfuscated} type="error" />
+                <IndicatorBadge label="Punycode" isSuspicious={item.punycode} type="error" />
+                <IndicatorBadge label="Brand Impersonation" isSuspicious={item.brand_impersonation} type="error" />
+                <IndicatorBadge label="Suspicious Port" isSuspicious={item.suspicious_port} type="warning" />
+                <IndicatorBadge label="TLS Violation" isSuspicious={item.tls_policy_violation} type="error" />
+                <IndicatorBadge label="Insecure Transport" isSuspicious={item.http_policy_warning} type="warning" />
+                <IndicatorBadge label="TLS Inspection Failed" isSuspicious={item.tls_inspection_unavailable} type="warning" />
+                {item.keywords && item.keywords.length > 0 && (
+                  <IndicatorBadge label={`KEYWORDS: ${item.keywords.join(", ")}`} isSuspicious={true} type="warning" />
+                )}
+                {item.email_alignment === "misaligned" && (
+                  <IndicatorBadge label="Sender Misalignment" isSuspicious={true} type="warning" />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Page Analysis Panel */}
+          {pageAnalysis && <PageAnalysisPanel pageAnalysis={pageAnalysis} />}
+          
+          {/* Technical Evidence */}
+          <div className="mt-2 flex flex-col gap-1 bg-[var(--tm-surface)] p-3 rounded-lg border border-[var(--tm-border)]/50">
             {/* DNS Evidence */}
             {item.dns && item.dns.resolved ? (
                <EvidenceRow type="success" text={`DNS resolved successfully (${[...(item.dns.a || []), ...(item.dns.aaaa || [])].length} records)`} />
@@ -245,8 +282,10 @@ function UrlCard({ item }) {
               item.tls.certificate_valid ? (
                  <EvidenceRow type="success" text={`TLS certificate valid (Issuer: ${item.tls.issuer || "Unknown"})`} />
               ) : (
-                 <EvidenceRow type="error" text="TLS certificate invalid or expired" />
+                 <EvidenceRow type="error" text={item.tls.error_detail ? `TLS policy violation: ${item.tls.error_detail} (${item.tls.violation})` : "TLS certificate invalid or expired"} />
               )
+            ) : item.tls && item.tls.certificate_present === false && item.tls.violation ? (
+               <EvidenceRow type="warning" text={`TLS inspection issue: ${item.tls.error_detail} (${item.tls.violation})`} />
             ) : (
                <EvidenceRow type="warning" text="Connection does not use HTTPS" />
             )}
@@ -285,8 +324,8 @@ function UrlCard({ item }) {
                <EvidenceRow type="error" text="URL attempts to impersonate a trusted brand" />
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,21 @@
 {
   "camp_recent": {
     "last_seen": 1786621118.255411
+  },
+  "c_1786601746": {
+    "normalized_subject": "make your sbi debit card, tap & pay ready",
+    "sender_domains": [
+      "communications.sbi.co.in"
+    ],
+    "url_domains": [],
+    "messages_seen": 1
+  },
+  "c_1786603403": {
+    "normalized_subject": "suriya's back with a story to remember \ud83d\udc95",
+    "sender_domains": [
+      "info.bookmyshow.com"
+    ],
+    "url_domains": [],
+    "messages_seen": 1
   }
 }

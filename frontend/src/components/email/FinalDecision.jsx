@@ -45,7 +45,7 @@ function FinalDecision({ decision }) {
   const icon = getIcon();
 
   return (
-    <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-6 shadow-sm">
+    <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-4 md:p-6 shadow-sm">
       <SectionHeader icon="⚖️" title="Final Security Decision" subtitle="Overall assessment based on accumulated intelligence" />
       
       <div className={`mt-5 flex flex-col md:flex-row items-center justify-between gap-6 rounded-[14px] border p-6 md:p-8 ${style}`}>

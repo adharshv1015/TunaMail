@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from "../../services/api";
 
 const SEVERITY_COLORS = {
   CRITICAL: 'bg-red-500/10 text-red-600 border-red-500/20 dark:text-red-400',
@@ -18,7 +19,7 @@ const EvidenceCard = ({ item }) => {
         <span className="text-xs opacity-75">Confidence: {item.confidence}%</span>
       </div>
       <div className="mb-1"><span className="font-semibold">Source:</span> {item.source}</div>
-      {item.observation && <div className="mb-1"><span className="font-semibold">Observation:</span> {item.observation}</div>}
+      {item.observation && item.observation !== item.explanation && <div className="mb-1"><span className="font-semibold">Observation:</span> {item.observation}</div>}
       {item.explanation && <div><span className="font-semibold">Explanation:</span> {item.explanation}</div>}
     </div>
   );
@@ -35,14 +36,15 @@ const AnalystExplanation = ({ messageId, decision, sender }) => {
 
   useEffect(() => {
     // Fetch previous feedback if any
-    fetch(`/api/gmail/message/${messageId}/feedback`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data && data.analyst_label) {
-          setFeedbackState(data);
+    api.get(`/gmail/message/${messageId}/feedback`)
+      .then(r => {
+        if (r.data && r.data.analyst_label) {
+          setFeedbackState(r.data);
         }
       })
-      .catch(e => console.error(e));
+      .catch(e => {
+        // usually 404 if no feedback exists yet
+      });
   }, [messageId]);
 
   const handleFeedbackClick = (label) => {
@@ -52,18 +54,14 @@ const AnalystExplanation = ({ messageId, decision, sender }) => {
 
   const submitFeedback = async () => {
     try {
-      const res = await fetch(`/api/gmail/message/${messageId}/feedback`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          label: pendingLabel,
-          reason,
-          sender,
-          previous_verdict: decision.verdict,
-          previous_risk_score: decision.risk_score
-        })
+      const res = await api.post(`/gmail/message/${messageId}/feedback`, {
+        label: pendingLabel,
+        reason,
+        sender,
+        previous_verdict: decision.verdict,
+        previous_risk_score: decision.risk_score
       });
-      if (res.ok) {
+      if (res.status === 200) {
         setFeedbackState({ analyst_label: pendingLabel });
         setModalOpen(false);
       }

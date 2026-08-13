@@ -118,7 +118,7 @@ function IOCTable({ iocs }) {
                     colorClass={IOC_TYPE_COLORS[ioc.type] || "bg-slate-500/10 text-slate-400"}
                   />
                 </td>
-                <td className="px-3 py-2 font-mono text-[11px] text-[var(--tm-text)] max-w-[200px] truncate" title={ioc.normalized || ioc.value}>
+                <td className="px-3 py-2 font-mono text-[11px] text-[var(--tm-text)] break-all min-w-0" title={ioc.normalized || ioc.value}>
                   {ioc.normalized || ioc.value}
                 </td>
                 <td className="px-3 py-2 text-[var(--tm-text-secondary)]">{ioc.source}</td>
@@ -150,12 +150,12 @@ function RelatedMessages({ related }) {
                 label={rel.relationship_type?.replace(/_/g, " ") || "RELATED"}
                 colorClass="bg-indigo-500/10 text-indigo-400"
               />
-              <span className="font-mono text-[10px] text-[var(--tm-text-secondary)] truncate">{rel.message_id}</span>
+              <span className="font-mono text-[10px] text-[var(--tm-text-secondary)] break-all">{rel.message_id}</span>
             </div>
             {rel.shared_indicators?.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {rel.shared_indicators.slice(0, 3).map((ind, j) => (
-                  <span key={j} className="font-mono text-[10px] px-2 py-0.5 rounded bg-[var(--tm-border)] text-[var(--tm-text-secondary)]">
+                  <span key={j} className="font-mono text-[10px] px-2 py-0.5 rounded bg-[var(--tm-border)] text-[var(--tm-text-secondary)] break-all">
                     {ind.type}: {ind.value}
                   </span>
                 ))}
@@ -351,7 +351,7 @@ function IntelligenceCard({ intelligence, messageId, automatedVerdict }) {
   ];
 
   return (
-    <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-6 shadow-sm">
+    <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-4 md:p-6 shadow-sm">
       <SectionHeader
         icon="🛰️"
         title="Stage 5 Intelligence"

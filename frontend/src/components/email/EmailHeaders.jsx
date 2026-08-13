@@ -15,10 +15,10 @@ function EmailHeaders({ message }) {
   return (
     <section className="space-y-6">
       {/* Primary Header Card */}
-      <div className="rounded-2xl border border-[var(--tm-border)] bg-[var(--tm-surface)] p-6 shadow-sm">
+      <div className="rounded-2xl border border-[var(--tm-border)] bg-[var(--tm-surface)] p-4 md:p-6 shadow-sm">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex-1 space-y-4">
-            <h1 className="text-2xl font-bold text-[var(--tm-text)] tracking-tight leading-tight">
+          <div className="flex-1 min-w-0 space-y-4">
+            <h1 className="text-2xl font-bold text-[var(--tm-text)] tracking-tight leading-tight break-words [overflow-wrap:anywhere]">
               {message.subject || "(No subject)"}
             </h1>
             

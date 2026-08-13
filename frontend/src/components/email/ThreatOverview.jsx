@@ -36,7 +36,7 @@ function ThreatOverview({ decision }) {
   const icon = getRiskIcon();
 
   return (
-    <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-6 md:p-8 shadow-[0_8px_30px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.25)]">
+    <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-4 md:p-8 shadow-[0_8px_30px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.25)]">
       <div className="mb-8 flex items-start justify-between">
         <div>
           <h2 className="text-xl font-bold text-[var(--tm-text)]">Threat Overview</h2>
@@ -89,9 +89,9 @@ function ThreatOverview({ decision }) {
           {/* RECOMMENDATION */}
           <div className="flex-1 rounded-[14px] border border-[var(--tm-border)] bg-[var(--tm-surface-secondary)] p-5 flex gap-4">
             <div className="text-2xl pt-0.5">{icon}</div>
-            <div>
+            <div className="min-w-0">
               <h3 className="text-[13px] font-bold text-[var(--tm-text)]">Security Recommendation</h3>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--tm-text-secondary)]">{recommendation}</p>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--tm-text-secondary)] break-words [overflow-wrap:anywhere]">{recommendation}</p>
             </div>
           </div>
         </div>

@@ -40,7 +40,7 @@ function EmailList({ messages, loading, selectedMessageId, onSelectMessage, isCo
           key={msg.id}
           message={msg}
           isActive={selectedMessageId === msg.id}
-          onClick={() => onSelectMessage(msg.id)}
+          onClick={() => onSelectMessage(msg.id, messages)}
         />
       ))}
     </div>

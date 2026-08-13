@@ -12,7 +12,7 @@ function AuthItem({ name, value }) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-[14px] border border-[var(--tm-border)] bg-[var(--tm-surface-secondary)] p-5">
+    <div className="flex flex-col items-center justify-center gap-2 rounded-[14px] border border-[var(--tm-border)] bg-[var(--tm-surface-secondary)] p-5 min-w-0">
       <span className="text-[12px] font-bold text-[var(--tm-text-secondary)] uppercase tracking-widest">{name}</span>
       <div className={`flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wider ${getStatusColor()}`}>
         {unknown ? "— UNKNOWN" : passed ? "✓ PASS" : "✕ FAIL"}
@@ -25,7 +25,7 @@ function AuthenticationCard({ authentication }) {
   const auth = authentication || {};
 
   return (
-    <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-6 shadow-sm">
+    <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-4 md:p-6 shadow-sm">
       <SectionHeader icon="🛡️" title="Authentication" subtitle="Email sender authentication results" />
       <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
         <AuthItem name="SPF" value={auth.spf} />

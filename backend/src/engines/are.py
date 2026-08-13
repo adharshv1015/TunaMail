@@ -1,4 +1,5 @@
 # pyrefly: ignore [missing-import]
+
 from src.config.scoring import SCORING
 
 
@@ -7,15 +8,18 @@ class AnalyticalReasoningEngine:
     Evidence-first Analytical Reasoning Engine.
 
     Design principles:
-    - Collect ALL available evidence before calculating the final verdict.
+    - Collect all available evidence before calculating the final verdict.
     - Risk score and confidence remain separate.
     - Historical evidence never overrides current evidence.
     - Authentication failure is distinct from authentication unavailability.
     - Structured evidence is preferred over string parsing.
     - Local AI contributes evidence but does not independently control the verdict.
+    - Strong deterministic malicious evidence takes precedence over trust history.
+    - Authentication success is a positive signal, not proof of legitimacy.
+    - Limited context reduces confidence rather than automatically declaring safety.
     """
 
-    TRUSTED_DOMAINS = [
+    TRUSTED_DOMAINS = {
         "google.com",
         "googleapis.com",
         "gstatic.com",
@@ -30,7 +34,7 @@ class AnalyticalReasoningEngine:
         "github.com",
         "linkedin.com",
         "amazon.com",
-    ]
+    }
 
     CRITICAL_NEGATIVE_TYPES = {
         "CREDENTIAL_HARVESTING",
@@ -42,6 +46,7 @@ class AnalyticalReasoningEngine:
         "SCRIPT_ATTACHMENT",
         "MACRO_ATTACHMENT",
         "KNOWN_MALICIOUS_URL",
+        "PRIVATE_IP_DESTINATION",
     }
 
     STRONG_NEGATIVE_TYPES = {
@@ -60,6 +65,16 @@ class AnalyticalReasoningEngine:
         "URL_BEHAVIOR_DRIFT",
         "CAMPAIGN_ANOMALY",
         "TRUST_HISTORY_CONFLICT",
+        "CREDENTIAL_FORM",
+    }
+
+    POSITIVE_TYPES = {
+        "AUTHENTICATION_PASS",
+        "VALID_HISTORICAL_EVIDENCE",
+        "TRUSTED_SENDER",
+        "ALIGNED_DOMAIN",
+        "VALID_TLS",
+        "SAFE_URL",
     }
 
     def __init__(self):
@@ -69,20 +84,41 @@ class AnalyticalReasoningEngine:
     # DOMAIN HELPERS
     # =========================================================
 
+    @staticmethod
+    def _clean_domain(domain):
+        domain = str(domain or "").strip().lower()
+
+        if "://" in domain:
+            domain = domain.split("://", 1)[1]
+
+        domain = domain.split("/", 1)[0]
+        domain = domain.split("?", 1)[0]
+        domain = domain.split("#", 1)[0]
+        domain = domain.split(":", 1)[0]
+
+        return domain.strip(".")
+
     def _is_trusted_domain(self, domain):
-        domain = (domain or "").lower().strip(".")
+        domain = self._clean_domain(domain)
 
         if not domain:
             return False
 
         for trusted in self.TRUSTED_DOMAINS:
-            if domain == trusted or domain.endswith("." + trusted):
+            if (
+                domain == trusted
+                or domain.endswith("." + trusted)
+            ):
                 return True
 
         return False
 
-    def _is_trusted_url_domain(self, url_analysis, url_item):
+    def _is_trusted_url_domain(self, url_item):
+        if not isinstance(url_item, dict):
+            return False
+
         domain = url_item.get("domain", "")
+
         return self._is_trusted_domain(domain)
 
     # =========================================================
@@ -92,13 +128,19 @@ class AnalyticalReasoningEngine:
     @staticmethod
     def _safe_number(value, default=0):
         try:
-            return float(value)
+            number = float(value)
+
+            if number != number:
+                return float(default)
+
+            return number
+
         except (TypeError, ValueError):
             return float(default)
 
     @staticmethod
     def _normalize_direction(value):
-        value = str(value or "NEUTRAL").upper()
+        value = str(value or "NEUTRAL").upper().strip()
 
         if value not in {
             "POSITIVE",
@@ -111,7 +153,7 @@ class AnalyticalReasoningEngine:
 
     @staticmethod
     def _normalize_severity(value):
-        value = str(value or "INFO").upper()
+        value = str(value or "INFO").upper().strip()
 
         if value not in {
             "INFO",
@@ -136,11 +178,26 @@ class AnalyticalReasoningEngine:
 
     def _structured_evidence(self, item):
         """
-        Normalize both dictionaries and existing object-based evidence.
+        Normalize dictionaries and object-based evidence
+        into a consistent internal structure.
         """
+
         if isinstance(item, dict):
+
+            confidence = self._safe_number(
+                item.get("confidence", 0),
+                0,
+            )
+
+            confidence = max(
+                0,
+                min(1, confidence),
+            )
+
             return {
-                "type": self._normalize_type(item.get("type")),
+                "type": self._normalize_type(
+                    item.get("type")
+                ),
                 "severity": self._normalize_severity(
                     item.get("severity")
                 ),
@@ -148,37 +205,75 @@ class AnalyticalReasoningEngine:
                     item.get("direction")
                 ),
                 "source": str(
-                    item.get("source", "UNKNOWN")
+                    item.get(
+                        "source",
+                        "UNKNOWN",
+                    )
+                    or "UNKNOWN"
                 ),
                 "explanation": str(
-                    item.get("explanation", "")
+                    item.get(
+                        "explanation",
+                        "",
+                    )
+                    or ""
                 ),
-                "confidence": self._safe_number(
-                    item.get("confidence", 0),
-                    0,
-                ),
+                "confidence": confidence,
             }
+
+        confidence = self._safe_number(
+            getattr(
+                item,
+                "confidence",
+                0,
+            ),
+            0,
+        )
+
+        confidence = max(
+            0,
+            min(1, confidence),
+        )
 
         return {
             "type": self._normalize_type(
-                getattr(item, "type", None)
+                getattr(
+                    item,
+                    "type",
+                    None,
+                )
             ),
             "severity": self._normalize_severity(
-                getattr(item, "severity", None)
+                getattr(
+                    item,
+                    "severity",
+                    None,
+                )
             ),
             "direction": self._normalize_direction(
-                getattr(item, "direction", None)
+                getattr(
+                    item,
+                    "direction",
+                    None,
+                )
             ),
             "source": str(
-                getattr(item, "source", "UNKNOWN")
+                getattr(
+                    item,
+                    "source",
+                    "UNKNOWN",
+                )
+                or "UNKNOWN"
             ),
             "explanation": str(
-                getattr(item, "explanation", "")
+                getattr(
+                    item,
+                    "explanation",
+                    "",
+                )
+                or ""
             ),
-            "confidence": self._safe_number(
-                getattr(item, "confidence", 0),
-                0,
-            ),
+            "confidence": confidence,
         }
 
     def _collect_structured_items(
@@ -188,11 +283,18 @@ class AnalyticalReasoningEngine:
         default_category="behavioral",
     ):
         for item in items or []:
-            normalized = self._structured_evidence(item)
 
-            target[default_category].append(
+            normalized = self._structured_evidence(
+                item
+            )
+
+            explanation = (
                 normalized["explanation"]
                 or normalized["type"]
+            )
+
+            target[default_category].append(
+                explanation
             )
 
     # =========================================================
@@ -209,22 +311,35 @@ class AnalyticalReasoningEngine:
                 "analysis_status",
                 "AVAILABLE",
             )
+            or "AVAILABLE"
         ).upper()
 
         if status == "UNAVAILABLE":
             return "UNAVAILABLE"
 
         spf = str(
-            authentication.get("spf", "")
-        ).lower()
+            authentication.get(
+                "spf",
+                "",
+            )
+            or ""
+        ).lower().strip()
 
         dkim = str(
-            authentication.get("dkim", "")
-        ).lower()
+            authentication.get(
+                "dkim",
+                "",
+            )
+            or ""
+        ).lower().strip()
 
         dmarc = str(
-            authentication.get("dmarc", "")
-        ).lower()
+            authentication.get(
+                "dmarc",
+                "",
+            )
+            or ""
+        ).lower().strip()
 
         if (
             spf == "pass"
@@ -241,16 +356,28 @@ class AnalyticalReasoningEngine:
             return "FAILED"
 
         if (
-            spf in {"", "unknown", "none"}
-            and dkim in {"", "unknown", "none"}
-            and dmarc in {"", "unknown", "none"}
+            spf in {
+                "",
+                "unknown",
+                "none",
+            }
+            and dkim in {
+                "",
+                "unknown",
+                "none",
+            }
+            and dmarc in {
+                "",
+                "unknown",
+                "none",
+            }
         ):
             return "UNAVAILABLE"
 
         return "PARTIAL"
 
     # =========================================================
-    # CURRENT EVIDENCE ANALYSIS
+    # EVIDENCE STATE HELPERS
     # =========================================================
 
     def _has_current_negative_evidence(
@@ -258,12 +385,24 @@ class AnalyticalReasoningEngine:
         structured_items,
     ):
         for item in structured_items:
+
+            if not isinstance(item, dict):
+                continue
+
             if (
-                item["direction"] == "NEGATIVE"
-                and item["type"]
-                in (
-                    self.CRITICAL_NEGATIVE_TYPES
-                    | self.STRONG_NEGATIVE_TYPES
+                item.get("direction")
+                == "NEGATIVE"
+                and (
+                    item.get("type")
+                    in (
+                        self.CRITICAL_NEGATIVE_TYPES
+                        | self.STRONG_NEGATIVE_TYPES
+                    )
+                    or item.get("severity")
+                    in {
+                        "HIGH",
+                        "CRITICAL",
+                    }
                 )
             ):
                 return True
@@ -275,11 +414,17 @@ class AnalyticalReasoningEngine:
         structured_items,
     ):
         for item in structured_items:
+
+            if not isinstance(item, dict):
+                continue
+
             if (
-                item["direction"] == "NEGATIVE"
+                item.get("direction")
+                == "NEGATIVE"
                 and (
-                    item["severity"] == "CRITICAL"
-                    or item["type"]
+                    item.get("severity")
+                    == "CRITICAL"
+                    or item.get("type")
                     in self.CRITICAL_NEGATIVE_TYPES
                 )
             ):
@@ -292,14 +437,24 @@ class AnalyticalReasoningEngine:
         structured_items,
     ):
         for item in structured_items:
+
+            if not isinstance(item, dict):
+                continue
+
             if (
-                item["direction"] == "NEGATIVE"
+                item.get("direction")
+                == "NEGATIVE"
                 and (
-                    item["severity"]
-                    in {"HIGH", "CRITICAL"}
-                    or item["type"]
-                    in self.CRITICAL_NEGATIVE_TYPES
-                    | self.STRONG_NEGATIVE_TYPES
+                    item.get("severity")
+                    in {
+                        "HIGH",
+                        "CRITICAL",
+                    }
+                    or item.get("type")
+                    in (
+                        self.CRITICAL_NEGATIVE_TYPES
+                        | self.STRONG_NEGATIVE_TYPES
+                    )
                 )
             ):
                 return True
@@ -311,10 +466,15 @@ class AnalyticalReasoningEngine:
         structured_items,
     ):
         return any(
-            item["direction"] == "NEGATIVE"
+            item.get("direction") == "NEGATIVE"
+            and item.get("severity")
+            in {
+                "MEDIUM",
+                "HIGH",
+                "CRITICAL",
+            }
             for item in structured_items
-            if item["severity"]
-            in {"MEDIUM", "HIGH", "CRITICAL"}
+            if isinstance(item, dict)
         )
 
     def _has_unresolved_contradiction(
@@ -323,14 +483,21 @@ class AnalyticalReasoningEngine:
         structured_items,
         historical_evidence,
     ):
+        ai_analysis = ai_analysis or {}
+
         ai_state = str(
             ai_analysis.get(
                 "reasoning_state",
                 "",
             )
+            or ""
         ).upper()
 
-        if ai_state == "CONFLICTING_EVIDENCE":
+        if ai_state in {
+            "CONFLICTING_EVIDENCE",
+            "TRUST_HISTORY_CONFLICT",
+            "AI_LEGITIMACY_CONFLICT",
+        }:
             return True
 
         contradiction_engine = (
@@ -338,27 +505,44 @@ class AnalyticalReasoningEngine:
                 "contradictions_engine",
                 {},
             )
-            if ai_analysis
-            else {}
+            or {}
         )
 
-        if (
+        contradiction_state = str(
             contradiction_engine.get(
-                "state"
+                "state",
+                "",
             )
-            == "CONFLICTING_EVIDENCE"
-        ):
+            or ""
+        ).upper()
+
+        if contradiction_state in {
+            "CONFLICTING_EVIDENCE",
+            "TRUST_HISTORY_CONFLICT",
+        }:
             return True
 
         if historical_evidence:
-            status = historical_evidence.get("status")
+
+            status = str(
+                historical_evidence.get(
+                    "status",
+                    "",
+                )
+                or ""
+            ).upper()
+
             if status == "CONFLICTING_EVIDENCE":
                 return True
 
         return any(
             item.get("type")
-            == "CONFLICTING_EVIDENCE"
+            in {
+                "CONFLICTING_EVIDENCE",
+                "HISTORICAL_CURRENT_CONFLICT",
+            }
             for item in structured_items
+            if isinstance(item, dict)
         )
 
     # =========================================================
@@ -385,6 +569,25 @@ class AnalyticalReasoningEngine:
             ),
         )
 
+    @staticmethod
+    def _score_by_severity(
+        severity,
+        critical=30,
+        high=20,
+        medium=15,
+        low=5,
+        default=10,
+    ):
+        return {
+            "CRITICAL": critical,
+            "HIGH": high,
+            "MEDIUM": medium,
+            "LOW": low,
+        }.get(
+            severity,
+            default,
+        )
+
     # =========================================================
     # MAIN EVALUATION
     # =========================================================
@@ -401,15 +604,64 @@ class AnalyticalReasoningEngine:
         url_page_intelligence=None,
         historical_evidence=None,
     ):
-        authentication = authentication or {}
-        url_analysis = url_analysis or {}
-        whois_analysis = whois_analysis or []
-        content_analysis = content_analysis or {}
-        attachment_analysis = attachment_analysis or {}
-        trust_analysis = trust_analysis or {}
-        ai_analysis = ai_analysis or {}
+        authentication = (
+            authentication
+            if isinstance(authentication, dict)
+            else {}
+        )
+
+        url_analysis = (
+            url_analysis
+            if isinstance(url_analysis, dict)
+            else {}
+        )
+
+        whois_analysis = (
+            whois_analysis
+            if isinstance(whois_analysis, list)
+            else []
+        )
+
+        content_analysis = (
+            content_analysis
+            if isinstance(content_analysis, dict)
+            else {}
+        )
+
+        attachment_analysis = (
+            attachment_analysis
+            if isinstance(attachment_analysis, dict)
+            else {}
+        )
+
+        trust_analysis = (
+            trust_analysis
+            if isinstance(trust_analysis, dict)
+            else {}
+        )
+
+        ai_analysis = (
+            ai_analysis
+            if isinstance(ai_analysis, dict)
+            else {}
+        )
+
         url_page_intelligence = (
-            url_page_intelligence or {}
+            url_page_intelligence
+            if isinstance(
+                url_page_intelligence,
+                dict,
+            )
+            else {}
+        )
+
+        historical_evidence = (
+            historical_evidence
+            if isinstance(
+                historical_evidence,
+                dict,
+            )
+            else None
         )
 
         score = 0
@@ -424,9 +676,21 @@ class AnalyticalReasoningEngine:
 
         structured_evidence = []
 
-        auth_rules = self.rules["authentication"]
-        url_rules = self.rules["url"]
-        content_rules = self.rules["content"]
+        auth_rules = self.rules.get(
+            "authentication",
+            {},
+        )
+
+        url_rules = self.rules.get(
+            "url",
+            {},
+        )
+
+        content_rules = self.rules.get(
+            "content",
+            {},
+        )
+
         whois_rules = self.rules.get(
             "whois",
             {},
@@ -449,19 +713,39 @@ class AnalyticalReasoningEngine:
         elif auth_state == "FAILED":
 
             spf = str(
-                authentication.get("spf", "")
+                authentication.get(
+                    "spf",
+                    "",
+                )
+                or ""
             ).lower()
 
             dkim = str(
-                authentication.get("dkim", "")
+                authentication.get(
+                    "dkim",
+                    "",
+                )
+                or ""
             ).lower()
 
             dmarc = str(
-                authentication.get("dmarc", "")
+                authentication.get(
+                    "dmarc",
+                    "",
+                )
+                or ""
             ).lower()
 
             if spf != "pass":
-                score += auth_rules["spf_fail"]
+
+                score += self._safe_number(
+                    auth_rules.get(
+                        "spf_fail",
+                        15,
+                    ),
+                    15,
+                )
+
                 evidence["technical"].append(
                     "SPF validation failed"
                 )
@@ -478,7 +762,15 @@ class AnalyticalReasoningEngine:
                 })
 
             if dkim != "pass":
-                score += auth_rules["dkim_fail"]
+
+                score += self._safe_number(
+                    auth_rules.get(
+                        "dkim_fail",
+                        15,
+                    ),
+                    15,
+                )
+
                 evidence["technical"].append(
                     "DKIM validation failed"
                 )
@@ -495,7 +787,15 @@ class AnalyticalReasoningEngine:
                 })
 
             if dmarc != "pass":
-                score += auth_rules["dmarc_fail"]
+
+                score += self._safe_number(
+                    auth_rules.get(
+                        "dmarc_fail",
+                        20,
+                    ),
+                    20,
+                )
+
                 evidence["technical"].append(
                     "DMARC validation failed"
                 )
@@ -517,6 +817,19 @@ class AnalyticalReasoningEngine:
                 "Authentication evidence incomplete"
             )
 
+            structured_evidence.append({
+                "type": "AUTHENTICATION_PARTIAL",
+                "severity": "INFO",
+                "direction": "NEUTRAL",
+                "source": "AuthenticationAnalyzer",
+                "explanation": (
+                    "Authentication evidence is incomplete; "
+                    "missing authentication results are not "
+                    "treated as authentication failure."
+                ),
+                "confidence": 0.80,
+            })
+
         # =====================================================
         # 2. TRUST SIGNAL
         # =====================================================
@@ -529,14 +842,62 @@ class AnalyticalReasoningEngine:
             0,
         )
 
+        trust_score = max(
+            0,
+            min(
+                100,
+                trust_score,
+            ),
+        )
+
         auth_fully_passed = (
             auth_state == "PASSED"
         )
 
+        aligned_url_count = sum(
+            1
+            for item in (
+                url_analysis.get(
+                    "analysis",
+                    [],
+                )
+                or []
+            )
+            if isinstance(item, dict)
+            and item.get(
+                "email_alignment"
+            ) == "aligned"
+        )
+
+        misaligned_url_count = sum(
+            1
+            for item in (
+                url_analysis.get(
+                    "analysis",
+                    [],
+                )
+                or []
+            )
+            if isinstance(item, dict)
+            and item.get(
+                "email_alignment"
+            ) == "misaligned"
+        )
+
+        strong_authenticated_context = (
+            auth_fully_passed
+            and aligned_url_count > 0
+            and misaligned_url_count == 0
+        )
+
         if (
             auth_fully_passed
-            and trust_score >= 40
+            and (
+                trust_score >= 40
+                or strong_authenticated_context
+            )
         ):
+
             score -= 30
 
             evidence["technical"].append(
@@ -559,34 +920,44 @@ class AnalyticalReasoningEngine:
                 "confidence": 0.96,
             })
 
-        elif (
-            auth_fully_passed
-            and trust_score >= 20
-        ):
-            score -= 15
-
-            evidence["technical"].append(
-                "Authenticated sender with partial trust signal"
-            )
-
-            evidence["positive"].append(
-                "Sender authentication passed."
-            )
+            structured_evidence.append({
+                "type": "TRUSTED_SENDER",
+                "severity": "LOW",
+                "direction": "POSITIVE",
+                "source": "TrustAnalyzer",
+                "explanation": (
+                    "Sender has full authentication "
+                    "and established trust context."
+                ),
+                "confidence": 0.90,
+            })
 
         # =====================================================
         # 3. URL ANALYSIS
         # =====================================================
 
-        for url in url_analysis.get(
-            "analysis",
-            [],
+        for url in (
+            url_analysis.get(
+                "analysis",
+                [],
+            )
+            or []
         ):
-            url = url or {}
 
-            # Legacy indicators
+            if not isinstance(url, dict):
+                continue
+
+            # -------------------------------------------------
+            # IP-based URL
+            # -------------------------------------------------
+
             if url.get("ip_based"):
-                score += url_rules.get(
-                    "ip_url",
+
+                score += self._safe_number(
+                    url_rules.get(
+                        "ip_url",
+                        20,
+                    ),
                     20,
                 )
 
@@ -606,9 +977,17 @@ class AnalyticalReasoningEngine:
                     "confidence": 0.90,
                 })
 
+            # -------------------------------------------------
+            # URL shortener
+            # -------------------------------------------------
+
             if url.get("shortener"):
-                score += url_rules.get(
-                    "shortener",
+
+                score += self._safe_number(
+                    url_rules.get(
+                        "shortener",
+                        10,
+                    ),
                     10,
                 )
 
@@ -616,28 +995,78 @@ class AnalyticalReasoningEngine:
                     f"Shortened URL: {url.get('url', '')}"
                 )
 
+                structured_evidence.append({
+                    "type": "SUSPICIOUS_URL",
+                    "severity": "MEDIUM",
+                    "direction": "NEGATIVE",
+                    "source": "URLAnalyzer",
+                    "explanation": (
+                        "URL uses a URL-shortening service."
+                    ),
+                    "confidence": 0.75,
+                })
+
+            # -------------------------------------------------
+            # Suspicious keywords
+            # -------------------------------------------------
+
             keywords = url.get(
                 "keywords",
                 [],
             )
 
+            if isinstance(
+                keywords,
+                str,
+            ):
+                keywords = [keywords]
+
             if keywords:
-                score += (
+
+                keyword_score = (
                     len(keywords)
-                    * url_rules.get(
-                        "keyword",
+                    * self._safe_number(
+                        url_rules.get(
+                            "keyword",
+                            5,
+                        ),
                         5,
                     )
                 )
 
+                score += keyword_score
+
                 evidence["network"].append(
                     "Suspicious URL keywords: "
-                    + ", ".join(keywords)
+                    + ", ".join(
+                        str(k)
+                        for k in keywords
+                    )
                 )
 
+                structured_evidence.append({
+                    "type": "SUSPICIOUS_URL",
+                    "severity": "MEDIUM",
+                    "direction": "NEGATIVE",
+                    "source": "URLAnalyzer",
+                    "explanation": (
+                        "URL contains suspicious "
+                        "security-sensitive keywords."
+                    ),
+                    "confidence": 0.75,
+                })
+
+            # -------------------------------------------------
+            # Obfuscation
+            # -------------------------------------------------
+
             if url.get("obfuscated"):
-                score += url_rules.get(
-                    "obfuscated",
+
+                score += self._safe_number(
+                    url_rules.get(
+                        "obfuscated",
+                        15,
+                    ),
                     15,
                 )
 
@@ -646,14 +1075,33 @@ class AnalyticalReasoningEngine:
                     f"{url.get('url', '')}"
                 )
 
+                structured_evidence.append({
+                    "type": "SUSPICIOUS_URL",
+                    "severity": "HIGH",
+                    "direction": "NEGATIVE",
+                    "source": "URLAnalyzer",
+                    "explanation": (
+                        "URL contains obfuscation indicators."
+                    ),
+                    "confidence": 0.90,
+                })
+
+            # -------------------------------------------------
+            # Punycode
+            # -------------------------------------------------
+
             if url.get("punycode"):
-                score += url_rules.get(
-                    "punycode",
+
+                score += self._safe_number(
+                    url_rules.get(
+                        "punycode",
+                        20,
+                    ),
                     20,
                 )
 
                 evidence["network"].append(
-                    f"Punycode domain detected: "
+                    "Punycode domain detected: "
                     f"{url.get('domain', '')}"
                 )
 
@@ -668,23 +1116,56 @@ class AnalyticalReasoningEngine:
                     "confidence": 0.90,
                 })
 
+            # -------------------------------------------------
+            # Suspicious port
+            # -------------------------------------------------
+
             if url.get("suspicious_port"):
-                score += url_rules.get(
-                    "suspicious_port",
+
+                score += self._safe_number(
+                    url_rules.get(
+                        "suspicious_port",
+                        10,
+                    ),
                     10,
                 )
 
                 evidence["network"].append(
-                    f"Suspicious URL port detected: "
+                    "Suspicious URL port detected: "
                     f"{url.get('url', '')}"
                 )
 
-            if url.get(
-                "subdomain_count",
-                0,
-            ) > 3:
-                score += url_rules.get(
-                    "excessive_subdomains",
+                structured_evidence.append({
+                    "type": "SUSPICIOUS_URL",
+                    "severity": "MEDIUM",
+                    "direction": "NEGATIVE",
+                    "source": "URLAnalyzer",
+                    "explanation": (
+                        "URL uses a suspicious network port."
+                    ),
+                    "confidence": 0.80,
+                })
+
+            # -------------------------------------------------
+            # Excessive subdomains
+            # -------------------------------------------------
+
+            if (
+                self._safe_number(
+                    url.get(
+                        "subdomain_count",
+                        0,
+                    ),
+                    0,
+                )
+                > 3
+            ):
+
+                score += self._safe_number(
+                    url_rules.get(
+                        "excessive_subdomains",
+                        10,
+                    ),
                     10,
                 )
 
@@ -693,10 +1174,26 @@ class AnalyticalReasoningEngine:
                     f"{url.get('domain', '')}"
                 )
 
+                structured_evidence.append({
+                    "type": "SUSPICIOUS_URL",
+                    "severity": "MEDIUM",
+                    "direction": "NEGATIVE",
+                    "source": "URLAnalyzer",
+                    "explanation": (
+                        "Domain contains an unusually "
+                        "large number of subdomains."
+                    ),
+                    "confidence": 0.70,
+                })
+
+            # -------------------------------------------------
             # Brand intelligence
+            # -------------------------------------------------
+
             if url.get(
                 "brand_impersonation"
             ):
+
                 score += 40
 
                 domain = url.get(
@@ -705,7 +1202,8 @@ class AnalyticalReasoningEngine:
                 )
 
                 evidence["network"].append(
-                    f"Brand impersonation detected: {domain}"
+                    "Brand impersonation detected: "
+                    f"{domain}"
                 )
 
                 structured_evidence.append({
@@ -720,12 +1218,20 @@ class AnalyticalReasoningEngine:
                     "confidence": 0.95,
                 })
 
+            # -------------------------------------------------
             # Email alignment
-            alignment = url.get(
-                "email_alignment"
-            )
+            # -------------------------------------------------
+
+            alignment = str(
+                url.get(
+                    "email_alignment",
+                    "",
+                )
+                or ""
+            ).lower()
 
             if alignment == "misaligned":
+
                 score += 15
 
                 evidence["network"].append(
@@ -746,13 +1252,29 @@ class AnalyticalReasoningEngine:
                 })
 
             elif alignment == "aligned":
+
                 score -= 10
 
                 evidence["positive"].append(
                     "URL domain is aligned with sender."
                 )
 
+                structured_evidence.append({
+                    "type": "ALIGNED_DOMAIN",
+                    "severity": "LOW",
+                    "direction": "POSITIVE",
+                    "source": "URLAnalyzer",
+                    "explanation": (
+                        "URL domain aligns with "
+                        "the sender domain."
+                    ),
+                    "confidence": 0.90,
+                })
+
+            # -------------------------------------------------
             # DNS
+            # -------------------------------------------------
+
             dns = url.get(
                 "dns",
                 {},
@@ -761,6 +1283,7 @@ class AnalyticalReasoningEngine:
             if dns.get(
                 "private_ip_detected"
             ):
+
                 score += 50
 
                 evidence["network"].append(
@@ -781,7 +1304,10 @@ class AnalyticalReasoningEngine:
                     "confidence": 1.0,
                 })
 
+            # -------------------------------------------------
             # Redirects
+            # -------------------------------------------------
+
             redirects = url.get(
                 "redirects",
                 {},
@@ -792,10 +1318,10 @@ class AnalyticalReasoningEngine:
                     "external_domain_change"
                 )
                 and not self._is_trusted_url_domain(
-                    url_analysis,
-                    url,
+                    url
                 )
             ):
+
                 score += 20
 
                 evidence["network"].append(
@@ -815,7 +1341,10 @@ class AnalyticalReasoningEngine:
                     "confidence": 0.90,
                 })
 
+            # -------------------------------------------------
             # TLS
+            # -------------------------------------------------
+
             tls = url.get(
                 "tls",
                 {},
@@ -824,15 +1353,29 @@ class AnalyticalReasoningEngine:
             if tls.get(
                 "certificate_valid"
             ) is True:
+
                 score -= 5
 
                 evidence["positive"].append(
                     "TLS certificate validated successfully."
                 )
 
+                structured_evidence.append({
+                    "type": "VALID_TLS",
+                    "severity": "LOW",
+                    "direction": "POSITIVE",
+                    "source": "TLSInspector",
+                    "explanation": (
+                        "TLS certificate validation "
+                        "completed successfully."
+                    ),
+                    "confidence": 0.90,
+                })
+
             if url.get(
                 "tls_policy_violation"
             ):
+
                 severity = self._normalize_severity(
                     tls.get(
                         "severity",
@@ -857,7 +1400,7 @@ class AnalyticalReasoningEngine:
                 score += tls_score
 
                 evidence["network"].append(
-                    f"TLS Policy Violation "
+                    "TLS Policy Violation "
                     f"({violation}) on: "
                     f"{url.get('domain', '')}"
                 )
@@ -877,6 +1420,7 @@ class AnalyticalReasoningEngine:
             elif url.get(
                 "http_policy_warning"
             ):
+
                 score += 5
 
                 evidence["network"].append(
@@ -884,9 +1428,21 @@ class AnalyticalReasoningEngine:
                     f"{url.get('domain', '')}"
                 )
 
+                structured_evidence.append({
+                    "type": "TLS_POLICY_VIOLATION",
+                    "severity": "LOW",
+                    "direction": "NEGATIVE",
+                    "source": "TLSInspector",
+                    "explanation": (
+                        "URL uses insecure HTTP transport."
+                    ),
+                    "confidence": 0.85,
+                })
+
             elif url.get(
                 "tls_inspection_unavailable"
             ):
+
                 evidence["network"].append(
                     "TLS inspection unavailable for: "
                     f"{url.get('domain', '')}"
@@ -898,35 +1454,45 @@ class AnalyticalReasoningEngine:
 
         for whois in whois_analysis:
 
-            whois = whois or {}
+            if not isinstance(whois, dict):
+                continue
 
             domain = whois.get(
                 "domain",
                 "Unknown",
             )
 
-            age_category = whois.get(
-                "age_category"
-            )
+            age_category = str(
+                whois.get(
+                    "age_category",
+                    "",
+                )
+                or ""
+            ).lower()
 
             error = whois.get(
                 "error"
             )
 
             if error:
+
                 evidence["network"].append(
-                    f"WHOIS lookup unavailable for: "
+                    "WHOIS lookup unavailable for: "
                     f"{domain}"
                 )
 
             elif age_category == "new":
-                score += whois_rules.get(
-                    "new_domain",
+
+                score += self._safe_number(
+                    whois_rules.get(
+                        "new_domain",
+                        15,
+                    ),
                     15,
                 )
 
                 evidence["network"].append(
-                    f"Newly registered domain detected: "
+                    "Newly registered domain detected: "
                     f"{domain}"
                 )
 
@@ -943,15 +1509,31 @@ class AnalyticalReasoningEngine:
                 })
 
             elif age_category == "recent":
-                score += whois_rules.get(
-                    "recent_domain",
+
+                score += self._safe_number(
+                    whois_rules.get(
+                        "recent_domain",
+                        5,
+                    ),
                     5,
                 )
 
                 evidence["network"].append(
-                    f"Recently registered domain: "
+                    "Recently registered domain: "
                     f"{domain}"
                 )
+
+                structured_evidence.append({
+                    "type": "NEW_DOMAIN",
+                    "severity": "LOW",
+                    "direction": "NEGATIVE",
+                    "source": "WhoisAnalyzer",
+                    "explanation": (
+                        f"Recently registered domain: "
+                        f"{domain}"
+                    ),
+                    "confidence": 0.70,
+                })
 
         # =====================================================
         # 5. CONTENT ANALYSIS
@@ -962,6 +1544,7 @@ class AnalyticalReasoningEngine:
                 "analysis_status",
                 "AVAILABLE",
             )
+            or "AVAILABLE"
         ).upper()
 
         if content_status == "UNAVAILABLE":
@@ -971,17 +1554,20 @@ class AnalyticalReasoningEngine:
             )
 
         else:
-            # A trusted/authenticated sender does not make
-            # credential requests automatically legitimate.
-            #
-            # Context is evaluated together with URL/brand/page
-            # evidence below.
+
+            # -------------------------------------------------
+            # Urgency
+            # -------------------------------------------------
 
             if content_analysis.get(
                 "urgency"
             ):
-                score += content_rules.get(
-                    "urgency",
+
+                score += self._safe_number(
+                    content_rules.get(
+                        "urgency",
+                        20,
+                    ),
                     20,
                 )
 
@@ -1000,11 +1586,19 @@ class AnalyticalReasoningEngine:
                     "confidence": 0.80,
                 })
 
+            # -------------------------------------------------
+            # Credential request
+            # -------------------------------------------------
+
             if content_analysis.get(
                 "credential_request"
             ):
-                score += content_rules.get(
-                    "credential_request",
+
+                score += self._safe_number(
+                    content_rules.get(
+                        "credential_request",
+                        25,
+                    ),
                     25,
                 )
 
@@ -1024,11 +1618,19 @@ class AnalyticalReasoningEngine:
                     "confidence": 0.85,
                 })
 
+            # -------------------------------------------------
+            # Financial request
+            # -------------------------------------------------
+
             if content_analysis.get(
                 "financial_request"
             ):
-                score += content_rules.get(
-                    "financial_request",
+
+                score += self._safe_number(
+                    content_rules.get(
+                        "financial_request",
+                        25,
+                    ),
                     25,
                 )
 
@@ -1047,11 +1649,19 @@ class AnalyticalReasoningEngine:
                     "confidence": 0.85,
                 })
 
+            # -------------------------------------------------
+            # Impersonation
+            # -------------------------------------------------
+
             if content_analysis.get(
                 "impersonation"
             ):
-                score += content_rules.get(
-                    "impersonation",
+
+                score += self._safe_number(
+                    content_rules.get(
+                        "impersonation",
+                        10,
+                    ),
                     10,
                 )
 
@@ -1070,17 +1680,37 @@ class AnalyticalReasoningEngine:
                     "confidence": 0.80,
                 })
 
+            # -------------------------------------------------
+            # Threat language
+            # -------------------------------------------------
+
             if content_analysis.get(
                 "threat_language"
             ):
-                score += content_rules.get(
-                    "threat_language",
+
+                score += self._safe_number(
+                    content_rules.get(
+                        "threat_language",
+                        20,
+                    ),
                     20,
                 )
 
                 evidence["behavioral"].append(
                     "Threat language detected"
                 )
+
+                structured_evidence.append({
+                    "type": "THREAT_LANGUAGE",
+                    "severity": "MEDIUM",
+                    "direction": "NEGATIVE",
+                    "source": "ContentAnalyzer",
+                    "explanation": (
+                        "Threat or coercive language "
+                        "was detected."
+                    ),
+                    "confidence": 0.80,
+                })
 
         # =====================================================
         # 6. ATTACHMENTS
@@ -1091,6 +1721,7 @@ class AnalyticalReasoningEngine:
                 "analysis_status",
                 "AVAILABLE",
             )
+            or "AVAILABLE"
         ).upper()
 
         if attachment_status == "UNAVAILABLE":
@@ -1101,26 +1732,33 @@ class AnalyticalReasoningEngine:
 
         else:
 
-            attachment_score = (
-                self._safe_number(
-                    attachment_analysis.get(
-                        "risk_score",
-                        0,
-                    ),
-                    0,
-                )
-                * self._safe_number(
-                    self.rules[
-                        "attachment"
-                    ].get(
-                        "risk_multiplier",
-                        1,
-                    ),
-                    1,
+            attachment_config = (
+                self.rules.get(
+                    "attachment",
+                    {},
                 )
             )
 
-            score += attachment_score
+            attachment_risk = self._safe_number(
+                attachment_analysis.get(
+                    "risk_score",
+                    0,
+                ),
+                0,
+            )
+
+            risk_multiplier = self._safe_number(
+                attachment_config.get(
+                    "risk_multiplier",
+                    1,
+                ),
+                1,
+            )
+
+            score += (
+                attachment_risk
+                * risk_multiplier
+            )
 
             for item in (
                 attachment_analysis.get(
@@ -1129,7 +1767,14 @@ class AnalyticalReasoningEngine:
                 )
                 or []
             ):
-                text = str(item)
+
+                text = str(
+                    item
+                    or ""
+                )
+
+                if not text:
+                    continue
 
                 evidence["technical"].append(
                     text
@@ -1137,7 +1782,11 @@ class AnalyticalReasoningEngine:
 
                 lowered = text.lower()
 
-                if "executable attachment" in lowered:
+                if (
+                    "executable attachment"
+                    in lowered
+                ):
+
                     structured_evidence.append({
                         "type": "EXECUTABLE_ATTACHMENT",
                         "severity": "CRITICAL",
@@ -1147,7 +1796,11 @@ class AnalyticalReasoningEngine:
                         "confidence": 0.98,
                     })
 
-                elif "script attachment" in lowered:
+                elif (
+                    "script attachment"
+                    in lowered
+                ):
+
                     structured_evidence.append({
                         "type": "SCRIPT_ATTACHMENT",
                         "severity": "CRITICAL",
@@ -1157,7 +1810,13 @@ class AnalyticalReasoningEngine:
                         "confidence": 0.97,
                     })
 
-                elif "macro-enabled" in lowered:
+                elif (
+                    "macro-enabled"
+                    in lowered
+                    or "macro enabled"
+                    in lowered
+                ):
+
                     structured_evidence.append({
                         "type": "MACRO_ATTACHMENT",
                         "severity": "HIGH",
@@ -1165,6 +1824,20 @@ class AnalyticalReasoningEngine:
                         "source": "AttachmentAnalyzer",
                         "explanation": text,
                         "confidence": 0.95,
+                    })
+
+                elif (
+                    "malicious attachment"
+                    in lowered
+                ):
+
+                    structured_evidence.append({
+                        "type": "MALICIOUS_ATTACHMENT",
+                        "severity": "CRITICAL",
+                        "direction": "NEGATIVE",
+                        "source": "AttachmentAnalyzer",
+                        "explanation": text,
+                        "confidence": 0.98,
                     })
 
         # =====================================================
@@ -1195,24 +1868,39 @@ class AnalyticalReasoningEngine:
                     url_page_intelligence.items()
                 ):
 
-                    page_data = page_data or {}
+                    page_data = (
+                        page_data
+                        if isinstance(
+                            page_data,
+                            dict,
+                        )
+                        else {}
+                    )
 
-                    security = page_data.get(
-                        "security",
-                        {},
-                    ) or {}
+                    security = (
+                        page_data.get(
+                            "security",
+                            {},
+                        )
+                        or {}
+                    )
 
-                    if security.get("error"):
+                    if security.get(
+                        "error"
+                    ):
 
                         evidence["network"].append(
                             f"Page fetch failed/blocked "
                             f"for {url}"
                         )
 
-                    forms = page_data.get(
-                        "forms",
-                        {},
-                    ) or {}
+                    forms = (
+                        page_data.get(
+                            "forms",
+                            {},
+                        )
+                        or {}
+                    )
 
                     password_fields = self._safe_number(
                         forms.get(
@@ -1229,6 +1917,10 @@ class AnalyticalReasoningEngine:
                         ),
                         0,
                     )
+
+                    # -----------------------------------------
+                    # Password field
+                    # -----------------------------------------
 
                     if password_fields > 0:
 
@@ -1252,6 +1944,10 @@ class AnalyticalReasoningEngine:
                             "confidence": 0.95,
                         })
 
+                    # -----------------------------------------
+                    # Email/login field
+                    # -----------------------------------------
+
                     elif email_fields > 0:
 
                         score += 20
@@ -1274,10 +1970,17 @@ class AnalyticalReasoningEngine:
                             "confidence": 0.90,
                         })
 
-                    page_ai = page_data.get(
-                        "ai",
-                        {},
-                    ) or {}
+                    # -----------------------------------------
+                    # Page AI
+                    # -----------------------------------------
+
+                    page_ai = (
+                        page_data.get(
+                            "ai",
+                            {},
+                        )
+                        or {}
+                    )
 
                     page_intent = self._normalize_type(
                         page_ai.get(
@@ -1296,6 +1999,27 @@ class AnalyticalReasoningEngine:
                         score += 40
                         page_risk_found = True
 
+                        page_confidence = (
+                            self._safe_number(
+                                page_ai.get(
+                                    "confidence",
+                                    0,
+                                ),
+                                0,
+                            )
+                        )
+
+                        if page_confidence > 1:
+                            page_confidence /= 100
+
+                        page_confidence = max(
+                            0,
+                            min(
+                                1,
+                                page_confidence,
+                            ),
+                        )
+
                         structured_evidence.append({
                             "type": page_intent,
                             "severity": "CRITICAL",
@@ -1305,13 +2029,7 @@ class AnalyticalReasoningEngine:
                                 "Local page-intent analysis "
                                 f"identified {page_intent}."
                             ),
-                            "confidence": self._safe_number(
-                                page_ai.get(
-                                    "confidence",
-                                    0,
-                                ),
-                                0,
-                            ),
+                            "confidence": page_confidence,
                         })
 
                 if not page_risk_found:
@@ -1320,6 +2038,18 @@ class AnalyticalReasoningEngine:
                         "Deep URL inspection found no "
                         "immediate page-level risk."
                     )
+
+                    structured_evidence.append({
+                        "type": "SAFE_URL",
+                        "severity": "LOW",
+                        "direction": "POSITIVE",
+                        "source": "URLPageInspection",
+                        "explanation": (
+                            "Deep URL inspection found no "
+                            "immediate page-level risk."
+                        ),
+                        "confidence": 0.70,
+                    })
 
         # =====================================================
         # 8. LOCAL AI / STAGE 6-10 EVIDENCE
@@ -1330,23 +2060,36 @@ class AnalyticalReasoningEngine:
                 "reasoning_state",
                 "",
             )
+            or ""
         ).upper()
 
-        ai_confidence = (
-            self._safe_number(
-                ai_analysis.get(
-                    "confidence",
-                    0,
-                ),
+        ai_confidence = self._safe_number(
+            ai_analysis.get(
+                "confidence",
                 0,
-            )
+            ),
+            0,
+        )
+
+        if ai_confidence > 1:
+            ai_confidence /= 100
+
+        ai_confidence = max(
+            0,
+            min(
+                1,
+                ai_confidence,
+            ),
         )
 
         original_ai_state = ai_state
 
         ai_structured = []
 
-        # Structured evidence from Local AI
+        # -----------------------------------------------------
+        # Structured Local AI evidence
+        # -----------------------------------------------------
+
         for item in (
             ai_analysis.get(
                 "structured_evidence",
@@ -1355,8 +2098,10 @@ class AnalyticalReasoningEngine:
             or []
         ):
 
-            normalized = self._structured_evidence(
-                item
+            normalized = (
+                self._structured_evidence(
+                    item
+                )
             )
 
             ai_structured.append(
@@ -1367,7 +2112,10 @@ class AnalyticalReasoningEngine:
                 normalized
             )
 
+        # -----------------------------------------------------
         # AI contradictions
+        # -----------------------------------------------------
+
         for contradiction in (
             ai_analysis.get(
                 "contradictions",
@@ -1376,19 +2124,25 @@ class AnalyticalReasoningEngine:
             or []
         ):
 
-            text = (
-                contradiction.get(
-                    "explanation",
-                    contradiction,
+            if isinstance(
+                contradiction,
+                dict,
+            ):
+
+                text = str(
+                    contradiction.get(
+                        "explanation",
+                        "Conflicting evidence detected.",
+                    )
+                    or "Conflicting evidence detected."
                 )
-                if isinstance(
-                    contradiction,
-                    dict,
-                )
-                else str(
+
+            else:
+
+                text = str(
                     contradiction
+                    or "Conflicting evidence detected."
                 )
-            )
 
             evidence["behavioral"].append(
                 f"AI Conflict: {text}"
@@ -1403,7 +2157,14 @@ class AnalyticalReasoningEngine:
                 "confidence": ai_confidence,
             })
 
+            ai_state = (
+                "CONFLICTING_EVIDENCE"
+            )
+
+        # -----------------------------------------------------
         # Homoglyph
+        # -----------------------------------------------------
+
         for item in (
             ai_analysis.get(
                 "homoglyph",
@@ -1412,13 +2173,40 @@ class AnalyticalReasoningEngine:
             or []
         ):
 
-            if isinstance(item, dict):
-                text = item.get(
-                    "evidence",
-                    "Homoglyph detected",
+            if isinstance(
+                item,
+                dict,
+            ):
+
+                text = str(
+                    item.get(
+                        "evidence",
+                        "Homoglyph detected",
+                    )
+                    or "Homoglyph detected"
                 )
+
+                item_confidence = (
+                    self._safe_number(
+                        item.get(
+                            "confidence",
+                            0.90,
+                        ),
+                        0.90,
+                    )
+                )
+
+                if item_confidence > 1:
+                    item_confidence /= 100
+
             else:
-                text = str(item)
+
+                text = str(
+                    item
+                    or "Homoglyph detected"
+                )
+
+                item_confidence = 0.90
 
             score += 20
 
@@ -1432,10 +2220,19 @@ class AnalyticalReasoningEngine:
                 "direction": "NEGATIVE",
                 "source": "BrandIntelligence",
                 "explanation": text,
-                "confidence": 0.90,
+                "confidence": max(
+                    0,
+                    min(
+                        1,
+                        item_confidence,
+                    ),
+                ),
             })
 
+        # -----------------------------------------------------
         # Brand intelligence
+        # -----------------------------------------------------
+
         for item in (
             ai_analysis.get(
                 "brand_intelligence",
@@ -1444,18 +2241,36 @@ class AnalyticalReasoningEngine:
             or []
         ):
 
-            if not isinstance(item, dict):
+            if not isinstance(
+                item,
+                dict,
+            ):
                 continue
 
             if item.get(
                 "impersonation_risk"
             ):
+
                 score += 40
 
-                explanation = item.get(
-                    "explanation",
-                    "Brand impersonation detected.",
+                explanation = str(
+                    item.get(
+                        "explanation",
+                        "Brand impersonation detected.",
+                    )
+                    or "Brand impersonation detected."
                 )
+
+                confidence = self._safe_number(
+                    item.get(
+                        "confidence",
+                        0.95,
+                    ),
+                    0.95,
+                )
+
+                if confidence > 1:
+                    confidence /= 100
 
                 evidence["behavioral"].append(
                     explanation
@@ -1467,12 +2282,12 @@ class AnalyticalReasoningEngine:
                     "direction": "NEGATIVE",
                     "source": "BrandIntelligence",
                     "explanation": explanation,
-                    "confidence": self._safe_number(
-                        item.get(
-                            "confidence",
-                            0.95,
+                    "confidence": max(
+                        0,
+                        min(
+                            1,
+                            confidence,
                         ),
-                        0.95,
                     ),
                 })
 
@@ -1482,15 +2297,25 @@ class AnalyticalReasoningEngine:
                     "domain_claimed"
                 )
             ):
-                evidence["behavioral"].append(
+
+                explanation = str(
                     item.get(
                         "explanation",
                         "Brand mentioned without "
                         "domain alignment.",
                     )
+                    or "Brand mentioned without "
+                    "domain alignment."
                 )
 
+                evidence["behavioral"].append(
+                    explanation
+                )
+
+        # -----------------------------------------------------
         # Adversarial analysis
+        # -----------------------------------------------------
+
         for item in (
             ai_analysis.get(
                 "adversarial",
@@ -1499,17 +2324,24 @@ class AnalyticalReasoningEngine:
             or []
         ):
 
-            if not isinstance(item, dict):
+            if not isinstance(
+                item,
+                dict,
+            ):
                 continue
 
-            explanation = item.get(
-                "explanation",
-                "",
+            explanation = str(
+                item.get(
+                    "explanation",
+                    "",
+                )
+                or ""
             )
 
-            evidence["behavioral"].append(
-                explanation
-            )
+            if explanation:
+                evidence["behavioral"].append(
+                    explanation
+                )
 
             severity = self._normalize_severity(
                 item.get(
@@ -1518,37 +2350,54 @@ class AnalyticalReasoningEngine:
                 )
             )
 
-            if item.get(
-                "direction",
-                "NEGATIVE",
-            ).upper() == "NEGATIVE":
+            direction = self._normalize_direction(
+                item.get(
+                    "direction",
+                    "NEGATIVE",
+                )
+            )
 
-                score += {
-                    "CRITICAL": 30,
-                    "HIGH": 25,
-                    "MEDIUM": 15,
-                    "LOW": 5,
-                }.get(
+            confidence = self._safe_number(
+                item.get(
+                    "confidence",
+                    0,
+                ),
+                0,
+            )
+
+            if confidence > 1:
+                confidence /= 100
+
+            if direction == "NEGATIVE":
+
+                score += self._score_by_severity(
                     severity,
-                    10,
+                    critical=30,
+                    high=25,
+                    medium=15,
+                    low=5,
+                    default=10,
                 )
 
-                structured_evidence.append({
-                    "type": "ADVERSARIAL_INDICATOR",
-                    "severity": severity,
-                    "direction": "NEGATIVE",
-                    "source": "AdversarialAnalyzer",
-                    "explanation": explanation,
-                    "confidence": self._safe_number(
-                        item.get(
-                            "confidence",
-                            0,
-                        ),
-                        0,
+            structured_evidence.append({
+                "type": "ADVERSARIAL_INDICATOR",
+                "severity": severity,
+                "direction": direction,
+                "source": "AdversarialAnalyzer",
+                "explanation": explanation,
+                "confidence": max(
+                    0,
+                    min(
+                        1,
+                        confidence,
                     ),
-                })
+                ),
+            })
 
+        # -----------------------------------------------------
         # Contradiction engine
+        # -----------------------------------------------------
+
         contradiction_engine = (
             ai_analysis.get(
                 "contradictions_engine",
@@ -1566,53 +2415,84 @@ class AnalyticalReasoningEngine:
                     "state",
                     "",
                 )
+                or ""
             ).upper()
 
-            explanation = contradiction_engine.get(
-                "explanation",
-                "Conflicting evidence detected.",
+            explanation = str(
+                contradiction_engine.get(
+                    "explanation",
+                    "Conflicting evidence detected.",
+                )
+                or "Conflicting evidence detected."
             )
 
-            evidence["behavioral"].append(
-                explanation
-            )
-
-            structured_evidence.append({
-                "type": (
-                    "TRUST_HISTORY_CONFLICT"
-                    if contradiction_state
-                    == "TRUST_HISTORY_CONFLICT"
-                    else "CONFLICTING_EVIDENCE"
-                ),
-                "severity": "HIGH",
-                "direction": "NEUTRAL",
-                "source": "ContradictionEngine",
-                "explanation": explanation,
-                "confidence": self._safe_number(
+            contradiction_confidence = (
+                self._safe_number(
                     contradiction_engine.get(
                         "confidence",
                         0,
                     ),
                     0,
+                )
+            )
+
+            if contradiction_confidence > 1:
+                contradiction_confidence /= 100
+
+            evidence["behavioral"].append(
+                explanation
+            )
+
+            contradiction_type = (
+                "TRUST_HISTORY_CONFLICT"
+                if contradiction_state
+                == "TRUST_HISTORY_CONFLICT"
+                else "CONFLICTING_EVIDENCE"
+            )
+
+            structured_evidence.append({
+                "type": contradiction_type,
+                "severity": "HIGH",
+                "direction": "NEUTRAL",
+                "source": "ContradictionEngine",
+                "explanation": explanation,
+                "confidence": max(
+                    0,
+                    min(
+                        1,
+                        contradiction_confidence,
+                    ),
                 ),
             })
 
-            if contradiction_state == "TRUST_HISTORY_CONFLICT":
+            if contradiction_state == (
+                "TRUST_HISTORY_CONFLICT"
+            ):
+
                 ai_state = (
                     "TRUST_HISTORY_CONFLICT"
                 )
 
-            elif contradiction_state == "CONFLICTING_EVIDENCE":
+            elif contradiction_state == (
+                "CONFLICTING_EVIDENCE"
+            ):
+
                 ai_state = (
                     "CONFLICTING_EVIDENCE"
                 )
 
-            elif contradiction_state == "INSUFFICIENT_EVIDENCE":
+            elif contradiction_state == (
+                "INSUFFICIENT_EVIDENCE"
+            ):
+
                 ai_state = (
                     "INSUFFICIENT_EVIDENCE"
                 )
 
+        # -----------------------------------------------------
         # Behavioral intelligence
+        # -----------------------------------------------------
+
         for item in (
             ai_analysis.get(
                 "behavioral",
@@ -1621,31 +2501,39 @@ class AnalyticalReasoningEngine:
             or []
         ):
 
-            normalized = self._structured_evidence(
-                item
+            normalized = (
+                self._structured_evidence(
+                    item
+                )
             )
 
             evidence["behavioral"].append(
                 normalized["explanation"]
+                or normalized["type"]
             )
 
             structured_evidence.append(
                 normalized
             )
 
-            if normalized["direction"] == "NEGATIVE":
+            if (
+                normalized["direction"]
+                == "NEGATIVE"
+            ):
 
-                score += {
-                    "CRITICAL": 30,
-                    "HIGH": 20,
-                    "MEDIUM": 15,
-                    "LOW": 5,
-                }.get(
+                score += self._score_by_severity(
                     normalized["severity"],
-                    10,
+                    critical=30,
+                    high=20,
+                    medium=15,
+                    low=5,
+                    default=10,
                 )
 
+        # -----------------------------------------------------
         # Campaign intelligence
+        # -----------------------------------------------------
+
         for item in (
             ai_analysis.get(
                 "campaign",
@@ -1654,12 +2542,15 @@ class AnalyticalReasoningEngine:
             or []
         ):
 
-            normalized = self._structured_evidence(
-                item
+            normalized = (
+                self._structured_evidence(
+                    item
+                )
             )
 
             evidence["behavioral"].append(
                 normalized["explanation"]
+                or normalized["type"]
             )
 
             structured_evidence.append(
@@ -1670,17 +2561,20 @@ class AnalyticalReasoningEngine:
                 normalized["direction"]
                 == "NEGATIVE"
             ):
-                score += {
-                    "CRITICAL": 30,
-                    "HIGH": 25,
-                    "MEDIUM": 15,
-                    "LOW": 5,
-                }.get(
+
+                score += self._score_by_severity(
                     normalized["severity"],
-                    10,
+                    critical=30,
+                    high=25,
+                    medium=15,
+                    low=5,
+                    default=10,
                 )
 
+        # -----------------------------------------------------
         # Temporal intelligence
+        # -----------------------------------------------------
+
         for item in (
             ai_analysis.get(
                 "temporal",
@@ -1689,12 +2583,15 @@ class AnalyticalReasoningEngine:
             or []
         ):
 
-            normalized = self._structured_evidence(
-                item
+            normalized = (
+                self._structured_evidence(
+                    item
+                )
             )
 
             evidence["behavioral"].append(
                 normalized["explanation"]
+                or normalized["type"]
             )
 
             structured_evidence.append(
@@ -1705,17 +2602,20 @@ class AnalyticalReasoningEngine:
                 normalized["direction"]
                 == "NEGATIVE"
             ):
-                score += {
-                    "CRITICAL": 25,
-                    "HIGH": 20,
-                    "MEDIUM": 15,
-                    "LOW": 5,
-                }.get(
+
+                score += self._score_by_severity(
                     normalized["severity"],
-                    10,
+                    critical=25,
+                    high=20,
+                    medium=15,
+                    low=5,
+                    default=10,
                 )
 
-        # Sender reputation
+        # =====================================================
+        # 8A. SENDER REPUTATION
+        # =====================================================
+
         reputation = (
             ai_analysis.get(
                 "sender_reputation",
@@ -1729,6 +2629,7 @@ class AnalyticalReasoningEngine:
                 "reputation",
                 "UNKNOWN",
             )
+            or "UNKNOWN"
         ).upper()
 
         messages_seen = int(
@@ -1745,15 +2646,35 @@ class AnalyticalReasoningEngine:
             reputation_status == "UNKNOWN"
             and messages_seen == 0
         ):
-            ai_state = "NEW_SENDER"
+
+            if not ai_state:
+                ai_state = "NEW_SENDER"
 
         elif reputation_status in {
             "SUSPICIOUS",
             "HIGH_RISK",
         }:
+
             ai_state = "SUSPICIOUS_HISTORY"
 
-        # Adaptive intelligence
+            structured_evidence.append({
+                "type": "SUSPICIOUS_HISTORY",
+                "severity": "HIGH",
+                "direction": "NEGATIVE",
+                "source": "SenderReputation",
+                "explanation": (
+                    "Sender reputation indicates "
+                    "suspicious or high-risk history."
+                ),
+                "confidence": 0.80,
+            })
+
+            score += 15
+
+        # =====================================================
+        # 8B. ADAPTIVE INTELLIGENCE
+        # =====================================================
+
         adaptive = (
             ai_analysis.get(
                 "adaptive",
@@ -1776,14 +2697,18 @@ class AnalyticalReasoningEngine:
             ):
                 continue
 
-            explanation = anomaly.get(
-                "explanation",
-                "",
+            explanation = str(
+                anomaly.get(
+                    "explanation",
+                    "",
+                )
+                or ""
             )
 
-            evidence["behavioral"].append(
-                explanation
-            )
+            if explanation:
+                evidence["behavioral"].append(
+                    explanation
+                )
 
             severity = self._normalize_severity(
                 anomaly.get(
@@ -1792,19 +2717,33 @@ class AnalyticalReasoningEngine:
                 )
             )
 
-            if anomaly.get(
-                "direction",
-                "NEGATIVE",
-            ).upper() == "NEGATIVE":
+            direction = self._normalize_direction(
+                anomaly.get(
+                    "direction",
+                    "NEGATIVE",
+                )
+            )
 
-                score += {
-                    "CRITICAL": 30,
-                    "HIGH": 20,
-                    "MEDIUM": 10,
-                    "LOW": 5,
-                }.get(
+            confidence = self._safe_number(
+                anomaly.get(
+                    "confidence",
+                    0,
+                ),
+                0,
+            )
+
+            if confidence > 1:
+                confidence /= 100
+
+            if direction == "NEGATIVE":
+
+                score += self._score_by_severity(
                     severity,
-                    10,
+                    critical=30,
+                    high=20,
+                    medium=10,
+                    low=5,
+                    default=10,
                 )
 
             anomaly_type = self._normalize_type(
@@ -1819,26 +2758,24 @@ class AnalyticalReasoningEngine:
                 "AUTHENTICATION_DRIFT",
                 "URL_BEHAVIOR_DRIFT",
             }:
+
                 ai_state = anomaly_type
 
             structured_evidence.append({
-                "type": anomaly_type
-                or "BEHAVIORAL_ANOMALY",
-                "severity": severity,
-                "direction": self._normalize_direction(
-                    anomaly.get(
-                        "direction",
-                        "NEGATIVE",
-                    )
+                "type": (
+                    anomaly_type
+                    or "BEHAVIORAL_ANOMALY"
                 ),
+                "severity": severity,
+                "direction": direction,
                 "source": "AdaptiveIntelligence",
                 "explanation": explanation,
-                "confidence": self._safe_number(
-                    anomaly.get(
-                        "confidence",
-                        0,
-                    ),
+                "confidence": max(
                     0,
+                    min(
+                        1,
+                        confidence,
+                    ),
                 ),
             })
 
@@ -1848,16 +2785,40 @@ class AnalyticalReasoningEngine:
                 {},
             )
             or {}
-        ).get("trend")
+        ).get(
+            "trend"
+        )
+
+        trend = str(
+            trend or ""
+        ).upper()
 
         if trend == "DEGRADING":
+
             score += 15
+
             evidence["behavioral"].append(
                 "Risk trend is degrading over time."
             )
 
+            structured_evidence.append({
+                "type": "CAMPAIGN_ANOMALY",
+                "severity": "MEDIUM",
+                "direction": "NEGATIVE",
+                "source": "AdaptiveIntelligence",
+                "explanation": (
+                    "Risk trend is degrading over time."
+                ),
+                "confidence": 0.75,
+            })
+
         elif trend == "IMPROVING":
+
             score -= 5
+
+            evidence["positive"].append(
+                "Historical risk trend is improving."
+            )
 
         history_confidence = (
             adaptive.get(
@@ -1865,12 +2826,19 @@ class AnalyticalReasoningEngine:
                 {},
             )
             or {}
-        ).get("level")
+        ).get(
+            "level"
+        )
+
+        history_confidence = str(
+            history_confidence or ""
+        ).upper()
 
         if history_confidence in {
             "VERY_LOW",
             "LOW",
         }:
+
             evidence["behavioral"].append(
                 "Insufficient historical baseline "
                 "for this sender."
@@ -1888,39 +2856,66 @@ class AnalyticalReasoningEngine:
             else None
         )
 
+        historical_status = str(
+            historical_status or ""
+        ).upper()
+
         if (
             historical_status
             == "VALID_HISTORICAL_EVIDENCE"
         ):
 
-            record = historical_evidence.get(
-                "record",
-                {},
-            ) or {}
-
-            historical = record.get(
-                "historical",
-                {},
-            ) or {}
-
-            historical_verdict = historical.get(
-                "verdict"
+            record = (
+                historical_evidence.get(
+                    "record",
+                    {},
+                )
+                or {}
             )
 
-            freshness = self._safe_number(
+            historical = (
+                record.get(
+                    "historical",
+                    {},
+                )
+                or {}
+            )
+
+            historical_verdict = str(
+                historical.get(
+                    "verdict",
+                    "",
+                )
+                or ""
+            ).upper()
+
+            history_state = (
                 record.get(
                     "history_state",
                     {},
-                ).get(
+                )
+                or {}
+            )
+
+            freshness = self._safe_number(
+                history_state.get(
                     "freshness",
                     0,
                 ),
                 0,
             )
 
-            # Historical evidence must never be used
-            # as an override if meaningful current
-            # negative evidence exists.
+            if freshness > 1:
+                freshness /= 100
+
+            freshness = max(
+                0,
+                min(
+                    1,
+                    freshness,
+                ),
+            )
+
             current_negative = (
                 self._has_current_negative_evidence(
                     structured_evidence
@@ -1941,7 +2936,9 @@ class AnalyticalReasoningEngine:
                     )
 
                     structured_evidence.append({
-                        "type": "HISTORICAL_CURRENT_CONFLICT",
+                        "type": (
+                            "HISTORICAL_CURRENT_CONFLICT"
+                        ),
                         "severity": "MEDIUM",
                         "direction": "NEUTRAL",
                         "source": "VerdictStore",
@@ -1961,7 +2958,9 @@ class AnalyticalReasoningEngine:
                     )
 
                     structured_evidence.append({
-                        "type": "VALID_HISTORICAL_EVIDENCE",
+                        "type": (
+                            "VALID_HISTORICAL_EVIDENCE"
+                        ),
                         "severity": "LOW",
                         "direction": "POSITIVE",
                         "source": "VerdictStore",
@@ -1983,8 +2982,20 @@ class AnalyticalReasoningEngine:
                 "fingerprint changed."
             )
 
+            structured_evidence.append({
+                "type": "STALE_HISTORICAL_EVIDENCE",
+                "severity": "INFO",
+                "direction": "NEUTRAL",
+                "source": "VerdictStore",
+                "explanation": (
+                    "Historical evidence was ignored "
+                    "because it is stale."
+                ),
+                "confidence": 0.50,
+            })
+
         # =====================================================
-        # 10. FINAL SCORE AFTER ALL EVIDENCE
+        # 10. FINAL SCORE
         # =====================================================
 
         score = self._clamp_score(
@@ -1992,7 +3003,7 @@ class AnalyticalReasoningEngine:
         )
 
         # =====================================================
-        # 11. DETERMINE CURRENT EVIDENCE STATE
+        # 11. CURRENT EVIDENCE STATE
         # =====================================================
 
         has_critical = (
@@ -2031,64 +3042,104 @@ class AnalyticalReasoningEngine:
         # 12. CONFIDENCE
         # =====================================================
 
-        independent_negative_sources = len({
+        negative_sources = {
             item.get("source")
             for item in structured_evidence
-            if item.get("direction")
-            == "NEGATIVE"
-        })
+            if (
+                isinstance(item, dict)
+                and item.get("direction")
+                == "NEGATIVE"
+                and item.get("source")
+            )
+        }
 
-        independent_positive_sources = len({
+        positive_sources = {
             item.get("source")
             for item in structured_evidence
-            if item.get("direction")
-            == "POSITIVE"
-        })
+            if (
+                isinstance(item, dict)
+                and item.get("direction")
+                == "POSITIVE"
+                and item.get("source")
+            )
+        }
+
+        independent_negative_sources = len(
+            negative_sources
+        )
+
+        independent_positive_sources = len(
+            positive_sources
+        )
+
+        # Confidence is evidence quality,
+        # not simply risk score.
 
         if (
             has_critical
             and independent_negative_sources >= 2
         ):
+
+            confidence = 95
+
+        elif has_critical:
+
             confidence = 90
 
         elif (
-            has_critical
-            or independent_negative_sources >= 2
+            has_strong
+            and independent_negative_sources >= 2
         ):
-            confidence = 80
+
+            confidence = 85
 
         elif (
             has_strong
             and independent_negative_sources >= 1
         ):
-            confidence = 70
+
+            confidence = 75
 
         elif (
             independent_positive_sources >= 3
             and not has_negative
         ):
+
             confidence = 90
 
         elif (
             independent_positive_sources >= 2
             and not has_negative
         ):
+
             confidence = 80
 
         elif not has_negative:
+
             confidence = 55
 
         else:
+
             confidence = 50
 
-        # AI confidence can inform but cannot exceed
-        # deterministic evidence confidence.
+        # AI confidence can reduce confidence,
+        # but AI cannot manufacture confidence.
+
         if ai_confidence > 0:
+
+            ai_confidence_percent = (
+                ai_confidence * 100
+            )
+
             confidence = min(
                 confidence,
-                max(
-                    40,
-                    int(ai_confidence),
+                int(
+                    round(
+                        max(
+                            40,
+                            ai_confidence_percent,
+                        )
+                    )
                 ),
             )
 
@@ -2104,6 +3155,7 @@ class AnalyticalReasoningEngine:
             )
 
             if not has_negative:
+
                 ai_state = (
                     "LIMITED_CONTEXT"
                 )
@@ -2113,35 +3165,43 @@ class AnalyticalReasoningEngine:
         # =====================================================
 
         if has_critical:
+
             verdict = "PHISHING"
 
         elif score >= 80:
+
             verdict = "PHISHING"
 
         elif score >= 60:
+
             verdict = "HIGH RISK"
 
         elif score >= 40:
+
             verdict = "SUSPICIOUS"
 
         elif (
             unresolved_contradiction
             and not has_critical
         ):
+
             verdict = "UNKNOWN"
 
         elif (
             limited_context
             and not has_negative
         ):
+
             verdict = "UNKNOWN"
 
         elif score < 20:
+
             if (
                 independent_positive_sources >= 3
                 and not has_negative
                 and not unresolved_contradiction
             ):
+
                 verdict = (
                     "VERIFIED LEGITIMATE"
                 )
@@ -2151,14 +3211,17 @@ class AnalyticalReasoningEngine:
                 and not has_negative
                 and not unresolved_contradiction
             ):
+
                 verdict = (
                     "LIKELY LEGITIMATE"
                 )
 
             else:
+
                 verdict = "UNKNOWN"
 
         else:
+
             verdict = "UNKNOWN"
 
         # =====================================================
@@ -2172,7 +3235,10 @@ class AnalyticalReasoningEngine:
             )
         )
 
-        # AI cannot override strong deterministic evidence.
+        # -----------------------------------------------------
+        # AI says safe but deterministic evidence says malicious
+        # -----------------------------------------------------
+
         if (
             recommended
             in {
@@ -2203,6 +3269,15 @@ class AnalyticalReasoningEngine:
 
             verdict = "PHISHING"
 
+            confidence = max(
+                confidence,
+                90,
+            )
+
+        # -----------------------------------------------------
+        # AI says phishing without deterministic evidence
+        # -----------------------------------------------------
+
         elif (
             recommended == "PHISHING"
             and not has_negative
@@ -2224,6 +3299,23 @@ class AnalyticalReasoningEngine:
                 "AI phishing recommendation lacked "
                 "sufficient independent malicious evidence."
             )
+
+            structured_evidence.append({
+                "type": "AI_INSUFFICIENT_EVIDENCE",
+                "severity": "MEDIUM",
+                "direction": "NEUTRAL",
+                "source": "SanityValidator",
+                "explanation": (
+                    "AI recommended phishing, but "
+                    "independent malicious evidence "
+                    "was insufficient."
+                ),
+                "confidence": ai_confidence,
+            })
+
+        # -----------------------------------------------------
+        # AI suspicious vs strong legitimacy
+        # -----------------------------------------------------
 
         elif (
             recommended == "SUSPICIOUS"
@@ -2248,8 +3340,6 @@ class AnalyticalReasoningEngine:
         # =====================================================
         # 16. TRUST HISTORY CONFLICT
         # =====================================================
-
-        reputation_status = reputation_status
 
         if (
             reputation_status
@@ -2285,14 +3375,53 @@ class AnalyticalReasoningEngine:
             )
 
         # =====================================================
-        # 17. FINAL CONFIDENCE ADJUSTMENTS
+        # 17. FINAL SAFETY VALIDATION
         # =====================================================
 
-        if unresolved_contradiction:
-            confidence = min(
-                confidence,
-                50,
+        # Recalculate current evidence after all AI,
+        # historical and adaptive evidence has been added.
+
+        final_has_critical = (
+            self._has_current_critical_evidence(
+                structured_evidence
             )
+        )
+
+        final_has_negative = (
+            self._has_current_negative_evidence(
+                structured_evidence
+            )
+        )
+
+        final_has_strong = (
+            self._has_current_strong_evidence(
+                structured_evidence
+            )
+        )
+
+        final_contradiction = (
+            self._has_unresolved_contradiction(
+                ai_analysis,
+                structured_evidence,
+                historical_evidence,
+            )
+        )
+
+        # Absolute deterministic safety rule:
+        # critical malicious evidence cannot result in
+        # a legitimate verdict.
+
+        if final_has_critical:
+
+            verdict = "PHISHING"
+
+            confidence = max(
+                confidence,
+                90,
+            )
+
+        # A legitimate verdict with meaningful negative
+        # evidence is never allowed.
 
         if (
             verdict
@@ -2300,9 +3429,11 @@ class AnalyticalReasoningEngine:
                 "VERIFIED LEGITIMATE",
                 "LIKELY LEGITIMATE",
             }
-            and has_negative
+            and final_has_negative
         ):
+
             verdict = "UNKNOWN"
+
             confidence = min(
                 confidence,
                 50,
@@ -2312,12 +3443,77 @@ class AnalyticalReasoningEngine:
                 "CONFLICTING_EVIDENCE"
             )
 
-        confidence = self._clamp_confidence(
-            confidence
-        )
+        # Strong negative evidence should prevent
+        # an unsupported legitimate verdict.
+
+        if (
+            final_has_strong
+            and verdict
+            in {
+                "VERIFIED LEGITIMATE",
+                "LIKELY LEGITIMATE",
+            }
+        ):
+
+            verdict = "SUSPICIOUS"
+
+            confidence = min(
+                confidence,
+                65,
+            )
+
+        # Contradictions reduce confidence.
+
+        if final_contradiction:
+
+            confidence = min(
+                confidence,
+                50,
+            )
+
+            if (
+                verdict
+                not in {
+                    "PHISHING",
+                }
+                and not final_has_critical
+            ):
+
+                verdict = "UNKNOWN"
+
+                if not ai_state:
+                    ai_state = (
+                        "CONFLICTING_EVIDENCE"
+                    )
+
+        # Limited context prevents high-confidence
+        # legitimacy.
+
+        if (
+            limited_context
+            and not final_has_critical
+        ):
+
+            if verdict in {
+                "VERIFIED LEGITIMATE",
+                "LIKELY LEGITIMATE",
+            }:
+
+                verdict = "UNKNOWN"
+
+            confidence = min(
+                confidence,
+                50,
+            )
+
+        # Recalculate score after all evidence.
 
         score = self._clamp_score(
             score
+        )
+
+        confidence = self._clamp_confidence(
+            confidence
         )
 
         # =====================================================
@@ -2330,7 +3526,18 @@ class AnalyticalReasoningEngine:
         )
 
         # =====================================================
-        # 19. FINAL RESULT
+        # 19. TRUSTED SENDER RESULT
+        # =====================================================
+
+        is_trusted_sender = bool(
+            auth_fully_passed
+            and trust_score >= 40
+            and not final_has_critical
+            and not final_has_strong
+        )
+
+        # =====================================================
+        # 20. FINAL RESULT
         # =====================================================
 
         return {
@@ -2339,6 +3546,7 @@ class AnalyticalReasoningEngine:
             "verdict": verdict,
             "detail_verdict": (
                 ai_state
+                or original_ai_state
                 or None
             ),
             "explanation": explanation,
@@ -2346,8 +3554,7 @@ class AnalyticalReasoningEngine:
             "adaptive_info": adaptive,
             "structured_evidence": structured_evidence,
             "is_trusted_sender": (
-                auth_fully_passed
-                and trust_score >= 40
+                is_trusted_sender
             ),
         }
 
@@ -2420,7 +3627,13 @@ class AnalyticalReasoningEngine:
 
             for item in values:
 
-                text = str(item)
+                text = str(
+                    item
+                    or ""
+                ).strip()
+
+                if not text:
+                    continue
 
                 if text in seen:
                     continue
@@ -2434,6 +3647,7 @@ class AnalyticalReasoningEngine:
             lines.append("")
 
         if not has_content:
+
             lines.append(
                 "No sufficient evidence was "
                 "generated for this analysis."

@@ -8,7 +8,7 @@ function BooleanItem({ label, value }) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-[14px] border border-[var(--tm-border)] bg-[var(--tm-surface-secondary)] p-4 text-center">
+    <div className="flex flex-col items-center justify-center gap-2 rounded-[14px] border border-[var(--tm-border)] bg-[var(--tm-surface-secondary)] p-4 text-center min-w-0">
       <span className="text-[11px] font-bold text-[var(--tm-text-secondary)] uppercase tracking-wider">{label}</span>
       <div className={`flex items-center justify-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${getStatusColor()}`}>
         {value ? "⚠ Detected" : "✓ Not detected"}
@@ -21,7 +21,7 @@ function ContentAnalysisCard({ content }) {
   const data = content || {};
 
   return (
-    <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-6 shadow-sm">
+    <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-4 md:p-6 shadow-sm">
       <SectionHeader icon="🧠" title="Content Analysis" subtitle="Behavioral and linguistic indicators" />
 
       <div className="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-5">

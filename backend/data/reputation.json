@@ -164,15 +164,16 @@
   },
   "sbi@communications.sbi.co.in": {
     "sender": "sbi@communications.sbi.co.in",
-    "messages_seen": 3,
+    "messages_seen": 4,
     "legitimate_count": 0,
-    "suspicious_count": 1,
+    "suspicious_count": 2,
     "phishing_count": 2,
-    "reputation": "NEW",
+    "reputation": "HIGH_RISK",
     "seen_message_ids": [
       "19ff717e04277c63",
       "19ff4cb834eeb8c6",
-      "19fdc0e3facfaf19"
+      "19fdc0e3facfaf19",
+      "19ffaee90d8a50f5"
     ]
   },
   "updates-noreply@linkedin.com": {
@@ -250,6 +251,17 @@
     "reputation": "UNKNOWN",
     "seen_message_ids": [
       "1958b7502b0ab4e0"
+    ]
+  },
+  "no-reply@info.bookmyshow.com": {
+    "sender": "no-reply@info.bookmyshow.com",
+    "messages_seen": 1,
+    "legitimate_count": 0,
+    "suspicious_count": 1,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN",
+    "seen_message_ids": [
+      "19ffadb798d89ad8"
     ]
   }
 }

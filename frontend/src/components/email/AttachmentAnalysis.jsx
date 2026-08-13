@@ -17,13 +17,13 @@ function AttachmentCard({ file }) {
     : "FILE";
 
   return (
-    <div className="rounded-[14px] border border-[var(--tm-border)] bg-[var(--tm-surface-secondary)] p-5">
+    <div className="rounded-[14px] border border-[var(--tm-border)] bg-[var(--tm-surface-secondary)] p-5 min-w-0">
       <div className="flex items-center gap-4">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--tm-accent)]/10 text-[var(--tm-accent)] text-xl border border-[var(--tm-accent)]/20">
           📄
         </div>
         <div className="min-w-0">
-          <div className="truncate text-[13px] font-bold text-[var(--tm-text)]">{filename}</div>
+          <div className="break-words [overflow-wrap:anywhere] text-[13px] font-bold text-[var(--tm-text)]">{filename}</div>
           <div className="mt-0.5 text-[11px] font-semibold text-[var(--tm-text-secondary)]">{extension} • {size}</div>
         </div>
       </div>
@@ -36,7 +36,7 @@ function AttachmentAnalysis({ attachmentData, rawAttachments }) {
   const files = rawAttachments || [];
 
   return (
-    <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-6 shadow-sm">
+    <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-4 md:p-6 shadow-sm">
       <SectionHeader icon="📎" title="Attachment Analysis" subtitle={`${data.attachment_count || 0} attachment(s) detected`} />
       
       {files.length === 0 ? (
@@ -56,7 +56,7 @@ function AttachmentAnalysis({ attachmentData, rawAttachments }) {
             {data.evidence.map((item, index) => (
               <div key={index} className="flex gap-2 text-[13px] font-medium text-[var(--tm-text)]">
                 <span className="shrink-0 text-orange-500">⚠️</span>
-                <span>{item}</span>
+                <span className="break-words [overflow-wrap:anywhere]">{item}</span>
               </div>
             ))}
           </div>

@@ -282,7 +282,8 @@
     "timestamps": [
       1786579728.863039,
       1786579770.982552,
-      1786581899.250072
+      1786581899.250072,
+      1786601746.166902
     ],
     "url_domains": [
       "imagescommunications.sbi.bank.in",
@@ -399,6 +400,15 @@
   "ansonkalleri@gmail.com": {
     "timestamps": [
       1786583057.063895
+    ],
+    "url_domains": [],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "no-reply@info.bookmyshow.com": {
+    "timestamps": [
+      1786603403.228315
     ],
     "url_domains": [],
     "auth_summary": [

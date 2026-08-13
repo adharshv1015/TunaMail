@@ -18,13 +18,17 @@ export function getVerdictStyle(verdict = "") {
       return "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-500/12 dark:text-teal-400 dark:border-teal-500/25";
     case "VERIFIED LEGITIMATE":
       return "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/12 dark:text-emerald-400 dark:border-emerald-500/25";
+    case "UNANALYZED":
+      // Distinct neutral — deliberately different from SAFE/UNKNOWN
+      return "bg-slate-100 text-slate-500 border-slate-300 dark:bg-slate-700/40 dark:text-slate-400 dark:border-slate-600/40";
     default:
       return "bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-500/12 dark:text-[var(--tm-text-secondary)] dark:border-slate-500/25";
   }
 }
 
 export function VerdictBadge({ verdict, className = "" }) {
-  const v = verdict || "UNKNOWN";
+  // Never fall back to SAFE — an unanalyzed message must never appear safe.
+  const v = verdict || "UNANALYZED";
   return (
     <span
       className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border ${getVerdictStyle(

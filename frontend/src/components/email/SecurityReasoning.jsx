@@ -106,9 +106,9 @@ function Accordion({ title, items, color, defaultOpen = false, icon = "ℹ️" }
           {items.map((item, index) => (
             <div
               key={index}
-              className={`flex gap-3 rounded-[8px] border p-3 text-[12px] leading-relaxed break-all ${bodyColor}`}
+              className={`flex gap-3 rounded-[8px] border p-3 text-[12px] leading-relaxed break-words [overflow-wrap:anywhere] ${bodyColor}`}
             >
-              <div className="flex-1 space-y-1">
+              <div className="flex-1 min-w-0 space-y-1">
                 <div className="font-bold text-[13px]">{item.title}</div>
                 <div className="opacity-90">{formatEvidence(item.explanation)}</div>
                 {item.source && (

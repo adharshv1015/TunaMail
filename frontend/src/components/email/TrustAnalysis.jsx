@@ -6,7 +6,7 @@ function TrustAnalysis({ trust }) {
   const trustScore = data.trust_score ?? 0;
 
   return (
-    <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-6 shadow-sm">
+    <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-4 md:p-6 shadow-sm">
       <SectionHeader icon="🔐" title="Trust Analysis" subtitle="Sender and organization trust assessment" />
       
       <div className="mt-5 rounded-[14px] border border-[var(--tm-border)] bg-[var(--tm-surface-secondary)] p-6">
@@ -24,7 +24,7 @@ function TrustAnalysis({ trust }) {
             {data.evidence.map((item, index) => (
               <div key={index} className="flex gap-2 text-[13px] leading-relaxed text-[var(--tm-text)] bg-[var(--tm-surface)] p-3 rounded-[10px] border border-[var(--tm-border)]">
                 <span className="shrink-0 text-[var(--tm-accent)]">✓</span>
-                <span>{item}</span>
+                <span className="break-words [overflow-wrap:anywhere] min-w-0">{item}</span>
               </div>
             ))}
           </div>
