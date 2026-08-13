@@ -264,6 +264,7 @@ class TestMaliciousEmails:
         from src.engines.decision_validator import DecisionValidator
 
         decision = _decision("PHISHING", 90, 85, "BRAND_IMPERSONATION")
+        decision["structured_evidence"] = [{"type": "BRAND_IMPERSONATION", "severity": "CRITICAL", "direction": "NEGATIVE"}]
         decision = DecisionValidator().validate(decision)
         assert decision["verdict"] in ("HIGH RISK", "PHISHING")
         assert decision["risk_score"] >= 80
@@ -275,6 +276,7 @@ class TestMaliciousEmails:
         from src.engines.decision_validator import DecisionValidator
 
         decision = _decision("PHISHING", 95, 90, "MALICIOUS_EVIDENCE")
+        decision["structured_evidence"] = [{"type": "CREDENTIAL_HARVESTING", "severity": "CRITICAL", "direction": "NEGATIVE"}]
         decision = DecisionValidator().validate(decision)
         assert decision["verdict"] == "PHISHING"
 
@@ -284,7 +286,7 @@ class TestMaliciousEmails:
         from src.engines.decision_validator import DecisionValidator
 
         decision = _decision("HIGH RISK", 80, 80)
-        analysis = {"_redirect": {"severity": "CRITICAL", "explanation": "Malicious redirect chain"}}
+        analysis = {"structured_evidence": [{"type": "MALICIOUS_REDIRECT", "severity": "CRITICAL", "direction": "NEGATIVE", "explanation": "Malicious redirect chain"}]}
         decision = enforce_deterministic_priority(decision, analysis)
         decision = DecisionValidator().validate(decision)
         assert decision["verdict"] in ("HIGH RISK", "PHISHING")
@@ -667,10 +669,12 @@ class TestDecisionSafety:
         decision = {"risk_score": 5, "confidence": 90, "verdict": "VERIFIED LEGITIMATE"}
         # But analysis contains CRITICAL threat
         analysis = {
-            "threat": {
+            "structured_evidence": [{
+                "type": "KNOWN_MALICIOUS_URL",
                 "severity": "CRITICAL",
+                "direction": "NEGATIVE",
                 "explanation": "Confirmed phishing page",
-            }
+            }]
         }
         decision = enforce_deterministic_priority(decision, analysis)
         decision = DecisionValidator().validate(decision)
@@ -683,7 +687,7 @@ class TestDecisionSafety:
         from src.engines.decision_validator import DecisionValidator
         dv = DecisionValidator()
 
-        r = dv.validate({"risk_score": 150, "confidence": 200, "verdict": "PHISHING"})
+        r = dv.validate({"risk_score": 150, "confidence": 200, "verdict": "PHISHING", "structured_evidence": [{"type": "KNOWN_MALICIOUS_URL", "severity": "CRITICAL", "direction": "NEGATIVE"}]})
         assert r["risk_score"] == 100
         assert r["confidence"] == 100
 
@@ -727,7 +731,7 @@ class TestConfidenceCalibration:
     def test_high_risk_high_confidence(self):
         from src.engines.decision_validator import DecisionValidator
         dv = DecisionValidator()
-        r = dv.validate({"risk_score": 90, "confidence": 85, "verdict": "PHISHING", "detail_verdict": "MALICIOUS_EVIDENCE"})
+        r = dv.validate({"risk_score": 90, "confidence": 85, "verdict": "PHISHING", "detail_verdict": "MALICIOUS_EVIDENCE", "structured_evidence": [{"type": "KNOWN_MALICIOUS_URL", "severity": "CRITICAL", "direction": "NEGATIVE"}]})
         assert r["confidence"] >= 80
 
     @pytest.mark.stage12

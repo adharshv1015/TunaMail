@@ -1,43 +1,108 @@
-import re
+# ============================================================
+# backend/src/analyzers/url_analyzer.py
+# ============================================================
+
+from __future__ import annotations
+
+import difflib
 import ipaddress
-from urllib.parse import urlparse, unquote, parse_qs
+import re
 from email.utils import parseaddr
+from typing import Any, Dict, Iterable, List, Tuple
+from urllib.parse import (
+    parse_qs,
+    unquote,
+    urlparse,
+)
+
 import tldextract
+
 try:
     from bs4 import BeautifulSoup
+
     _BS4_AVAILABLE = True
 except ImportError:
+    BeautifulSoup = None
     _BS4_AVAILABLE = False
 
-from src.services.url_inspection_service import URLInspectionService
+from src.services.url_inspection_service import (
+    URLInspectionService,
+)
 
-# Known tracking/safety-redirect wrappers that encode the real URL in a query param
+
+# ============================================================
+# Known redirect/safety-wrapper patterns
+# ============================================================
+
 _REDIRECT_PATTERNS = [
-    # Google Safety redirect: https://www.google.com/url?q=https%3A%2F%2F...
     ("google.com", "q"),
     ("google.com", "url"),
-    # Outlook/Microsoft SafeLinks: https://nam.safelinks.protection.outlook.com/?url=...
     ("safelinks.protection.outlook.com", "url"),
-    # Proofpoint URLDefense
     ("urldefense.com", "u"),
-    # Generic tracking redirectors
     (None, "redirect_uri"),
     (None, "redirect_url"),
     (None, "target_url"),
+    (None, "destination"),
 ]
 
-class URLAnalyzer:
 
-    TRUSTED_DOMAINS = [
+class URLAnalyzer:
+    """
+    Defensive URL intelligence analyzer.
+
+    Responsibilities:
+    - Extract URLs from plain text and HTML email.
+    - Safely normalize and unwrap known redirect wrappers.
+    - Generate lexical URL evidence.
+    - Inspect URLs through URLInspectionService.
+    - Evaluate sender/URL alignment.
+    - Detect brand relationships and lookalikes.
+    - Normalize TLS policy evidence.
+    - Preserve structured evidence for ARE / fusion.
+
+    Important:
+    - URL indicators are evidence, not final verdicts.
+    - A trusted domain is not automatically SAFE.
+    - HTTPS is not automatically SAFE.
+    - HTTP is a warning, not automatically phishing.
+    - TLS inspection failure is not the same as a certificate violation.
+    """
+
+    TRUSTED_DOMAINS = {
         "google.com",
         "googleapis.com",
         "gstatic.com",
         "googleusercontent.com",
+        "accounts.google.com",
+        "myaccount.google.com",
+        "mail.google.com",
         "microsoft.com",
+        "microsoftonline.com",
+        "office.com",
+        "live.com",
+        "outlook.com",
+        "account.microsoft.com",
+        "accountprotection.microsoft.com",
         "apple.com",
+        "icloud.com",
+        "appleid.apple.com",
+        "id.apple.com",
         "amazon.com",
+        "amazon.in",
+        "amazonaws.com",
         "paypal.com",
-    ]
+        "github.com",
+        "githubusercontent.com",
+        "linkedin.com",
+        "lnkd.in",
+        "facebook.com",
+        "instagram.com",
+        "meta.com",
+        "x.com",
+        "twitter.com",
+        "dropbox.com",
+        "cloudflare.com",
+    }
 
     SHORTENERS = {
         "bit.ly",
@@ -52,7 +117,7 @@ class URLAnalyzer:
         "shorturl.at",
     }
 
-    SUSPICIOUS_KEYWORDS = [
+    SUSPICIOUS_KEYWORDS = {
         "login",
         "verify",
         "secure",
@@ -65,310 +130,2306 @@ class URLAnalyzer:
         "unlock",
         "suspended",
         "validation",
-    ]
+        "credential",
+    }
 
-    def __init__(self):
-        self.inspection_service = URLInspectionService()
+    TLS_POLICY_VIOLATIONS = {
+        "EXPIRED_CERTIFICATE",
+        "HOSTNAME_MISMATCH",
+        "SELF_SIGNED_CERTIFICATE",
+        "UNTRUSTED_ISSUER",
+        "CERTIFICATE_INVALID",
+    }
 
-    def analyze(self, body, sender_headers=None, auth_results=None):
-        urls = self.extract_urls(body)
+    TLS_UNAVAILABLE_STATES = {
+        "TLS_HANDSHAKE_FAILED",
+        "TLS_UNAVAILABLE",
+    }
+
+    URL_TRAILING_CHARS = ".,;:!?)]}>\"'"
+
+    URL_PATTERN = re.compile(
+        r"https?://[^\s<>'\"\]\[()]+",
+        re.IGNORECASE,
+    )
+
+    WWW_PATTERN = re.compile(
+        r"(?<![/\w])www\.[^\s<>'\"\]\[()]+",
+        re.IGNORECASE,
+    )
+
+    EMAIL_ADDRESS_PATTERN = re.compile(
+        r"(?<![\w.+-])"
+        r"[A-Za-z0-9._%+-]+@"
+        r"[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
+    )
+
+    def __init__(
+        self,
+        inspection_service=None,
+    ):
+        self.inspection_service = (
+            inspection_service
+            if inspection_service is not None
+            else URLInspectionService()
+        )
+
+        self._tld_cache: Dict[
+            str,
+            Any,
+        ] = {}
+
+    # ========================================================
+    # Main API
+    # ========================================================
+
+    def analyze(
+        self,
+        body: str | None,
+        sender_headers: Dict[str, Any] | None = None,
+        auth_results: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+
+        body = (
+            body
+            if isinstance(body, str)
+            else str(body or "")
+        )
+
+        sender_headers = (
+            sender_headers
+            if isinstance(sender_headers, dict)
+            else {}
+        )
+
+        auth_results = (
+            auth_results
+            if isinstance(auth_results, dict)
+            else {}
+        )
+
+        urls = self.extract_urls(
+            body
+        )
+
         results = []
 
         for url in urls:
-            results.append(self.analyze_url(url, sender_headers, auth_results))
+            try:
+                results.append(
+                    self.analyze_url(
+                        url=url,
+                        sender_headers=sender_headers,
+                        auth_results=auth_results,
+                    )
+                )
+            except Exception as exc:
+                results.append(
+                    self._failed_url_result(
+                        url,
+                        str(exc),
+                    )
+                )
+
+        limited_context = (
+            self._is_limited_context(
+                body,
+                urls,
+            )
+        )
+
+        structured_evidence = []
+
+        for result in results:
+            structured_evidence.extend(
+                result.get(
+                    "structured_evidence",
+                    [],
+                )
+                or []
+            )
+
+        # Link-only should remain a context state.
+        # It must not be converted into SAFE simply because
+        # the URL itself has no obvious lexical indicators.
+        if limited_context:
+            structured_evidence.append(
+                self._evidence(
+                    type_="LIMITED_CONTEXT",
+                    severity="MEDIUM",
+                    direction="NEUTRAL",
+                    source="URLAnalyzer",
+                    explanation=(
+                        "The email contains URLs with very little "
+                        "surrounding text."
+                    ),
+                    confidence=0.90,
+                )
+            )
 
         return {
+            "analysis_status": "AVAILABLE",
             "urls": urls,
+            "count": len(urls),
             "analysis": results,
-            "limited_context": self._is_limited_context(body, urls)
+            "limited_context": limited_context,
+            "link_only": limited_context,
+            "structured_evidence": (
+                self._deduplicate_evidence(
+                    structured_evidence
+                )
+            ),
         }
 
-    def _is_limited_context(self, body, urls):
+    # ========================================================
+    # Limited context
+    # ========================================================
+
+    def _is_limited_context(
+        self,
+        body: str,
+        urls: Iterable[str],
+    ) -> bool:
+
+        urls = list(
+            urls or []
+        )
+
         if not urls:
             return False
-        # If the body is mostly just URLs, with very little text, it's limited context
-        text_without_urls = body
-        for url in urls:
-            text_without_urls = text_without_urls.replace(url, "")
-        
-        cleaned_text = text_without_urls.strip()
-        # If the remaining text is less than 20 characters or just a few words, it's limited context
-        if len(cleaned_text) < 30 or len(cleaned_text.split()) < 5:
-            return True
-        return False
 
-    def _unwrap_redirect(self, url):
-        """
-        Unwrap known tracking/safety-redirect wrappers (e.g. Google's
-        https://www.google.com/url?q=<encoded>) to reveal the real URL.
-        Returns the inner URL if found, otherwise returns the original url.
-        """
+        text_without_urls = self.URL_PATTERN.sub(
+            " ",
+            body or "",
+        )
+
+        text_without_urls = self.WWW_PATTERN.sub(
+            " ",
+            text_without_urls,
+        )
+
+        cleaned_text = re.sub(
+            r"\s+",
+            " ",
+            text_without_urls,
+        ).strip()
+
+        words = (
+            cleaned_text.split()
+            if cleaned_text
+            else []
+        )
+
+        return (
+            len(cleaned_text) < 30
+            or len(words) < 5
+        )
+
+    # ========================================================
+    # Redirect unwrapping
+    # ========================================================
+
+    def _unwrap_redirect(
+        self,
+        url: str,
+        max_depth: int = 3,
+    ) -> str:
+
+        current = (
+            self._normalize_url(
+                url
+            )
+        )
+
+        seen = set()
+
+        for _ in range(
+            max_depth
+        ):
+
+            if not current:
+                break
+
+            if current in seen:
+                break
+
+            seen.add(
+                current
+            )
+
+            next_url = (
+                self._unwrap_once(
+                    current
+                )
+            )
+
+            if (
+                next_url == current
+                or not next_url
+            ):
+                break
+
+            current = next_url
+
+        return current
+
+    def _unwrap_once(
+        self,
+        url: str,
+    ) -> str:
+
         try:
-            parsed = urlparse(url)
-            hostname = (parsed.hostname or "").lower().lstrip("www.")
-            qs = parse_qs(parsed.query)
+            parsed = urlparse(
+                url
+            )
 
-            for domain, param in _REDIRECT_PATTERNS:
-                # domain=None means we check the param on any host
-                if domain is not None and not hostname.endswith(domain):
+            hostname = (
+                parsed.hostname
+                or ""
+            ).lower().rstrip(".")
+
+            if not hostname:
+                return url
+
+            query = parse_qs(
+                parsed.query,
+                keep_blank_values=True,
+            )
+
+            for domain, parameter in (
+                _REDIRECT_PATTERNS
+            ):
+
+                if domain is not None:
+
+                    if not self._domain_matches(
+                        hostname,
+                        domain,
+                    ):
+                        continue
+
+                values = query.get(
+                    parameter
+                )
+
+                if not values:
                     continue
-                if param in qs:
-                    inner = unquote(qs[param][0]).strip()
-                    # Must look like a real URL
-                    if inner.startswith(("http://", "https://")):
-                        return inner
+
+                inner = unquote(
+                    str(
+                        values[0]
+                    )
+                ).strip()
+
+                inner = self._normalize_url(
+                    inner
+                )
+
+                try:
+                    inner_parsed = urlparse(
+                        inner
+                    )
+                except Exception:
+                    continue
+
+                if (
+                    inner_parsed.scheme.lower()
+                    in {"http", "https"}
+                    and inner_parsed.hostname
+                ):
+                    return inner
+
         except Exception:
-            pass
+            return url
+
         return url
 
-    def extract_urls(self, text):
+    # ========================================================
+    # URL extraction
+    # ========================================================
+
+    def extract_urls(
+        self,
+        text: str | None,
+    ) -> List[str]:
+
         if not text:
             return []
 
-        raw_urls = []
+        text = str(
+            text
+        )
 
-        # --- Pass 1: Parse HTML href/src attributes directly (most reliable for HTML email) ---
-        if _BS4_AVAILABLE and ("<a " in text or "<A " in text or "href=" in text):
+        raw_urls: List[str] = []
+
+        # ----------------------------------------------------
+        # HTML extraction
+        # ----------------------------------------------------
+
+        if (
+            _BS4_AVAILABLE
+            and (
+                "<a " in text.lower()
+                or "href=" in text.lower()
+                or "<form" in text.lower()
+                or "<iframe" in text.lower()
+            )
+        ):
+
             try:
-                soup = BeautifulSoup(text, "html.parser")
-                for tag in soup.find_all(["a", "link", "img", "iframe", "form"]):
-                    for attr in ("href", "src", "action", "data-url"):
-                        val = tag.get(attr, "")
-                        if val and isinstance(val, str) and val.startswith(("http://", "https://")):
-                            raw_urls.append(val.strip())
+                soup = BeautifulSoup(
+                    text,
+                    "html.parser",
+                )
+
+                for tag in soup.find_all(
+                    [
+                        "a",
+                        "link",
+                        "img",
+                        "iframe",
+                        "form",
+                        "area",
+                    ]
+                ):
+
+                    for attr in (
+                        "href",
+                        "src",
+                        "action",
+                        "data-url",
+                        "data-href",
+                    ):
+
+                        value = tag.get(
+                            attr
+                        )
+
+                        if not isinstance(
+                            value,
+                            str,
+                        ):
+                            continue
+
+                        value = self._normalize_url(
+                            value
+                        )
+
+                        if self._is_http_url(
+                            value
+                        ):
+                            raw_urls.append(
+                                value
+                            )
+
             except Exception:
+                # Regex extraction below remains available.
                 pass
 
-        # --- Pass 2: Regex fallback — catches URLs in plain text and any missed by BS4 ---
-        pattern1 = r'https?://[^\s<>"\']+'  
-        pattern2 = r'(?<!/)\bwww\.[^\s<>"\']+'  
+        # ----------------------------------------------------
+        # Plain-text http/https URLs
+        # ----------------------------------------------------
 
-        raw_urls.extend(re.findall(pattern1, text))
-        www_urls = re.findall(pattern2, text)
-        for w in www_urls:
-            raw_urls.append("http://" + w)
+        raw_urls.extend(
+            self.URL_PATTERN.findall(
+                text
+            )
+        )
 
-        # --- Pass 3: Clean, deduplicate, and unwrap redirect wrappers ---
+        # ----------------------------------------------------
+        # www.example.com fallback
+        # ----------------------------------------------------
+
+        for value in self.WWW_PATTERN.findall(
+            text
+        ):
+            normalized = (
+                "http://"
+                + self._normalize_url(
+                    value
+                )
+            )
+
+            raw_urls.append(
+                normalized
+            )
+
+        # ----------------------------------------------------
+        # Normalize, unwrap and deduplicate
+        # ----------------------------------------------------
+
         cleaned_urls = []
         seen = set()
-        for url in raw_urls:
-            url = url.rstrip(".,;:!?)]}<>'\"")
-            # Unwrap tracking/safety redirectors (e.g. Google safety links)
-            url = self._unwrap_redirect(url)
-            url = url.rstrip(".,;:!?)]}<>'\"")
-            if url not in seen and url.startswith("http"):
-                seen.add(url)
-                cleaned_urls.append(url)
+
+        for raw_url in raw_urls:
+
+            url = self._normalize_url(
+                raw_url
+            )
+
+            if not self._is_http_url(
+                url
+            ):
+                continue
+
+            url = self._unwrap_redirect(
+                url
+            )
+
+            url = self._normalize_url(
+                url
+            )
+
+            if not self._is_http_url(
+                url
+            ):
+                continue
+
+            # Normalize host casing while preserving the rest
+            # of the URL as much as possible.
+            key = self._canonical_url_key(
+                url
+            )
+
+            if key in seen:
+                continue
+
+            seen.add(
+                key
+            )
+
+            cleaned_urls.append(
+                url
+            )
 
         return cleaned_urls
 
-    def analyze_url(self, url, sender_headers, auth_results):
-        parsed = urlparse(url)
-        domain = parsed.hostname or ""
-        domain = domain.lower().rstrip(".")
+    # ========================================================
+    # Analyze single URL
+    # ========================================================
 
-        # Run safe external inspection
-        inspection_data = self.inspection_service.inspect(url)
-        
-        # Backward-compatible fields
-        inspection_data["ip_based"] = self.is_ip(domain)
-        inspection_data["shortener"] = self.is_shortener(domain)
-        inspection_data["keywords"] = self.detect_keywords(url, domain)
-        inspection_data["obfuscated"] = self.is_obfuscated(url)
-        inspection_data["punycode"] = self.is_punycode(domain)
-        inspection_data["suspicious_port"] = self.has_suspicious_port(parsed)
-        inspection_data["subdomain_count"] = self.subdomain_count(domain)
+    def analyze_url(
+        self,
+        url: str,
+        sender_headers: Dict[str, Any] | None = None,
+        auth_results: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
 
-        # Brand Analysis & Sender Alignment
-        inspection_data["email_alignment"] = self.evaluate_alignment(inspection_data, sender_headers, auth_results)
-        
-        brand_rel = self.evaluate_brand_relationship(inspection_data)
-        inspection_data["brand_relationship"] = brand_rel
-        inspection_data["brand_impersonation"] = brand_rel in ["IMPERSONATION", "LOOKALIKE"]
-        inspection_data["brand_match"] = brand_rel in ["OFFICIAL", "SUBDOMAIN_OF_OFFICIAL"]
+        sender_headers = (
+            sender_headers
+            if isinstance(
+                sender_headers,
+                dict,
+            )
+            else {}
+        )
 
-        # TLS Policy Evaluation
-        tls_info = inspection_data.get("tls", {})
-        violation = tls_info.get("violation")
-        
-        inspection_data["http_policy_warning"] = tls_info.get("https") is False
-        
-        policy_violations = [
-            "EXPIRED_CERTIFICATE", 
-            "HOSTNAME_MISMATCH", 
-            "SELF_SIGNED_CERTIFICATE", 
-            "UNTRUSTED_ISSUER", 
-            "CERTIFICATE_INVALID"
+        auth_results = (
+            auth_results
+            if isinstance(
+                auth_results,
+                dict,
+            )
+            else {}
+        )
+
+        url = self._normalize_url(
+            url
+        )
+
+        # ----------------------------------------------------
+        # Safe parsing
+        # ----------------------------------------------------
+
+        try:
+            parsed = urlparse(
+                url
+            )
+        except Exception:
+            return self._failed_url_result(
+                url,
+                "Invalid URL syntax",
+            )
+
+        if (
+            parsed.scheme.lower()
+            not in {
+                "http",
+                "https",
+            }
+            or not parsed.hostname
+        ):
+            return self._failed_url_result(
+                url,
+                "Unsupported or invalid URL",
+            )
+
+        domain = (
+            parsed.hostname
+            or ""
+        ).lower().rstrip(".")
+
+        registered_domain = (
+            self._registered_domain(
+                domain
+            )
+        )
+
+        # ----------------------------------------------------
+        # Inspection service
+        # ----------------------------------------------------
+
+        try:
+
+            inspection_data = (
+                self.inspection_service.inspect(
+                    url
+                )
+                or {}
+            )
+
+        except Exception as exc:
+
+            inspection_data = {
+                "analysis_status": "UNAVAILABLE",
+                "inspection_error": (
+                    "URL inspection unavailable"
+                ),
+                "inspection_error_detail": str(
+                    exc
+                ),
+            }
+
+        # Never allow inspection failure to erase
+        # deterministic local fields.
+        inspection_data = dict(
+            inspection_data
+        )
+
+        inspection_data.setdefault(
+            "analysis_status",
+            "AVAILABLE",
+        )
+
+        inspection_data["url"] = url
+        inspection_data["domain"] = domain
+
+        if not inspection_data.get(
+            "registered_domain"
+        ):
+            inspection_data[
+                "registered_domain"
+            ] = registered_domain
+
+        # ----------------------------------------------------
+        # Basic lexical indicators
+        # ----------------------------------------------------
+
+        inspection_data[
+            "ip_based"
+        ] = self.is_ip(
+            domain
+        )
+
+        inspection_data[
+            "shortener"
+        ] = self.is_shortener(
+            domain
+        )
+
+        inspection_data[
+            "keywords"
+        ] = self.detect_keywords(
+            url,
+            domain,
+        )
+
+        inspection_data[
+            "obfuscated"
+        ] = self.is_obfuscated(
+            url
+        )
+
+        inspection_data[
+            "punycode"
+        ] = self.is_punycode(
+            domain
+        )
+
+        inspection_data[
+            "suspicious_port"
+        ] = self.has_suspicious_port(
+            parsed
+        )
+
+        inspection_data[
+            "subdomain_count"
+        ] = self.subdomain_count(
+            domain
+        )
+
+        # ----------------------------------------------------
+        # Alignment
+        # ----------------------------------------------------
+
+        inspection_data[
+            "email_alignment"
+        ] = self.evaluate_alignment(
+            inspection_data,
+            sender_headers,
+            auth_results,
+        )
+
+        inspection_data[
+            "alignment"
+        ] = inspection_data[
+            "email_alignment"
         ]
-        inspection_data["tls_policy_violation"] = violation in policy_violations
-        
-        unavailable_issues = [
-            "TLS_HANDSHAKE_FAILED",
-            "TLS_UNAVAILABLE"
-        ]
-        inspection_data["tls_inspection_unavailable"] = violation in unavailable_issues
+
+        # ----------------------------------------------------
+        # Brand relationship
+        # ----------------------------------------------------
+
+        brand_relationship = (
+            self.evaluate_brand_relationship(
+                inspection_data
+            )
+        )
+
+        inspection_data[
+            "brand_relationship"
+        ] = brand_relationship
+
+        inspection_data[
+            "brand_impersonation"
+        ] = brand_relationship in {
+            "IMPERSONATION",
+            "LOOKALIKE",
+        }
+
+        inspection_data[
+            "brand_match"
+        ] = brand_relationship in {
+            "OFFICIAL",
+            "SUBDOMAIN_OF_OFFICIAL",
+        }
+
+        # ----------------------------------------------------
+        # TLS
+        # ----------------------------------------------------
+
+        self._apply_tls_policy(
+            inspection_data
+        )
+
+        # ----------------------------------------------------
+        # Structured evidence
+        # ----------------------------------------------------
+
+        structured_evidence = (
+            inspection_data.get(
+                "structured_evidence",
+                [],
+            )
+            or []
+        )
+
+        structured_evidence = list(
+            structured_evidence
+        )
+
+        structured_evidence.extend(
+            self._build_local_evidence(
+                inspection_data
+            )
+        )
+
+        inspection_data[
+            "structured_evidence"
+        ] = self._deduplicate_evidence(
+            structured_evidence
+        )
+
+        # ----------------------------------------------------
+        # Contextual risk summary
+        # ----------------------------------------------------
+
+        inspection_data[
+            "risk_indicators"
+        ] = self._risk_indicators(
+            inspection_data
+        )
+
+        inspection_data[
+            "has_strong_negative_evidence"
+        ] = self._has_strong_negative_evidence(
+            inspection_data
+        )
 
         return inspection_data
 
-    def get_email_domain(self, email_str):
-        if not email_str:
-            return None
-        _, addr = parseaddr(email_str)
-        if "@" in addr:
-            return addr.split("@")[-1].lower()
-        return None
+    # ========================================================
+    # TLS policy normalization
+    # ========================================================
 
-    def evaluate_alignment(self, inspection_data, sender_headers, auth_results):
+    def _apply_tls_policy(
+        self,
+        inspection_data: Dict[str, Any],
+    ) -> None:
+
+        tls_info = (
+            inspection_data.get(
+                "tls",
+                {},
+            )
+            or {}
+        )
+
+        violation = str(
+            tls_info.get(
+                "violation",
+                "",
+            )
+            or ""
+        ).upper()
+
+        https_value = tls_info.get(
+            "https"
+        )
+
+        inspection_data[
+            "http_policy_warning"
+        ] = (
+            https_value is False
+        )
+
+        inspection_data[
+            "tls_policy_violation"
+        ] = (
+            violation
+            in self.TLS_POLICY_VIOLATIONS
+        )
+
+        inspection_data[
+            "tls_inspection_unavailable"
+        ] = (
+            violation
+            in self.TLS_UNAVAILABLE_STATES
+        )
+
+        # Explicit certificate details are preserved.
+        inspection_data[
+            "tls_violation"
+        ] = violation or None
+
+        inspection_data[
+            "tls_error_detail"
+        ] = tls_info.get(
+            "error_detail"
+        )
+
+        if inspection_data[
+            "tls_policy_violation"
+        ]:
+
+            inspection_data[
+                "tls_risk_severity"
+            ] = str(
+                tls_info.get(
+                    "severity",
+                    "MEDIUM",
+                )
+            ).upper()
+
+        elif inspection_data[
+            "tls_inspection_unavailable"
+        ]:
+
+            inspection_data[
+                "tls_risk_severity"
+            ] = "INFO"
+
+        elif inspection_data[
+            "http_policy_warning"
+        ]:
+
+            inspection_data[
+                "tls_risk_severity"
+            ] = "LOW"
+
+        else:
+
+            inspection_data[
+                "tls_risk_severity"
+            ] = (
+                tls_info.get(
+                    "severity",
+                    "INFO",
+                )
+                or "INFO"
+            )
+
+    # ========================================================
+    # Alignment
+    # ========================================================
+
+    def evaluate_alignment(
+        self,
+        inspection_data: Dict[str, Any],
+        sender_headers: Dict[str, Any] | None,
+        auth_results: Dict[str, Any] | None,
+    ) -> str:
+
         if not sender_headers:
             return "unknown"
 
-        url_reg_domain = inspection_data.get("registered_domain")
-        if not url_reg_domain:
+        url_registered_domain = (
+            inspection_data.get(
+                "registered_domain"
+            )
+            or ""
+        ).lower()
+
+        if not url_registered_domain:
             return "unknown"
 
-        from_domain = self.get_email_domain(sender_headers.get("from", ""))
-        return_path_domain = self.get_email_domain(sender_headers.get("return-path", ""))
-        
-        # Must have at least a sender domain to compare
+        from_domain = self.get_email_domain(
+            sender_headers.get(
+                "from",
+                "",
+            )
+        )
+
+        return_path_domain = self.get_email_domain(
+            sender_headers.get(
+                "return-path",
+                sender_headers.get(
+                    "Return-Path",
+                    "",
+                ),
+            )
+        )
+
         if not from_domain:
             return "unknown"
 
-        sender_ext = tldextract.extract(from_domain)
-        sender_reg_domain = sender_ext.registered_domain if sender_ext.registered_domain else from_domain
+        sender_registered_domain = (
+            self._registered_domain(
+                from_domain
+            )
+        )
 
-        # Authenticated sender
-        is_authenticated = False
-        if auth_results:
-            is_authenticated = auth_results.get("spf") == "pass" or auth_results.get("dkim") == "pass"
+        return_path_registered_domain = (
+            self._registered_domain(
+                return_path_domain
+            )
+            if return_path_domain
+            else ""
+        )
 
-        if sender_reg_domain == url_reg_domain:
-            if is_authenticated:
+        auth_state = (
+            self._authentication_state(
+                auth_results
+            )
+        )
+
+        if (
+            sender_registered_domain
+            == url_registered_domain
+        ):
+
+            if auth_state == "PASSED":
                 return "aligned"
-            else:
+
+            if auth_state == "PARTIAL":
                 return "partially_aligned"
-                
-        # If there's a return-path and it matches, partial alignment
-        if return_path_domain:
-            return_ext = tldextract.extract(return_path_domain)
-            return_reg_domain = return_ext.registered_domain if return_ext.registered_domain else return_path_domain
-            if return_reg_domain == url_reg_domain:
+
+            if auth_state == "UNAVAILABLE":
                 return "partially_aligned"
+
+            return "partially_aligned"
+
+        if (
+            return_path_registered_domain
+            == url_registered_domain
+        ):
+
+            if auth_state == "PASSED":
+                return "partially_aligned"
+
+            return "partially_aligned"
 
         return "misaligned"
 
-    def evaluate_brand_relationship(self, inspection_data):
-        import difflib
-        hostname = (inspection_data.get("domain") or "").lower()
-        registered_domain = (inspection_data.get("registered_domain") or "").lower()
-        
-        if not hostname or not registered_domain:
+    # ========================================================
+    # Brand relationship
+    # ========================================================
+
+    def evaluate_brand_relationship(
+        self,
+        inspection_data: Dict[str, Any],
+    ) -> str:
+
+        hostname = (
+            inspection_data.get(
+                "domain",
+                "",
+            )
+            or ""
+        ).lower().rstrip(".")
+
+        registered_domain = (
+            inspection_data.get(
+                "registered_domain",
+                "",
+            )
+            or ""
+        ).lower().rstrip(".")
+
+        if not hostname:
             return "UNKNOWN"
-            
-        # First pass: check for exact match or subdomain of any trusted domain
+
+        # ----------------------------------------------------
+        # Exact / legitimate subdomain
+        # ----------------------------------------------------
+
         for trusted in self.TRUSTED_DOMAINS:
+
+            trusted = (
+                trusted.lower().rstrip(".")
+            )
+
             if hostname == trusted:
                 return "OFFICIAL"
-            if hostname.endswith("." + trusted):
+
+            if hostname.endswith(
+                "."
+                + trusted
+            ):
                 return "SUBDOMAIN_OF_OFFICIAL"
-                
-        # Second pass: check for impersonation and lookalikes
+
+        # ----------------------------------------------------
+        # Extract trusted brand labels
+        # ----------------------------------------------------
+
+        trusted_brands = []
+
         for trusted in self.TRUSTED_DOMAINS:
-            trusted_brand = trusted.split(".")[0]
-            
-            # Impersonation (contains brand name but different registered domain)
-            if trusted_brand in hostname and trusted not in registered_domain:
+
+            try:
+                trusted_extract = (
+                    tldextract.extract(
+                        trusted
+                    )
+                )
+
+                brand = (
+                    trusted_extract.domain
+                    or trusted.split(
+                        "."
+                    )[0]
+                )
+
+            except Exception:
+                brand = trusted.split(
+                    "."
+                )[0]
+
+            if brand:
+                trusted_brands.append(
+                    (
+                        trusted,
+                        brand.lower(),
+                    )
+                )
+
+        # ----------------------------------------------------
+        # Registered-domain comparison
+        # ----------------------------------------------------
+
+        for trusted, brand in trusted_brands:
+
+            if not registered_domain:
+                continue
+
+            if (
+                registered_domain
+                == trusted
+            ):
+                continue
+
+            # Brand appears in the host but the registered
+            # domain is unrelated.
+            labels = (
+                hostname.split(".")
+            )
+
+            brand_present = any(
+                brand == label
+                or brand in label
+                for label in labels
+            )
+
+            if brand_present:
+
                 return "IMPERSONATION"
-                
-            # Lookalike checks
-            # Replace common substitutions (e.g., 1->l, 0->o)
-            lookalike_host = hostname.replace("1", "l").replace("0", "o")
-            if trusted_brand in lookalike_host and trusted not in registered_domain:
-                return "LOOKALIKE"
-            
-            # Typo-squatting via SequenceMatcher (e.g., 'gogle' for 'google')
-            for part in hostname.split("."):
-                # Avoid matching very short parts to prevent false positives
-                if len(part) < 4:
+
+        # ----------------------------------------------------
+        # Lookalike / typo-squatting
+        # ----------------------------------------------------
+
+        candidate_labels = (
+            hostname.split(".")
+        )
+
+        for trusted, brand in trusted_brands:
+
+            if len(brand) < 4:
+                continue
+
+            for label in candidate_labels:
+
+                if len(label) < 4:
                     continue
-                ratio = difflib.SequenceMatcher(None, trusted_brand, part).ratio()
-                if ratio > 0.8 and trusted not in registered_domain:
+
+                normalized_label = (
+                    self._normalize_lookalike(
+                        label
+                    )
+                )
+
+                if (
+                    normalized_label
+                    == brand
+                    and registered_domain
+                    != trusted
+                ):
                     return "LOOKALIKE"
-                
+
+                ratio = (
+                    difflib.SequenceMatcher(
+                        None,
+                        brand,
+                        normalized_label,
+                    ).ratio()
+                )
+
+                if (
+                    ratio >= 0.88
+                    and registered_domain
+                    != trusted
+                ):
+                    return "LOOKALIKE"
+
         return "UNKNOWN"
 
-    def is_ip(self, domain):
+    # ========================================================
+    # IP / shortener / trusted domain
+    # ========================================================
+
+    @staticmethod
+    def is_ip(
+        domain: str,
+    ) -> bool:
+
+        if not domain:
+            return False
+
         try:
-            ipaddress.ip_address(domain)
+            ipaddress.ip_address(
+                domain
+            )
             return True
         except ValueError:
             return False
 
-    def is_shortener(self, domain):
-        return domain in self.SHORTENERS
+    def is_shortener(
+        self,
+        domain: str,
+    ) -> bool:
 
-    def is_trusted_domain(self, domain):
-        domain = domain.lower().rstrip(".")
+        domain = (
+            domain
+            or ""
+        ).lower().rstrip(".")
+
+        return (
+            domain in self.SHORTENERS
+        )
+
+    def is_trusted_domain(
+        self,
+        domain: str,
+    ) -> bool:
+
+        domain = (
+            domain
+            or ""
+        ).lower().rstrip(".")
+
         for trusted in self.TRUSTED_DOMAINS:
-            if domain == trusted or domain.endswith("." + trusted):
+
+            trusted = (
+                trusted.lower().rstrip(".")
+            )
+
+            if (
+                domain == trusted
+                or domain.endswith(
+                    "."
+                    + trusted
+                )
+            ):
                 return True
+
         return False
 
-    def detect_keywords(self, url, domain):
-        if self.is_trusted_domain(domain):
+    # ========================================================
+    # Keyword detection
+    # ========================================================
+
+    def detect_keywords(
+        self,
+        url: str,
+        domain: str,
+    ) -> List[str]:
+
+        if self.is_trusted_domain(
+            domain
+        ):
             return []
-        decoded_url = unquote(url).lower()
+
+        decoded_url = unquote(
+            url
+        ).lower()
+
         found = []
-        for word in self.SUSPICIOUS_KEYWORDS:
+
+        for word in (
+            self.SUSPICIOUS_KEYWORDS
+        ):
+
             if word in decoded_url:
-                found.append(word)
-        return found
+                found.append(
+                    word
+                )
 
-    def is_obfuscated(self, url):
-        parsed = urlparse(url)
+        return sorted(
+            set(found)
+        )
 
-        # Trusted domains are never considered obfuscated
-        domain = (parsed.hostname or "").lower()
-        if self.is_trusted_domain(domain):
+    # ========================================================
+    # Obfuscation
+    # ========================================================
+
+    def is_obfuscated(
+        self,
+        url: str,
+    ) -> bool:
+
+        try:
+            parsed = urlparse(
+                url
+            )
+
+        except Exception:
+            return True
+
+        domain = (
+            parsed.hostname
+            or ""
+        ).lower()
+
+        # ----------------------------------------------------
+        # Credentials embedded in authority
+        # ----------------------------------------------------
+
+        if parsed.username is not None:
+            return True
+
+        if parsed.password is not None:
+            return True
+
+        # ----------------------------------------------------
+        # Percent encoding in hostname/netloc
+        # ----------------------------------------------------
+
+        if "%" in (
+            parsed.netloc
+            or ""
+        ):
+            return True
+
+        # ----------------------------------------------------
+        # Suspicious control characters
+        # ----------------------------------------------------
+
+        if any(
+            ord(char) < 32
+            for char in url
+        ):
+            return True
+
+        # ----------------------------------------------------
+        # Punycode is separately classified. Do not double
+        # count it here.
+        # ----------------------------------------------------
+
+        if (
+            "xn--" in domain
+        ):
             return False
 
-        # Credentials embedded in the URL (e.g. http://user@evil.com)
-        if "@" in parsed.netloc:
-            return True
+        # ----------------------------------------------------
+        # Odd numeric/IP-looking host
+        # ----------------------------------------------------
 
-        # Percent encoding in the DOMAIN/NETLOC is suspicious
-        # (e.g. http://g%6f%6fgle.com) — but NOT in path or query string
-        # which is perfectly normal (e.g. ?continue=...%3D...)
-        if "%" in parsed.netloc:
+        if (
+            domain
+            and self.is_ip(
+                domain
+            )
+        ):
             return True
-
-        # IP-literal hostname
-        if parsed.hostname:
-            try:
-                if parsed.hostname.isdigit():
-                    return True
-            except Exception:
-                pass
 
         return False
 
-    def is_punycode(self, domain):
-        return "xn--" in domain.lower()
+    # ========================================================
+    # Punycode
+    # ========================================================
 
-    def has_suspicious_port(self, parsed):
+    @staticmethod
+    def is_punycode(
+        domain: str,
+    ) -> bool:
+
+        return (
+            "xn--"
+            in (
+                domain
+                or ""
+            ).lower()
+        )
+
+    # ========================================================
+    # Port
+    # ========================================================
+
+    @staticmethod
+    def has_suspicious_port(
+        parsed,
+    ) -> bool:
+
         try:
+
             port = parsed.port
+
             if port is None:
                 return False
-            return port not in {80, 443}
+
+            return port not in {
+                80,
+                443,
+            }
+
         except ValueError:
             return True
 
-    def subdomain_count(self, domain):
+    # ========================================================
+    # Subdomain count
+    # ========================================================
+
+    def subdomain_count(
+        self,
+        domain: str,
+    ) -> int:
+
         if not domain:
             return 0
-        if self.is_ip(domain):
+
+        if self.is_ip(
+            domain
+        ):
             return 0
-        parts = domain.split(".")
-        if len(parts) <= 2:
+
+        registered_domain = self._registered_domain(
+            domain
+        )
+
+        if not registered_domain:
             return 0
-        return len(parts) - 2
+
+        labels = [
+            item
+            for item in domain.split(".")
+            if item
+        ]
+
+        registered_labels = [
+            item
+            for item in registered_domain.split(".")
+            if item
+        ]
+
+        return max(
+            0,
+            len(
+                labels
+            )
+            - len(
+                registered_labels
+            ),
+        )
+
+    # ========================================================
+    # Registered domain
+    # ========================================================
+
+    def _registered_domain(
+        self,
+        domain: str | None,
+    ) -> str:
+
+        domain = (
+            domain
+            or ""
+        ).lower().strip(".")
+
+        if not domain:
+            return ""
+
+        if self.is_ip(
+            domain
+        ):
+            return domain
+
+        cached = (
+            self._tld_cache.get(
+                domain
+            )
+        )
+
+        if cached is not None:
+            return cached
+
+        try:
+
+            extracted = tldextract.extract(
+                domain
+            )
+
+            registered = (
+                extracted.registered_domain
+            )
+
+            if not registered:
+
+                if (
+                    extracted.domain
+                    and extracted.suffix
+                ):
+                    registered = (
+                        extracted.domain
+                        + "."
+                        + extracted.suffix
+                    )
+
+                else:
+                    registered = domain
+
+        except Exception:
+            registered = domain
+
+        self._tld_cache[
+            domain
+        ] = registered
+
+        return registered
+
+    # ========================================================
+    # Authentication state
+    # ========================================================
+
+    @staticmethod
+    def _authentication_state(
+        auth_results: Dict[str, Any] | None,
+    ) -> str:
+
+        if not isinstance(
+            auth_results,
+            dict,
+        ):
+            return "UNAVAILABLE"
+
+        status = str(
+            auth_results.get(
+                "analysis_status",
+                "AVAILABLE",
+            )
+        ).upper()
+
+        if status == "UNAVAILABLE":
+            return "UNAVAILABLE"
+
+        spf = URLAnalyzer._auth_value(
+            auth_results,
+            "spf",
+            "spf_result",
+        )
+
+        dkim = URLAnalyzer._auth_value(
+            auth_results,
+            "dkim",
+            "dkim_result",
+        )
+
+        dmarc = URLAnalyzer._auth_value(
+            auth_results,
+            "dmarc",
+            "dmarc_result",
+        )
+
+        if (
+            spf == "pass"
+            and dkim == "pass"
+            and dmarc == "pass"
+        ):
+            return "PASSED"
+
+        if (
+            spf == "fail"
+            or dkim == "fail"
+            or dmarc == "fail"
+        ):
+            return "FAILED"
+
+        if (
+            spf
+            or dkim
+            or dmarc
+        ):
+            return "PARTIAL"
+
+        return "UNAVAILABLE"
+
+    @staticmethod
+    def _auth_value(
+        auth_results: Dict[str, Any],
+        primary: str,
+        fallback: str,
+    ) -> str:
+
+        return str(
+            auth_results.get(
+                primary,
+                auth_results.get(
+                    fallback,
+                    "",
+                ),
+            )
+            or ""
+        ).strip().lower()
+
+    # ========================================================
+    # Evidence generation
+    # ========================================================
+
+    def _build_local_evidence(
+        self,
+        inspection_data: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+
+        evidence = []
+
+        domain = (
+            inspection_data.get(
+                "domain",
+                "",
+            )
+        )
+
+        if inspection_data.get(
+            "ip_based"
+        ):
+
+            evidence.append(
+                self._evidence(
+                    type_="SUSPICIOUS_URL",
+                    severity="HIGH",
+                    direction="NEGATIVE",
+                    source="URLAnalyzer",
+                    explanation=(
+                        f"URL uses an IP address as the destination: {domain}."
+                    ),
+                    confidence=0.90,
+                )
+            )
+
+        if inspection_data.get(
+            "shortener"
+        ):
+
+            evidence.append(
+                self._evidence(
+                    type_="SUSPICIOUS_URL",
+                    severity="MEDIUM",
+                    direction="NEGATIVE",
+                    source="URLAnalyzer",
+                    explanation=(
+                        "URL uses a shortening service."
+                    ),
+                    confidence=0.80,
+                )
+            )
+
+        keywords = (
+            inspection_data.get(
+                "keywords",
+                [],
+            )
+            or []
+        )
+
+        if keywords:
+
+            evidence.append(
+                self._evidence(
+                    type_="SUSPICIOUS_URL_KEYWORD",
+                    severity="LOW",
+                    direction="NEGATIVE",
+                    source="URLAnalyzer",
+                    explanation=(
+                        "URL contains contextual security-sensitive "
+                        "keywords: "
+                        + ", ".join(
+                            keywords
+                        )
+                    ),
+                    confidence=0.55,
+                )
+            )
+
+        if inspection_data.get(
+            "punycode"
+        ):
+
+            evidence.append(
+                self._evidence(
+                    type_="PUNYCODE_DOMAIN",
+                    severity="HIGH",
+                    direction="NEGATIVE",
+                    source="URLAnalyzer",
+                    explanation=(
+                        "Destination domain uses Punycode."
+                    ),
+                    confidence=0.90,
+                )
+            )
+
+        if inspection_data.get(
+            "obfuscated"
+        ):
+
+            evidence.append(
+                self._evidence(
+                    type_="OBFUSCATED_URL",
+                    severity="HIGH",
+                    direction="NEGATIVE",
+                    source="URLAnalyzer",
+                    explanation=(
+                        "URL contains obfuscation indicators."
+                    ),
+                    confidence=0.90,
+                )
+            )
+
+        if inspection_data.get(
+            "suspicious_port"
+        ):
+
+            evidence.append(
+                self._evidence(
+                    type_="SUSPICIOUS_URL_PORT",
+                    severity="MEDIUM",
+                    direction="NEGATIVE",
+                    source="URLAnalyzer",
+                    explanation=(
+                        "URL uses a non-standard HTTP/HTTPS port."
+                    ),
+                    confidence=0.80,
+                )
+            )
+
+        subdomain_count = self._safe_int(
+            inspection_data.get(
+                "subdomain_count",
+                0,
+            )
+        )
+
+        if subdomain_count > 3:
+
+            evidence.append(
+                self._evidence(
+                    type_="EXCESSIVE_SUBDOMAINS",
+                    severity="LOW",
+                    direction="NEGATIVE",
+                    source="URLAnalyzer",
+                    explanation=(
+                        f"Destination contains {subdomain_count} "
+                        "subdomain level(s)."
+                    ),
+                    confidence=0.65,
+                )
+            )
+
+        relationship = (
+            inspection_data.get(
+                "brand_relationship",
+                "UNKNOWN",
+            )
+        )
+
+        if relationship == "OFFICIAL":
+
+            evidence.append(
+                self._evidence(
+                    type_="OFFICIAL_BRAND",
+                    severity="LOW",
+                    direction="POSITIVE",
+                    source="URLAnalyzer",
+                    explanation=(
+                        "URL exactly matches a recognized official domain."
+                    ),
+                    confidence=0.95,
+                )
+            )
+
+        elif relationship == "SUBDOMAIN_OF_OFFICIAL":
+
+            evidence.append(
+                self._evidence(
+                    type_="OFFICIAL_BRAND_SUBDOMAIN",
+                    severity="LOW",
+                    direction="POSITIVE",
+                    source="URLAnalyzer",
+                    explanation=(
+                        "URL is a subdomain of a recognized official domain."
+                    ),
+                    confidence=0.92,
+                )
+            )
+
+        elif relationship == "IMPERSONATION":
+
+            evidence.append(
+                self._evidence(
+                    type_="BRAND_IMPERSONATION",
+                    severity="CRITICAL",
+                    direction="NEGATIVE",
+                    source="URLAnalyzer",
+                    explanation=(
+                        "URL appears to impersonate a recognized brand."
+                    ),
+                    confidence=0.95,
+                )
+            )
+
+        elif relationship == "LOOKALIKE":
+
+            evidence.append(
+                self._evidence(
+                    type_="HOMOGRAPH_DOMAIN",
+                    severity="HIGH",
+                    direction="NEGATIVE",
+                    source="URLAnalyzer",
+                    explanation=(
+                        "URL appears visually or lexically similar "
+                        "to a recognized brand domain."
+                    ),
+                    confidence=0.90,
+                )
+            )
+
+        alignment = str(
+            inspection_data.get(
+                "email_alignment",
+                "unknown",
+            )
+        ).lower()
+
+        if alignment == "aligned":
+
+            evidence.append(
+                self._evidence(
+                    type_="URL_ALIGNMENT",
+                    severity="LOW",
+                    direction="POSITIVE",
+                    source="URLAnalyzer",
+                    explanation=(
+                        "URL registered domain aligns with the sender."
+                    ),
+                    confidence=0.90,
+                )
+            )
+
+        elif alignment == "misaligned":
+
+            evidence.append(
+                self._evidence(
+                    type_="DOMAIN_MISMATCH",
+                    severity="HIGH",
+                    direction="NEGATIVE",
+                    source="URLAnalyzer",
+                    explanation=(
+                        "URL registered domain does not align with the sender."
+                    ),
+                    confidence=0.90,
+                )
+            )
+
+        # ----------------------------------------------------
+        # TLS
+        # ----------------------------------------------------
+
+        if inspection_data.get(
+            "tls_policy_violation"
+        ):
+
+            tls = (
+                inspection_data.get(
+                    "tls",
+                    {},
+                )
+                or {}
+            )
+
+            evidence.append(
+                self._evidence(
+                    type_="TLS_POLICY_VIOLATION",
+                    severity=self._normalize_severity(
+                        tls.get(
+                            "severity",
+                            "MEDIUM",
+                        )
+                    ),
+                    direction="NEGATIVE",
+                    source="URLAnalyzer",
+                    explanation=(
+                        "TLS policy violation: "
+                        + str(
+                            tls.get(
+                                "violation",
+                                "UNKNOWN",
+                            )
+                        )
+                    ),
+                    confidence=0.90,
+                )
+            )
+
+        elif inspection_data.get(
+            "http_policy_warning"
+        ):
+
+            evidence.append(
+                self._evidence(
+                    type_="HTTP_POLICY_WARNING",
+                    severity="LOW",
+                    direction="NEGATIVE",
+                    source="URLAnalyzer",
+                    explanation=(
+                        "URL uses plain HTTP instead of HTTPS."
+                    ),
+                    confidence=0.90,
+                )
+            )
+
+        elif inspection_data.get(
+            "tls_inspection_unavailable"
+        ):
+
+            evidence.append(
+                self._evidence(
+                    type_="TLS_INSPECTION_UNAVAILABLE",
+                    severity="INFO",
+                    direction="NEUTRAL",
+                    source="URLAnalyzer",
+                    explanation=(
+                        "TLS inspection could not be completed."
+                    ),
+                    confidence=0.0,
+                )
+            )
+
+        return evidence
+
+    # ========================================================
+    # Risk summary
+    # ========================================================
+
+    @staticmethod
+    def _risk_indicators(
+        inspection_data: Dict[str, Any],
+    ) -> List[str]:
+
+        indicators = []
+
+        if inspection_data.get(
+            "ip_based"
+        ):
+            indicators.append(
+                "IP-based URL"
+            )
+
+        if inspection_data.get(
+            "shortener"
+        ):
+            indicators.append(
+                "URL shortener"
+            )
+
+        if inspection_data.get(
+            "punycode"
+        ):
+            indicators.append(
+                "Punycode domain"
+            )
+
+        if inspection_data.get(
+            "obfuscated"
+        ):
+            indicators.append(
+                "Obfuscated URL"
+            )
+
+        if inspection_data.get(
+            "suspicious_port"
+        ):
+            indicators.append(
+                "Suspicious port"
+            )
+
+        if inspection_data.get(
+            "brand_impersonation"
+        ):
+            indicators.append(
+                "Brand impersonation"
+            )
+
+        if inspection_data.get(
+            "email_alignment"
+        ) == "misaligned":
+            indicators.append(
+                "Sender/domain mismatch"
+            )
+
+        if inspection_data.get(
+            "tls_policy_violation"
+        ):
+            indicators.append(
+                "TLS policy violation"
+            )
+
+        if inspection_data.get(
+            "http_policy_warning"
+        ):
+            indicators.append(
+                "Insecure transport"
+            )
+
+        return indicators
+
+    def _has_strong_negative_evidence(
+        self,
+        inspection_data: Dict[str, Any],
+    ) -> bool:
+
+        evidence = (
+            inspection_data.get(
+                "structured_evidence",
+                [],
+            )
+            or []
+        )
+
+        return any(
+            item.get(
+                "direction"
+            ) == "NEGATIVE"
+            and (
+                item.get(
+                    "severity"
+                )
+                in {
+                    "HIGH",
+                    "CRITICAL",
+                }
+            )
+            for item in evidence
+            if isinstance(
+                item,
+                dict,
+            )
+        )
+
+    # ========================================================
+    # Failed result
+    # ========================================================
+
+    def _failed_url_result(
+        self,
+        url: str,
+        error: str,
+    ) -> Dict[str, Any]:
+
+        return {
+            "analysis_status": "UNAVAILABLE",
+            "url": url,
+            "domain": "",
+            "registered_domain": "",
+            "inspection_error": (
+                "URL analysis unavailable"
+            ),
+            "inspection_error_detail": str(
+                error
+            ),
+            "ip_based": False,
+            "shortener": False,
+            "keywords": [],
+            "obfuscated": False,
+            "punycode": False,
+            "suspicious_port": False,
+            "subdomain_count": 0,
+            "email_alignment": "unknown",
+            "alignment": "unknown",
+            "brand_relationship": "UNKNOWN",
+            "brand_impersonation": False,
+            "brand_match": False,
+            "tls_policy_violation": False,
+            "tls_inspection_unavailable": True,
+            "http_policy_warning": False,
+            "structured_evidence": [
+                self._evidence(
+                    type_="URL_ANALYSIS_UNAVAILABLE",
+                    severity="INFO",
+                    direction="NEUTRAL",
+                    source="URLAnalyzer",
+                    explanation=(
+                        "URL inspection was unavailable."
+                    ),
+                    confidence=0.0,
+                )
+            ],
+            "risk_indicators": [],
+            "has_strong_negative_evidence": False,
+        }
+
+    # ========================================================
+    # Normalization helpers
+    # ========================================================
+
+    @staticmethod
+    def _normalize_url(
+        url: Any,
+    ) -> str:
+
+        url = str(
+            url
+            or ""
+        ).strip()
+
+        url = url.strip(
+            URLAnalyzer.URL_TRAILING_CHARS
+        )
+
+        return url
+
+    @staticmethod
+    def _is_http_url(
+        url: str,
+    ) -> bool:
+
+        if not url:
+            return False
+
+        try:
+            parsed = urlparse(
+                url
+            )
+
+            return (
+                parsed.scheme.lower()
+                in {
+                    "http",
+                    "https",
+                }
+                and bool(
+                    parsed.hostname
+                )
+            )
+
+        except (
+            ValueError,
+            TypeError,
+        ):
+            return False
+
+    @staticmethod
+    def _canonical_url_key(
+        url: str,
+    ) -> str:
+
+        try:
+            parsed = urlparse(
+                url
+            )
+
+            scheme = (
+                parsed.scheme.lower()
+            )
+
+            hostname = (
+                parsed.hostname
+                or ""
+            ).lower().rstrip(".")
+
+            port = ""
+
+            try:
+                if parsed.port:
+                    if not (
+                        (
+                            scheme == "http"
+                            and parsed.port == 80
+                        )
+                        or (
+                            scheme == "https"
+                            and parsed.port == 443
+                        )
+                    ):
+                        port = (
+                            ":"
+                            + str(
+                                parsed.port
+                            )
+                        )
+            except ValueError:
+                return url.lower()
+
+            path = (
+                parsed.path
+                or "/"
+            )
+
+            query = (
+                parsed.query
+                or ""
+            )
+
+            return (
+                scheme
+                + "://"
+                + hostname
+                + port
+                + path
+                + (
+                    "?"
+                    + query
+                    if query
+                    else ""
+                )
+            ).lower()
+
+        except Exception:
+            return str(
+                url
+            ).lower()
+
+    def _normalize_lookalike(
+        self,
+        value: str,
+    ) -> str:
+
+        value = (
+            value
+            or ""
+        ).lower()
+
+        substitutions = str.maketrans(
+            {
+                "0": "o",
+                "1": "l",
+                "3": "e",
+                "5": "s",
+                "7": "t",
+                "@": "a",
+            }
+        )
+
+        return value.translate(
+            substitutions
+        )
+
+    @staticmethod
+    def _normalize_severity(
+        severity: Any,
+    ) -> str:
+
+        value = str(
+            severity
+            or "MEDIUM"
+        ).upper()
+
+        if value not in {
+            "LOW",
+            "MEDIUM",
+            "HIGH",
+            "CRITICAL",
+            "INFO",
+        }:
+            return "MEDIUM"
+
+        return value
+
+    @staticmethod
+    def _safe_int(
+        value: Any,
+    ) -> int:
+
+        try:
+            return int(
+                float(
+                    value
+                    or 0
+                )
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            return 0
+
+    @staticmethod
+    def _evidence(
+        type_: str,
+        severity: str,
+        direction: str,
+        source: str,
+        explanation: str,
+        confidence: float,
+    ) -> Dict[str, Any]:
+
+        try:
+            confidence = float(
+                confidence
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            confidence = 0.0
+
+        return {
+            "type": (
+                str(
+                    type_
+                    or "UNKNOWN"
+                )
+                .strip()
+                .upper()
+                .replace(
+                    "-",
+                    "_",
+                )
+                .replace(
+                    " ",
+                    "_",
+                )
+            ),
+            "severity": str(
+                severity
+                or "INFO"
+            ).upper(),
+            "direction": str(
+                direction
+                or "NEUTRAL"
+            ).upper(),
+            "source": source,
+            "explanation": explanation,
+            "confidence": max(
+                0.0,
+                min(
+                    1.0,
+                    confidence,
+                ),
+            ),
+        }
+
+    @staticmethod
+    def _deduplicate_evidence(
+        evidence,
+    ) -> List[Dict[str, Any]]:
+
+        if not isinstance(
+            evidence,
+            list,
+        ):
+            return []
+
+        result = []
+        seen = set()
+
+        for item in evidence:
+
+            if not isinstance(
+                item,
+                dict,
+            ):
+                continue
+
+            key = (
+                str(
+                    item.get(
+                        "type",
+                        "",
+                    )
+                ),
+                str(
+                    item.get(
+                        "severity",
+                        "",
+                    )
+                ),
+                str(
+                    item.get(
+                        "direction",
+                        "",
+                    )
+                ),
+                str(
+                    item.get(
+                        "source",
+                        "",
+                    )
+                ),
+                str(
+                    item.get(
+                        "explanation",
+                        "",
+                    )
+                ),
+            )
+
+            if key in seen:
+                continue
+
+            seen.add(
+                key
+            )
+
+            result.append(
+                item
+            )
+
+        return result

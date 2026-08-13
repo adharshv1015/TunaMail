@@ -28,6 +28,7 @@ MAX_ANALYSIS_CACHE_ENTRIES = int(os.environ.get("MAX_ANALYSIS_CACHE_ENTRIES", "5
 
 # Increment this whenever the intelligence pipeline changes significantly.
 # Cache entries from a previous version will be automatically invalidated.
+# Note: For historical safety persistence, see SAFE_VERDICT_VERSION in verdict_store.py
 ANALYSIS_VERSION = "15.1"
 
 

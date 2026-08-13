@@ -19,6 +19,7 @@ from .campaign_detector import CampaignDetector
 from .behavioral_analyzer import BehavioralAnalyzer
 from .temporal_analyzer import TemporalAnalyzer
 from .adaptive_intelligence import AdaptiveIntelligenceEngine
+from .sanity_validator import SanityValidator
 
 class AIOrchestrator:
     def __init__(self):
@@ -38,6 +39,7 @@ class AIOrchestrator:
         self.behavioral_analyzer = BehavioralAnalyzer()
         self.temporal_analyzer = TemporalAnalyzer()
         self.adaptive_intelligence = AdaptiveIntelligenceEngine()
+        self.sanity_validator = SanityValidator()
         
     def analyze_email_with_ai(self, parsed_email: dict, existing_analysis: dict) -> dict:
         """
@@ -163,7 +165,7 @@ class AIOrchestrator:
         pos_ev = [e.explanation for e in evidence_items if e.direction == EvidenceDirection.POSITIVE]
         neg_ev = [e.explanation for e in evidence_items if e.direction == EvidenceDirection.NEGATIVE]
 
-        return {
+        result = {
             "enabled": True,
             "model_type": "local-mlp-v1",
             "reasoning_state": reasoning_state,
@@ -196,6 +198,18 @@ class AIOrchestrator:
             "adaptive": adaptive_evidence,
             "structured_evidence": evidence_items
         }
+
+        # Stage 11: Sanity Validation
+        result = self.sanity_validator.validate(
+            ai_result=result,
+            auth_analysis=auth_analysis,
+            url_analysis=url_analysis,
+            brand_evidence=brand_evidence,
+            threat_evidence=[], # We don't have separate threat evidence here, it's in url_analysis
+            risk_score=0 # We don't have the final risk score yet, we pass 0
+        )
+        
+        return result
 
 _ai_orchestrator = None
 

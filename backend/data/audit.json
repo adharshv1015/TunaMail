@@ -277,6 +277,198 @@
         "previous_risk_score": 100,
         "reason": "Test 2"
       }
+    },
+    {
+      "timestamp": "2026-08-13T10:54:04.693653",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "MALICIOUS",
+        "timestamp": "2026-08-13T10:54:04.684492",
+        "previous_verdict": "UNKNOWN",
+        "previous_risk_score": 0,
+        "reason": "Test 1"
+      }
+    },
+    {
+      "timestamp": "2026-08-13T10:54:04.706187",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "SAFE",
+        "timestamp": "2026-08-13T10:54:04.698170",
+        "previous_verdict": "MALICIOUS",
+        "previous_risk_score": 100,
+        "reason": "Test 2"
+      }
+    },
+    {
+      "timestamp": "2026-08-13T11:07:45.490992",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "MALICIOUS",
+        "timestamp": "2026-08-13T11:07:45.465276",
+        "previous_verdict": "UNKNOWN",
+        "previous_risk_score": 0,
+        "reason": "Test 1"
+      }
+    },
+    {
+      "timestamp": "2026-08-13T11:07:45.504262",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "SAFE",
+        "timestamp": "2026-08-13T11:07:45.495887",
+        "previous_verdict": "MALICIOUS",
+        "previous_risk_score": 100,
+        "reason": "Test 2"
+      }
+    },
+    {
+      "timestamp": "2026-08-13T11:09:57.327776",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "MALICIOUS",
+        "timestamp": "2026-08-13T11:09:57.302885",
+        "previous_verdict": "UNKNOWN",
+        "previous_risk_score": 0,
+        "reason": "Test 1"
+      }
+    },
+    {
+      "timestamp": "2026-08-13T11:09:57.342362",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "SAFE",
+        "timestamp": "2026-08-13T11:09:57.333123",
+        "previous_verdict": "MALICIOUS",
+        "previous_risk_score": 100,
+        "reason": "Test 2"
+      }
+    },
+    {
+      "timestamp": "2026-08-13T11:17:32.393314",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "MALICIOUS",
+        "timestamp": "2026-08-13T11:17:32.367976",
+        "previous_verdict": "UNKNOWN",
+        "previous_risk_score": 0,
+        "reason": "Test 1"
+      }
+    },
+    {
+      "timestamp": "2026-08-13T11:17:32.407089",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "SAFE",
+        "timestamp": "2026-08-13T11:17:32.398316",
+        "previous_verdict": "MALICIOUS",
+        "previous_risk_score": 100,
+        "reason": "Test 2"
+      }
+    },
+    {
+      "timestamp": "2026-08-13T11:20:47.768069",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "MALICIOUS",
+        "timestamp": "2026-08-13T11:20:47.740142",
+        "previous_verdict": "UNKNOWN",
+        "previous_risk_score": 0,
+        "reason": "Test 1"
+      }
+    },
+    {
+      "timestamp": "2026-08-13T11:20:47.782034",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "SAFE",
+        "timestamp": "2026-08-13T11:20:47.773522",
+        "previous_verdict": "MALICIOUS",
+        "previous_risk_score": 100,
+        "reason": "Test 2"
+      }
+    },
+    {
+      "timestamp": "2026-08-13T11:29:48.168363",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "MALICIOUS",
+        "timestamp": "2026-08-13T11:29:48.143185",
+        "previous_verdict": "UNKNOWN",
+        "previous_risk_score": 0,
+        "reason": "Test 1"
+      }
+    },
+    {
+      "timestamp": "2026-08-13T11:29:48.181848",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "SAFE",
+        "timestamp": "2026-08-13T11:29:48.173468",
+        "previous_verdict": "MALICIOUS",
+        "previous_risk_score": 100,
+        "reason": "Test 2"
+      }
+    },
+    {
+      "timestamp": "2026-08-13T11:34:02.785681",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "MALICIOUS",
+        "timestamp": "2026-08-13T11:34:02.758476",
+        "previous_verdict": "UNKNOWN",
+        "previous_risk_score": 0,
+        "reason": "Test 1"
+      }
+    },
+    {
+      "timestamp": "2026-08-13T11:34:02.798756",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "SAFE",
+        "timestamp": "2026-08-13T11:34:02.790468",
+        "previous_verdict": "MALICIOUS",
+        "previous_risk_score": 100,
+        "reason": "Test 2"
+      }
+    },
+    {
+      "timestamp": "2026-08-13T11:38:38.230044",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "MALICIOUS",
+        "timestamp": "2026-08-13T11:38:38.203557",
+        "previous_verdict": "UNKNOWN",
+        "previous_risk_score": 0,
+        "reason": "Test 1"
+      }
+    },
+    {
+      "timestamp": "2026-08-13T11:38:38.244260",
+      "event": "ANALYST_FEEDBACK",
+      "details": {
+        "message_id": "msg_f1",
+        "analyst_label": "SAFE",
+        "timestamp": "2026-08-13T11:38:38.235403",
+        "previous_verdict": "MALICIOUS",
+        "previous_risk_score": 100,
+        "reason": "Test 2"
+      }
     }
   ],
   "19ff467ac8fdaf80": [

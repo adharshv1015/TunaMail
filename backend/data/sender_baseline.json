@@ -127,9 +127,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 108,
+    "messages_analyzed": 110,
     "first_seen": "2026-08-12T05:05:20.808732",
-    "last_seen": "2026-08-13T07:20:41.143929"
+    "last_seen": "2026-08-13T09:02:16.002640"
   },
   "no-reply@accounts.google.com": {
     "normal_domains": [
@@ -146,9 +146,9 @@
     "normal_domains": [
       "example.com"
     ],
-    "messages_analyzed": 28,
+    "messages_analyzed": 68,
     "first_seen": "2026-08-12T09:44:49.945931",
-    "last_seen": "2026-08-12T10:03:38.341456"
+    "last_seen": "2026-08-13T11:38:38.558529"
   },
   "jobalerts-noreply@linkedin.com": {
     "normal_domains": [
@@ -157,9 +157,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 3,
+    "messages_analyzed": 4,
     "first_seen": "2026-08-13T05:38:12.860920",
-    "last_seen": "2026-08-13T07:41:07.061603"
+    "last_seen": "2026-08-13T08:59:27.332123"
   },
   "sbi@communications.sbi.co.in": {
     "normal_domains": [
@@ -168,9 +168,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 3,
+    "messages_analyzed": 4,
     "first_seen": "2026-08-13T05:38:48.748731",
-    "last_seen": "2026-08-13T06:14:59.124854"
+    "last_seen": "2026-08-13T09:00:16.580899"
   },
   "updates-noreply@linkedin.com": {
     "normal_domains": [
@@ -179,9 +179,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 3,
+    "messages_analyzed": 4,
     "first_seen": "2026-08-13T05:39:00.365383",
-    "last_seen": "2026-08-13T07:41:55.011624"
+    "last_seen": "2026-08-13T09:00:31.880860"
   },
   "messages-noreply@linkedin.com": {
     "normal_domains": [
@@ -190,9 +190,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 1,
+    "messages_analyzed": 2,
     "first_seen": "2026-08-13T05:39:08.171378",
-    "last_seen": "2026-08-13T05:39:08.171396"
+    "last_seen": "2026-08-13T09:00:47.575684"
   },
   "help@acct.epicgames.com": {
     "normal_domains": [

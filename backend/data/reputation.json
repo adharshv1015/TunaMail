@@ -125,7 +125,7 @@
   },
   "test@example.com": {
     "sender": "test@example.com",
-    "messages_seen": 12,
+    "messages_seen": 28,
     "legitimate_count": 0,
     "suspicious_count": 0,
     "phishing_count": 6,

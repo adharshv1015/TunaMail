@@ -21,6 +21,8 @@ from src.ai.orchestrator import analyze_email_with_ai
 from src.intelligence.pipeline import run_intelligence
 from src.monitoring.performance import PerformanceTracker
 from src.services.analysis_cache import analysis_cache, get_analysis_fingerprint
+from src.services.verdict_store import VerdictStore
+from src.engines.decision_consistency_validator import DecisionConsistencyValidator
 from src.utils.json_safe import json_safe
 
 import logging
@@ -46,7 +48,9 @@ def get_analyzers():
             "trust": TrustAnalyzer(),
             "categorizer": EmailCategorizer(),
             "whois": WhoisAnalyzer(),
-            "learner": LocalLearning()
+            "learner": LocalLearning(),
+            "consistency_validator": DecisionConsistencyValidator(),
+            "verdict_store": VerdictStore()
         }
     return _analyzers
 
@@ -304,11 +308,13 @@ def process_single_message(connector, msg_id, is_batch=False):
         else:
             ai_analysis = safe_analyze("LocalAI", msg_id, analyze_email_with_ai, tracker, parsed, existing_analysis)
 
-        are_result = safe_analyze("AnalyticalReasoningEngine", msg_id, analyzers["are"].evaluate, tracker, auth_analysis, url_analysis, whois_analysis, content_analysis, attachment_analysis, trust_analysis, ai_analysis=ai_analysis, url_page_intelligence=url_page_intelligence)
+        historical_evidence = analyzers["verdict_store"].get_historical_evidence(msg_id, parsed, url_analysis)
+        are_result = safe_analyze("AnalyticalReasoningEngine", msg_id, analyzers["are"].evaluate, tracker, auth_analysis, url_analysis, whois_analysis, content_analysis, attachment_analysis, trust_analysis, ai_analysis=ai_analysis, url_page_intelligence=url_page_intelligence, historical_evidence=historical_evidence)
 
         conflict_result = safe_analyze("EvidenceConflictEngine", msg_id, analyzers["conflict"].evaluate, tracker, parsed, auth_analysis, url_analysis, whois_analysis, content_analysis, attachment_analysis, trust_analysis, ai_analysis, url_page_intelligence)
 
         decision_result = safe_analyze("DecisionFusionEngine", msg_id, analyzers["decision"].evaluate, tracker, are_result, conflict_result)
+        decision_result = analyzers["consistency_validator"].validate(decision_result)
 
         with tracker.measure("LocalLearning"):
             analyzers["learner"].learn(parsed, existing_analysis, decision_result.get("verdict", "UNKNOWN"))
@@ -359,6 +365,14 @@ def process_single_message(connector, msg_id, is_batch=False):
                 attachment_analysis=attachment_analysis,
                 decision=decision_result
             )
+
+        # Record verdict to persistent historical store
+        full_analysis_for_store = {
+            "authentication": auth_analysis,
+            "url": url_analysis,
+            "conflict": conflict_result
+        }
+        analyzers["verdict_store"].record_if_safe(msg_id, parsed, full_analysis_for_store, decision_result)
 
         # Cache the full result for subsequent requests
         analysis_cache.set(msg_id, fingerprint, result)
