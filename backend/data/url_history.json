@@ -94,54 +94,61 @@
     "senders": [
       "jobalerts-noreply@linkedin.com",
       "updates-noreply@linkedin.com",
-      "messages-noreply@linkedin.com"
+      "messages-noreply@linkedin.com",
+      "notifications-noreply@linkedin.com"
     ],
-    "last_seen": "2026-08-13T09:00:47.802881"
+    "last_seen": "2026-08-17T11:05:02.709190"
   },
   "https://static.licdn.com/aero-v1/sc/h/2fp5x7ci191mxbdy1eynscn59": {
     "senders": [
       "jobalerts-noreply@linkedin.com",
-      "messages-noreply@linkedin.com"
+      "messages-noreply@linkedin.com",
+      "notifications-noreply@linkedin.com"
     ],
-    "last_seen": "2026-08-13T09:00:47.589396"
+    "last_seen": "2026-08-17T11:05:02.416775"
   },
   "https://www.linkedin.com/comm/messaging/": {
     "senders": [
       "jobalerts-noreply@linkedin.com",
       "updates-noreply@linkedin.com",
-      "messages-noreply@linkedin.com"
+      "messages-noreply@linkedin.com",
+      "notifications-noreply@linkedin.com"
     ],
-    "last_seen": "2026-08-13T09:00:47.742622"
+    "last_seen": "2026-08-17T11:05:02.716243"
   },
   "https://static.licdn.com/aero-v1/sc/h/4zo4b28tqisx2lerkp2qoioke": {
     "senders": [
       "jobalerts-noreply@linkedin.com",
-      "messages-noreply@linkedin.com"
+      "messages-noreply@linkedin.com",
+      "notifications-noreply@linkedin.com"
     ],
-    "last_seen": "2026-08-13T09:00:47.600548"
+    "last_seen": "2026-08-17T11:05:02.431352"
   },
   "https://www.linkedin.com/comm/mynetwork/": {
     "senders": [
       "jobalerts-noreply@linkedin.com",
       "updates-noreply@linkedin.com",
-      "messages-noreply@linkedin.com"
+      "messages-noreply@linkedin.com",
+      "notifications-noreply@linkedin.com"
     ],
-    "last_seen": "2026-08-13T09:00:47.747836"
+    "last_seen": "2026-08-17T11:05:02.723408"
   },
   "https://static.licdn.com/aero-v1/sc/h/anu0f2h3c0xay9ou5nkdrjk8q": {
     "senders": [
       "jobalerts-noreply@linkedin.com",
-      "messages-noreply@linkedin.com"
+      "messages-noreply@linkedin.com",
+      "notifications-noreply@linkedin.com"
     ],
-    "last_seen": "2026-08-13T09:00:47.612000"
+    "last_seen": "2026-08-17T11:05:02.445990"
   },
   "https://www.linkedin.com/comm/notifications/": {
     "senders": [
       "jobalerts-noreply@linkedin.com",
       "updates-noreply@linkedin.com",
-      "messages-noreply@linkedin.com"
+      "messages-noreply@linkedin.com",
+      "notifications-noreply@linkedin.com"
     ],
-    "last_seen": "2026-08-13T09:00:47.752842"
+    "last_seen": "2026-08-17T11:05:02.730694"
   },
   "https://static.licdn.com/aero-v1/sc/h/dh68pw6fo2eg4oh1u9r44zcx": {
     "senders": [
@@ -205,22 +212,25 @@
   },
   "https://www.linkedin.com/comm/widgets/promo": {
     "senders": [
-      "jobalerts-noreply@linkedin.com"
+      "jobalerts-noreply@linkedin.com",
+      "notifications-noreply@linkedin.com"
     ],
-    "last_seen": "2026-08-13T08:59:27.474650"
+    "last_seen": "2026-08-17T11:05:02.585089"
   },
   "https://static.licdn.com/aero-v1/sc/h/biuh9wrdh2y3k0d1fjfzcg2vb": {
     "senders": [
-      "jobalerts-noreply@linkedin.com"
+      "jobalerts-noreply@linkedin.com",
+      "notifications-noreply@linkedin.com"
     ],
-    "last_seen": "2026-08-13T08:59:27.480279"
+    "last_seen": "2026-08-17T11:05:02.592369"
   },
   "https://www.linkedin.com/help/linkedin/answer/4788": {
     "senders": [
       "jobalerts-noreply@linkedin.com",
-      "messages-noreply@linkedin.com"
+      "messages-noreply@linkedin.com",
+      "notifications-noreply@linkedin.com"
     ],
-    "last_seen": "2026-08-13T09:00:47.786456"
+    "last_seen": "2026-08-17T11:05:02.678368"
   },
   "https://www.linkedin.com/job-alert-email-unsubscribe": {
     "senders": [
@@ -231,16 +241,18 @@
   "https://www.linkedin.com/help/linkedin/answer/67": {
     "senders": [
       "jobalerts-noreply@linkedin.com",
-      "messages-noreply@linkedin.com"
+      "messages-noreply@linkedin.com",
+      "notifications-noreply@linkedin.com"
     ],
-    "last_seen": "2026-08-13T09:00:47.796994"
+    "last_seen": "2026-08-17T11:05:02.694162"
   },
   "https://static.licdn.com/aero-v1/sc/h/9ehe6n39fa07dc5edzv0rla4e": {
     "senders": [
       "jobalerts-noreply@linkedin.com",
-      "messages-noreply@linkedin.com"
+      "messages-noreply@linkedin.com",
+      "notifications-noreply@linkedin.com"
     ],
-    "last_seen": "2026-08-13T09:00:47.698298"
+    "last_seen": "2026-08-17T11:05:02.629171"
   },
   "https://www.linkedin.com/emimp/ip_YW5CdGRucHZMVzF6Y1hreFl6TjFMV1ZuOlpXMWhhV3hmYW05aVgyRnNaWEowWDJScFoyVnpkRjh3TVE9PTo=.gif": {
     "senders": [
@@ -254,9 +266,13 @@
       "sbi@communications.sbi.co.in",
       "messages-noreply@linkedin.com",
       "help@acct.epicgames.com",
-      "donotreply@match.indeed.com"
+      "donotreply@match.indeed.com",
+      "notifications-noreply@linkedin.com",
+      "recommendationnc@naukri.com",
+      "hr@oneteamsolutions.co.in",
+      "hello@ollama.com"
     ],
-    "last_seen": "2026-08-13T11:45:46.138573"
+    "last_seen": "2026-08-17T11:52:58.148013"
   },
   "https://imagescommunications.sbi.bank.in/30530353/30530353_03999_7816383_Debitcard_Reliance_Digital_301.jpg": {
     "senders": [
@@ -274,7 +290,7 @@
     "senders": [
       "sbi@communications.sbi.co.in"
     ],
-    "last_seen": "2026-08-13T11:45:46.107998"
+    "last_seen": "2026-08-17T11:52:58.119146"
   },
   "https://imagescommunications.sbi.bank.in/30530353/30530353_03999_7816383_Debit-Card-Reliance_Digital-304.jpg": {
     "senders": [
@@ -286,25 +302,25 @@
     "senders": [
       "sbi@communications.sbi.co.in"
     ],
-    "last_seen": "2026-08-13T11:45:46.063862"
+    "last_seen": "2026-08-17T11:39:58.968026"
   },
   "https://imagescommunications.sbi.co.in/28934269/28934269_03999_8427518_SBIDCMMTGOI_2.png": {
     "senders": [
       "sbi@communications.sbi.co.in"
     ],
-    "last_seen": "2026-08-13T11:45:46.077263"
+    "last_seen": "2026-08-17T11:39:58.982039"
   },
   "https://imagescommunications.sbi.co.in/28934269/28934269_03999_8427518_SBIDCMMTGOI_3.png": {
     "senders": [
       "sbi@communications.sbi.co.in"
     ],
-    "last_seen": "2026-08-13T11:45:46.089134"
+    "last_seen": "2026-08-17T11:39:58.995774"
   },
   "https://imagescommunications.sbi.co.in/28934269/28934269_03999_8427518_SBIDCMMTGOI_4.png": {
     "senders": [
       "sbi@communications.sbi.co.in"
     ],
-    "last_seen": "2026-08-13T11:45:46.095763"
+    "last_seen": "2026-08-17T11:39:59.002904"
   },
   "https://sbi.bank.in/web/personal-banking/cards/debit-card/debit-card-offers": {
     "senders": [
@@ -317,13 +333,13 @@
       "sbi@communications.sbi.co.in",
       "messages-noreply@linkedin.com"
     ],
-    "last_seen": "2026-08-13T11:45:46.113684"
+    "last_seen": "2026-08-17T11:52:58.126303"
   },
   "https://apps.apple.com/in/app/yono-sbi-banking-and-lifestyle/id1231393474": {
     "senders": [
       "sbi@communications.sbi.co.in"
     ],
-    "last_seen": "2026-08-13T11:45:46.119805"
+    "last_seen": "2026-08-17T11:52:58.133679"
   },
   "https://onlinesbi.sbi.bank.in": {
     "senders": [
@@ -335,29 +351,31 @@
     "senders": [
       "sbi@communications.sbi.co.in",
       "help@acct.epicgames.com",
-      "donotreply@match.indeed.com"
+      "donotreply@match.indeed.com",
+      "recommendationnc@naukri.com"
     ],
-    "last_seen": "2026-08-13T11:45:46.132715"
+    "last_seen": "2026-08-17T11:52:58.140962"
   },
   "https://fonts.googleapis.com/css2": {
     "senders": [
       "sbi@communications.sbi.co.in",
       "help@acct.epicgames.com",
-      "donotreply@match.indeed.com"
+      "donotreply@match.indeed.com",
+      "recommendationnc@naukri.com"
     ],
-    "last_seen": "2026-08-13T11:45:46.144176"
+    "last_seen": "2026-08-17T11:39:59.065008"
   },
   "https://imagescommunications.sbi.co.in//30052025FONTS/effra-trial-regular.woff": {
     "senders": [
       "sbi@communications.sbi.co.in"
     ],
-    "last_seen": "2026-08-13T11:45:46.150204"
+    "last_seen": "2026-08-17T11:52:58.155022"
   },
   "https://imagescommunications.sbi.co.in//30052025FONTS/effra-trial-regular.woff2": {
     "senders": [
       "sbi@communications.sbi.co.in"
     ],
-    "last_seen": "2026-08-13T11:45:46.155870"
+    "last_seen": "2026-08-17T11:52:58.161920"
   },
   "https://www.linkedin.com/mypreferences/d/language-for-translation": {
     "senders": [
@@ -559,9 +577,10 @@
   },
   "https://www.linkedin.com/comm/mypreferences/u/emailunsub": {
     "senders": [
-      "messages-noreply@linkedin.com"
+      "messages-noreply@linkedin.com",
+      "notifications-noreply@linkedin.com"
     ],
-    "last_seen": "2026-08-13T09:00:47.791677"
+    "last_seen": "2026-08-17T11:05:02.685599"
   },
   "https://www.linkedin.com/emimp/ip_YW5CdGRucHZMVzF6Y1RoaVpuRjVMWEp4OllqSmZjSEp2Wm1WemMybHZibUZzWDJsa1pXNTBhWFI1WDJScFoyVnpkRjh3TWc9PTo=.gif": {
     "senders": [
@@ -607,15 +626,17 @@
   },
   "https://fonts.googleapis.com": {
     "senders": [
-      "help@acct.epicgames.com"
+      "help@acct.epicgames.com",
+      "recommendationnc@naukri.com"
     ],
-    "last_seen": "2026-08-13T05:39:43.145529"
+    "last_seen": "2026-08-17T04:32:31.086800"
   },
   "https://fonts.gstatic.com": {
     "senders": [
-      "help@acct.epicgames.com"
+      "help@acct.epicgames.com",
+      "recommendationnc@naukri.com"
     ],
-    "last_seen": "2026-08-13T05:39:43.150214"
+    "last_seen": "2026-08-17T04:32:31.093940"
   },
   "https://epicgames.com": {
     "senders": [
@@ -723,7 +744,7 @@
     "senders": [
       "sbi@communications.sbi.co.in"
     ],
-    "last_seen": "2026-08-13T06:14:59.193982"
+    "last_seen": "2026-08-17T11:52:58.104093"
   },
   "https://cts.indeed.com/v3/H4sIAAAAAAAA_42RXWucQBSG_4tQr7pZHb8XpGD206Bxk_1ovVmccVZHHcfqqLuG_PdOoCTQq14deF4Oh_O8b1IvLaSc86ZbzOekfiB1inH6gBidt2iOqvJHUboA2lqCUGpawMEIKfK1ZdQtGCQguYhBE47yWYsTxMmQcMLqGa5nu_CCaUIqmZeuWvQDyLoKZ4zbtqLKELrNGXS69vJEA2tcvRzRz2cv6bahwvt6jZZRWO-xGa-NAlnNTXXi6EBhVZ2132fj9TTp96228UwfbO57XB9WV0RgZA6-sQFZpay9C7o1gWGstjTMV8c2U5LgeIqZV6aMLHW_Re001U_DeULGrMOlcynCw0n1yK_UGfN9MO6rax_viub4SDWofNOW8q1E0H1lXmFagZZdwyAGo089ZQenMn1Mo0hui-brVUjZkJS2okjfJSot3iQhkPU136VCuKoYwNBMYAGRJlnmM_iXqzbQdce0NBGgiqDykLesz3IR8rbHn_TeYIEGgkfhX9CPRgT4307EBi8_Dv7Ti_T-_gd9_VDpEwIAAA/IUCb7i0Cuwo49yYK6dQVqOHeOrQ76cOroK9LW2iFvQI": {
     "senders": [
@@ -1498,5 +1519,533 @@
       "no-reply@info.bookmyshow.com"
     ],
     "last_seen": "2026-08-13T12:13:23.216155"
+  },
+  "https://deliveryalerts.sbi.bank.in/QWEDFGNM": {
+    "senders": [
+      "cbsalerts.sbi@alerts.sbi.bank.in"
+    ],
+    "last_seen": "2026-08-17T11:04:53.901074"
+  },
+  "https://static.licdn.com/aero-v1/sc/h/eh1e9j5bszh6p379hn269p3ps": {
+    "senders": [
+      "notifications-noreply@linkedin.com"
+    ],
+    "last_seen": "2026-08-17T11:05:02.460251"
+  },
+  "https://www.linkedin.com/comm/company/ernstandyoung": {
+    "senders": [
+      "notifications-noreply@linkedin.com"
+    ],
+    "last_seen": "2026-08-17T11:05:02.737943"
+  },
+  "https://media.licdn.com/dms/image/v2/C510BAQGpRhkpxp5A9A/company-logo_100_100/company-logo_100_100/0/1630570672166/ernstandyoung_logo": {
+    "senders": [
+      "notifications-noreply@linkedin.com"
+    ],
+    "last_seen": "2026-08-17T11:05:02.745983"
+  },
+  "https://www.linkedin.com/comm/me/search-appearances": {
+    "senders": [
+      "notifications-noreply@linkedin.com"
+    ],
+    "last_seen": "2026-08-17T11:05:02.753420"
+  },
+  "https://www.linkedin.com/comm/company/hackthebox": {
+    "senders": [
+      "notifications-noreply@linkedin.com"
+    ],
+    "last_seen": "2026-08-17T11:05:02.760886"
+  },
+  "https://media.licdn.com/dms/image/v2/D4D0BAQEl0vw0EBKctA/company-logo_100_100/company-logo_100_100/0/1736427077568/hackthebox_logo": {
+    "senders": [
+      "notifications-noreply@linkedin.com"
+    ],
+    "last_seen": "2026-08-17T11:05:02.768352"
+  },
+  "https://www.linkedin.com/comm/suggested-for-you/follow-page/": {
+    "senders": [
+      "notifications-noreply@linkedin.com"
+    ],
+    "last_seen": "2026-08-17T11:05:02.657288"
+  },
+  "https://www.linkedin.com/comm/company/siem-cybersecurity-identity-access-management-soc-jobs": {
+    "senders": [
+      "notifications-noreply@linkedin.com"
+    ],
+    "last_seen": "2026-08-17T11:05:02.510863"
+  },
+  "https://media.licdn.com/dms/image/v2/C4E0BAQHSvns1ryXZ1A/company-logo_100_100/company-logo_100_100/0/1630650815487/siem_cybersecurity_identity_access_management_soc_jobs_logo": {
+    "senders": [
+      "notifications-noreply@linkedin.com"
+    ],
+    "last_seen": "2026-08-17T11:05:02.517939"
+  },
+  "https://www.linkedin.com/comm/feed/news/8425921": {
+    "senders": [
+      "notifications-noreply@linkedin.com"
+    ],
+    "last_seen": "2026-08-17T11:05:02.664033"
+  },
+  "https://static.licdn.com/aero-v1/sc/h/87uu7x5mwmatsn7v6f28s26o5": {
+    "senders": [
+      "notifications-noreply@linkedin.com"
+    ],
+    "last_seen": "2026-08-17T11:05:02.540224"
+  },
+  "https://www.linkedin.com/comm/news/daily-rundown/7493597736399765504": {
+    "senders": [
+      "notifications-noreply@linkedin.com"
+    ],
+    "last_seen": "2026-08-17T11:05:02.671322"
+  },
+  "https://static.licdn.com/aero-v1/sc/h/6swkubnat0uuzsfcn80ns07d8": {
+    "senders": [
+      "notifications-noreply@linkedin.com"
+    ],
+    "last_seen": "2026-08-17T11:05:02.563146"
+  },
+  "https://www.linkedin.com/emimp/ip_YW5CdGRucHZMVzF6ZG5abFpXdGtMWGx2OlpXMWhhV3hmYm05MGFXWnBZMkYwYVc5dVgyUnBaMlZ6ZEY4d01RPT06.gif": {
+    "senders": [
+      "notifications-noreply@linkedin.com"
+    ],
+    "last_seen": "2026-08-17T11:05:02.636320"
+  },
+  "https://logs.naukri.com/collectorapi/v1/uba": {
+    "senders": [
+      "recommendationnc@naukri.com"
+    ],
+    "last_seen": "2026-08-17T04:32:31.107972"
+  },
+  "https://cm.naukri.com": {
+    "senders": [
+      "recommendationnc@naukri.com"
+    ],
+    "last_seen": "2026-08-17T04:32:31.326945"
+  },
+  "https://www.ieplads.com/mailers/2024_ui/naukri/nc-upload-march/campus_logo.png": {
+    "senders": [
+      "recommendationnc@naukri.com"
+    ],
+    "last_seen": "2026-08-17T04:32:31.122947"
+  },
+  "https://www.naukri.com/campus/career-guidance/wp-content/uploads/2023/07/How-to-Write-a-Job-Application-Email.jpg": {
+    "senders": [
+      "recommendationnc@naukri.com"
+    ],
+    "last_seen": "2026-08-17T04:32:31.143877"
+  },
+  "https://www.ieplads.com/mailers/2023_ui/naukri/career-camp-15feb/images/space.png": {
+    "senders": [
+      "recommendationnc@naukri.com"
+    ],
+    "last_seen": "2026-08-17T04:32:31.157439"
+  },
+  "https://www.ieplads.com/mailers/2024_ui/naukri-campus/squad-30sept/images/s1.png": {
+    "senders": [
+      "recommendationnc@naukri.com"
+    ],
+    "last_seen": "2026-08-17T04:32:31.172493"
+  },
+  "https://www.ieplads.com/mailers/2024_ui/naukri-campus/squad-30sept/images/s2.png": {
+    "senders": [
+      "recommendationnc@naukri.com"
+    ],
+    "last_seen": "2026-08-17T04:32:31.186155"
+  },
+  "https://www.ieplads.com/mailers/2024_ui/naukri-campus/squad-30sept/images/s3.png": {
+    "senders": [
+      "recommendationnc@naukri.com"
+    ],
+    "last_seen": "2026-08-17T04:32:31.200700"
+  },
+  "https://imagescommunications.sbi.bank.in/30557635/30557635_03999_6709192_20X-Rewardz-Points_01.jpg": {
+    "senders": [
+      "sbi@communications.sbi.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:48.578019"
+  },
+  "https://imagescommunications.sbi.bank.in/30557635/30557635_03999_6709192_20X-Rewardz-Points_02.jpg": {
+    "senders": [
+      "sbi@communications.sbi.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:48.592079"
+  },
+  "https://imagescommunications.sbi.bank.in/30557635/30557635_03999_6709192_20X-Rewardz-Points_03.jpg": {
+    "senders": [
+      "sbi@communications.sbi.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:48.606790"
+  },
+  "https://www.amazon.in/Acer-Predator-Processor-Windows-GeForce/dp/B0CCRV54Y7/ref=dp_prsubs_sccl_1/257-2094948-7987659": {
+    "senders": [
+      "amanyukrishnaak@gmail.com"
+    ],
+    "last_seen": "2026-08-17T04:57:34.288357"
+  },
+  "https://www.acer.com/us-en/predator/compare.html": {
+    "senders": [
+      "amanyukrishnaak@gmail.com"
+    ],
+    "last_seen": "2026-08-17T04:57:34.281216"
+  },
+  "https://us.list-manage.com/114pEtxWaGE": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.191833"
+  },
+  "https://us.list-manage.com/ft_vuVpDXQO": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.198442"
+  },
+  "https://us.list-manage.com/48VsDz6GEa4": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.205318"
+  },
+  "https://us.list-manage.com/6l0rmq5ctYk": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.212136"
+  },
+  "https://us.list-manage.com/f8wka46umrF": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.219479"
+  },
+  "https://us.list-manage.com/7iXuxxzD8YI": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.226334"
+  },
+  "https://us.list-manage.com/wIv2q5Y6j9i": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.233137"
+  },
+  "https://us.list-manage.com/1C_HtAmgVQs": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.240612"
+  },
+  "https://us.list-manage.com/XF_IZh4NFbv": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.247693"
+  },
+  "https://oneteamsolutions.us6.list-manage.com/about": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:37.607130"
+  },
+  "https://oneteamsolutions.us6.list-manage.com/unsubscribe": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:37.614322"
+  },
+  "https://oneteamsolutions.us6.list-manage.com/profile": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:37.621106"
+  },
+  "https://us.list-manage.com/8SWOt9sXWfaN8TABfsiEZ7": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.275740"
+  },
+  "https://oneteamsolutions.in/": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.282827"
+  },
+  "https://oneteamsolutions.in/course-software-it-python-training-institute-kochi/": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.289592"
+  },
+  "https://oneteamsolutions.in/data-analytics-training-institute-in-kochi/": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.296244"
+  },
+  "https://oneteamsolutions.in/course-digital-marketing-training-kochi-kerala/": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.302733"
+  },
+  "https://oneteamsolutions.in/ui-ux-training/Design": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.309526"
+  },
+  "https://oneteamsolutions.in/ui-ux-training/": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.316433"
+  },
+  "https://oneteamsolutions.in/cyber-security-training-institute-in-kochi/": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.323293"
+  },
+  "https://oneteamsolutions.in/placed-students/": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.330169"
+  },
+  "https://mcusercontent.com/3ca7147f5399299f8c8a5f5cf/images/df268025-f9d6-1c2d-5711-089846bf8c59.png": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.344127"
+  },
+  "https://mcusercontent.com/3ca7147f5399299f8c8a5f5cf/images/df268025-f9d6-1c2d-5711-089846bf8c59.png&quot": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:04:49.351437"
+  },
+  "https://imagescommunications.sbi.bank.in/30557635/30557635_03999_6709192_Freedom-from-full-prices_01.jpg": {
+    "senders": [
+      "sbi@communications.sbi.co.in"
+    ],
+    "last_seen": "2026-08-17T11:52:58.058573"
+  },
+  "https://imagescommunications.sbi.bank.in/30557635/30557635_03999_6709192_Freedom-from-full-prices_02.jpg": {
+    "senders": [
+      "sbi@communications.sbi.co.in"
+    ],
+    "last_seen": "2026-08-17T11:52:58.066586"
+  },
+  "https://imagescommunications.sbi.bank.in/30557635/30557635_03999_6709192_Freedom-from-full-prices_03.jpg": {
+    "senders": [
+      "sbi@communications.sbi.co.in"
+    ],
+    "last_seen": "2026-08-17T11:52:58.081976"
+  },
+  "https://imagescommunications.sbi.bank.in/30557635/30557635_03999_6709192_Freedom-from-full-prices_04.jpg": {
+    "senders": [
+      "sbi@communications.sbi.co.in"
+    ],
+    "last_seen": "2026-08-17T11:52:58.096840"
+  },
+  "https://us.list-manage.com/3ccsj5URKbi": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:37.585796"
+  },
+  "https://us.list-manage.com/FhSQvnE03LK": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:37.593017"
+  },
+  "https://us.list-manage.com/StVisxlrfxV": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:37.600275"
+  },
+  "https://us.list-manage.com/7GtuT_1BCdjHadEAqQWvsc": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:37.628066"
+  },
+  "https://forms.gle/AstdB3QhuhTHLLDz9": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:37.635022"
+  },
+  "https://mcusercontent.com/3ca7147f5399299f8c8a5f5cf/images/1186442e-a840-81c7-64ff-fea1e21671ba.jpg": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:37.648482"
+  },
+  "https://mcusercontent.com/3ca7147f5399299f8c8a5f5cf/images/1186442e-a840-81c7-64ff-fea1e21671ba.jpg&quot": {
+    "senders": [
+      "hr@oneteamsolutions.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:37.655202"
+  },
+  "https://imagescommunications.sbi.bank.in/30260136/30260136_03999_7816383_SBI-Debit-Card---(Big-Basket)-03_01.jpg": {
+    "senders": [
+      "sbi@communications.sbi.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:58.918965"
+  },
+  "https://imagescommunications.sbi.bank.in/30260136/30260136_03999_7816383_SBI-Debit-Card---(Big-Basket)-03_03.jpg": {
+    "senders": [
+      "sbi@communications.sbi.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:58.926007"
+  },
+  "https://imagescommunications.sbi.bank.in/30260136/30260136_03999_7816383_SBI-Debit-Card---(Big-Basket)-03_04.jpg": {
+    "senders": [
+      "sbi@communications.sbi.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:58.933189"
+  },
+  "https://imagescommunications.sbi.bank.in/30260136/30260136_03999_7816383_SBI-Debit-Card---(Big-Basket)-03_05.jpg": {
+    "senders": [
+      "sbi@communications.sbi.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:58.947607"
+  },
+  "https://imagescommunications.sbi.bank.in/30260136/30260136_03999_7816383_SBI-Debit-Card---(Big-Basket)-03_06.jpg": {
+    "senders": [
+      "sbi@communications.sbi.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:58.954531"
+  },
+  "https://web.onlineyono.sbi.bank.in/registration/welcome": {
+    "senders": [
+      "sbi@communications.sbi.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:59.023266"
+  },
+  "https://retail.onlinesbi.sbi/retail/login.htm": {
+    "senders": [
+      "sbi@communications.sbi.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:59.044379"
+  },
+  "https://imagescommunications.sbi.bank.in/30260136/30260136_03999_7816383_SBI-Debit-Card---": {
+    "senders": [
+      "sbi@communications.sbi.co.in"
+    ],
+    "last_seen": "2026-08-17T11:39:59.085789"
+  },
+  "https://c.vialoops.com/CI0/010001a00a7425e8-d41baf4b-c8c1-448b-b206-6470088e3d85-000000/ELR9DCbcrjfbDbzGdecDjESjXlCuuNTFCGMRTednr-Q=452": {
+    "senders": [
+      "hello@ollama.com"
+    ],
+    "last_seen": "2026-08-17T11:40:27.756684"
+  },
+  "https://images.vialoops.com/cljxdpsf70154jt0o2m5pzpx8/cmsv8142l002g0jvhiaso0h8h.jpg": {
+    "senders": [
+      "hello@ollama.com"
+    ],
+    "last_seen": "2026-08-17T11:40:27.763481"
+  },
+  "https://c.vialoops.com/CL0/https:%2F%2Follama.com%2Flibrary%2Fqwen3.8/1/010001a00a7425e8-d41baf4b-c8c1-448b-b206-6470088e3d85-000000/IAAOlJU9ItNBnEUPecSrmFWfQuGPZcURF_ci_DVnl20=452": {
+    "senders": [
+      "hello@ollama.com"
+    ],
+    "last_seen": "2026-08-17T11:40:27.770707"
+  },
+  "https://c.vialoops.com/CL0/https:%2F%2Follama.com%2Fdownload/1/010001a00a7425e8-d41baf4b-c8c1-448b-b206-6470088e3d85-000000/VuKBtK9ZLvPmBsArrflnrr_ecqymMvpXFGPSFK_CgZo=452": {
+    "senders": [
+      "hello@ollama.com"
+    ],
+    "last_seen": "2026-08-17T11:40:27.777872"
+  },
+  "https://c.vialoops.com/CL0/https:%2F%2Fdocs.ollama.com%2Fintegrations%2Fpi/1/010001a00a7425e8-d41baf4b-c8c1-448b-b206-6470088e3d85-000000/e8IMhiUHcoVBOwX_lo8Rk_0ZNaKmv2ekRWLNtbOT0i8=452": {
+    "senders": [
+      "hello@ollama.com"
+    ],
+    "last_seen": "2026-08-17T11:40:27.784951"
+  },
+  "https://c.vialoops.com/CL0/https:%2F%2Fdocs.ollama.com%2Fintegrations/1/010001a00a7425e8-d41baf4b-c8c1-448b-b206-6470088e3d85-000000/VIm6D8N2qvRARTdKm2f7zO_muCz94RDnB_ZJrK1nlLA=452": {
+    "senders": [
+      "hello@ollama.com"
+    ],
+    "last_seen": "2026-08-17T11:40:27.791929"
+  },
+  "https://c.vialoops.com/CL0/https:%2F%2Fopensource.apple.com%2Fprojects%2Fmlx%2F/1/010001a00a7425e8-d41baf4b-c8c1-448b-b206-6470088e3d85-000000/KT_uvChq3FiWe97OY3HA8AmuspXIhTelRniaYRgn5N0=452": {
+    "senders": [
+      "hello@ollama.com"
+    ],
+    "last_seen": "2026-08-17T11:40:27.799038"
+  },
+  "https://c.vialoops.com/CL0/https:%2F%2Fblogs.nvidia.com%2Fblog%2Flocal-ai-open-source-models-agents-nemotron%2F/1/010001a00a7425e8-d41baf4b-c8c1-448b-b206-6470088e3d85-000000/wbgs4W8PEdljEhO39E-NjoZIOcbvMXDky0tClCk3vdw=452": {
+    "senders": [
+      "hello@ollama.com"
+    ],
+    "last_seen": "2026-08-17T11:40:27.806586"
+  },
+  "https://c.vialoops.com/CL0/https:%2F%2Fdiscord.gg%2Follama/1/010001a00a7425e8-d41baf4b-c8c1-448b-b206-6470088e3d85-000000/ak5brM0id1XCQf_gdkZFrvwSk4CJKAxfan5Nw81gewg=452": {
+    "senders": [
+      "hello@ollama.com"
+    ],
+    "last_seen": "2026-08-17T11:40:27.814156"
+  },
+  "https://c.vialoops.com/CL0/https:%2F%2Fapp.loops.so%2Funsubscribe%2Fcmsvr9vmoekji01z985r87n6x%2F333461a449dddc3d6d040177b5f69bca114e6c7128e975295badca160f58e43990f77ec039285a646b2d98aabe2988c97a02fda3552699b88e46cd32/1/010001a00a7425e8-d41baf4b-c8c1-448b-b206-6470088e3d85-000000/IXnO7njG5QPiHTaIgvett7tZBAI9RvWAMALIXdVT8jk=452": {
+    "senders": [
+      "hello@ollama.com"
+    ],
+    "last_seen": "2026-08-17T11:40:27.821588"
+  },
+  "https://ollama.com/library/qwen3.8": {
+    "senders": [
+      "hello@ollama.com"
+    ],
+    "last_seen": "2026-08-17T11:40:27.828936"
+  },
+  "https://ollama.com/download": {
+    "senders": [
+      "hello@ollama.com"
+    ],
+    "last_seen": "2026-08-17T11:40:27.836062"
+  },
+  "https://docs.ollama.com/integrations/pi": {
+    "senders": [
+      "hello@ollama.com"
+    ],
+    "last_seen": "2026-08-17T11:40:27.843369"
+  },
+  "https://docs.ollama.com/integrations": {
+    "senders": [
+      "hello@ollama.com"
+    ],
+    "last_seen": "2026-08-17T11:40:27.850321"
+  },
+  "https://opensource.apple.com/projects/mlx/": {
+    "senders": [
+      "hello@ollama.com"
+    ],
+    "last_seen": "2026-08-17T11:40:27.857368"
+  },
+  "https://blogs.nvidia.com/blog/local-ai-open-source-models-agents-nemotron/": {
+    "senders": [
+      "hello@ollama.com"
+    ],
+    "last_seen": "2026-08-17T11:40:27.864463"
+  },
+  "https://discord.gg/ollama": {
+    "senders": [
+      "hello@ollama.com"
+    ],
+    "last_seen": "2026-08-17T11:40:27.871354"
+  },
+  "https://app.loops.so/unsubscribe/cmsvr9vmoekji01z985r87n6x/333461a449dddc3d6d040177b5f69bca114e6c7128e975295badca160f58e43990f77ec039285a646b2d98aabe2988c97a02fda3552699b88e46cd32": {
+    "senders": [
+      "hello@ollama.com"
+    ],
+    "last_seen": "2026-08-17T11:40:27.878535"
   }
 }

@@ -6,7 +6,6 @@ Provides configurable record expiry for all local JSON stores:
   HISTORY_RETENTION_DAYS    — behavior store entries
   AUDIT_RETENTION_DAYS      — audit log entries
   CAMPAIGN_RETENTION_DAYS   — campaign history entries
-  FEEDBACK_RETENTION_DAYS   — analyst feedback entries
 
 Records older than the configured threshold are removed on the next
 maintenance run. The operation uses the existing atomic-write path so it
@@ -31,7 +30,6 @@ logger = logging.getLogger(__name__)
 HISTORY_RETENTION_DAYS = int(os.environ.get("HISTORY_RETENTION_DAYS", "90"))
 AUDIT_RETENTION_DAYS = int(os.environ.get("AUDIT_RETENTION_DAYS", "180"))
 CAMPAIGN_RETENTION_DAYS = int(os.environ.get("CAMPAIGN_RETENTION_DAYS", "60"))
-FEEDBACK_RETENTION_DAYS = int(os.environ.get("FEEDBACK_RETENTION_DAYS", "365"))
 MAX_HISTORY_ENTRIES = int(os.environ.get("MAX_HISTORY_ENTRIES", "10000"))
 
 
@@ -169,13 +167,6 @@ def _prune_campaign_store() -> int:
         return 0
 
 
-def _prune_feedback_store() -> int:
-    """
-    Feedback is precious analyst data — only prune if VERY old.
-    Feedback records are keyed by message_id; they contain a 'timestamp' field.
-    """
-    try:
-        from src.storage.feedback_store import get_feedback_store
 
         store = get_feedback_store()
         data = store.store.get_all()
@@ -251,7 +242,6 @@ def run_maintenance() -> Dict[str, int]:
     results = {
         "behavior_pruned": _prune_behavior_store(),
         "campaign_pruned": _prune_campaign_store(),
-        "feedback_pruned": _prune_feedback_store(),
         "reputation_trimmed": _prune_reputation_store(),
     }
     logger.info("StoreMaintenance: completed — %s", results)

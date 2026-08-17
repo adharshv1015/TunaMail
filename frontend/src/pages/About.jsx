@@ -6,7 +6,7 @@ export default function About() {
     const [versionData, setVersionData] = useState(null);
 
     useEffect(() => {
-        axios.get("http://127.0.0.1:8000/system/version")
+        axios.get("http://localhost:8000/system/version")
             .then(res => setVersionData(res.data))
             .catch(err => console.error("Failed to fetch version info", err));
     }, []);

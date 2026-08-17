@@ -7,7 +7,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchHealth = () => {
       axios
-        .get("http://127.0.0.1:8000/system/health")
+        .get("http://localhost:8000/system/health")
         .then((res) => {
           setHealth(res.data);
         })

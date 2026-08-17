@@ -168,9 +168,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 5,
+    "messages_analyzed": 11,
     "first_seen": "2026-08-13T05:38:48.748731",
-    "last_seen": "2026-08-13T11:45:46.019108"
+    "last_seen": "2026-08-17T11:52:58.049731"
   },
   "updates-noreply@linkedin.com": {
     "normal_domains": [
@@ -237,5 +237,71 @@
     "messages_analyzed": 1,
     "first_seen": "2026-08-13T12:13:22.921173",
     "last_seen": "2026-08-13T12:13:22.921183"
+  },
+  "cbsalerts.sbi@alerts.sbi.bank.in": {
+    "normal_domains": [
+      "alerts.sbi.bank.in"
+    ],
+    "normal_authentication": {
+      "spf": "pass"
+    },
+    "messages_analyzed": 4,
+    "first_seen": "2026-08-17T04:29:38.344235",
+    "last_seen": "2026-08-17T11:04:53.892137"
+  },
+  "notifications-noreply@linkedin.com": {
+    "normal_domains": [
+      "linkedin.com"
+    ],
+    "normal_authentication": {
+      "spf": "pass"
+    },
+    "messages_analyzed": 3,
+    "first_seen": "2026-08-17T04:30:44.162933",
+    "last_seen": "2026-08-17T11:05:02.400829"
+  },
+  "recommendationnc@naukri.com": {
+    "normal_domains": [
+      "naukri.com"
+    ],
+    "normal_authentication": {
+      "spf": "pass"
+    },
+    "messages_analyzed": 1,
+    "first_seen": "2026-08-17T04:32:31.077089",
+    "last_seen": "2026-08-17T04:32:31.077098"
+  },
+  "amanyukrishnaak@gmail.com": {
+    "normal_domains": [
+      "gmail.com"
+    ],
+    "normal_authentication": {
+      "spf": "pass"
+    },
+    "messages_analyzed": 2,
+    "first_seen": "2026-08-17T04:39:25.620705",
+    "last_seen": "2026-08-17T04:57:34.242249"
+  },
+  "hr@oneteamsolutions.co.in": {
+    "normal_domains": [
+      "oneteamsolutions.co.in"
+    ],
+    "normal_authentication": {
+      "spf": "pass"
+    },
+    "messages_analyzed": 4,
+    "first_seen": "2026-08-17T08:56:51.282865",
+    "last_seen": "2026-08-17T11:39:37.555630"
+  },
+  "hello@ollama.com": {
+    "normal_domains": [
+      "ollama.com"
+    ],
+    "normal_authentication": {
+      "spf": "pass"
+    },
+    "messages_analyzed": 1,
+    "first_seen": "2026-08-17T11:40:27.748509",
+    "last_seen": "2026-08-17T11:40:27.748522"
   }
 }

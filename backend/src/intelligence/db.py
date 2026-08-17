@@ -4,7 +4,6 @@ SQLite database manager for TunaMail Stage 5 local intelligence persistence.
 Schema:
   ioc_records    - Historical IOC observations
   campaigns      - Detected phishing campaigns
-  feedback       - Analyst feedback (automated verdict preserved separately)
   cases          - SOC investigation cases
   case_notes     - Notes attached to investigation cases
   audit_log      - Immutable analyst action log (no credentials stored)
@@ -60,7 +59,6 @@ _CREATE_STATEMENTS = [
         submitted_at TEXT
     )
     """,
-    "CREATE INDEX IF NOT EXISTS idx_feedback_message ON feedback(message_id)",
     """
     CREATE TABLE IF NOT EXISTS cases (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

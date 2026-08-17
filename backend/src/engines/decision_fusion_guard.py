@@ -848,11 +848,16 @@ def enforce_deterministic_priority(
 
         elif has_strong:
 
-            if risk_score >= 60:
+            if risk_score >= 80:
+                decision["verdict"] = (
+                    "PHISHING"
+                )
+
+            elif risk_score >=60:
                 decision["verdict"] = (
                     "HIGH RISK"
                 )
-
+            
             else:
                 decision["verdict"] = (
                     "SUSPICIOUS"

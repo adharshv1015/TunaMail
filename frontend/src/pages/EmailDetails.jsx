@@ -2,23 +2,19 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import useNotification from "../hooks/useNotification";
-import { submitFeedback } from "../api/intelligence";
 
 export default function EmailDetails() {
   const { id } = useParams();
   const [email, setEmail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [feedbackVerdict, setFeedbackVerdict] = useState("");
-  const [feedbackComment, setFeedbackComment] = useState("");
-  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const notify = useNotification();
 
   useEffect(() => {
     const fetchEmail = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`http://127.0.0.1:8000/gmail/message/${id}`);
+        const response = await axios.get(`http://localhost:8000/gmail/message/${id}`);
         setEmail(response.data);
         notify.info("🧠 Email analysis completed");
       } catch (err) {
@@ -103,7 +99,7 @@ export default function EmailDetails() {
       {/* EXPORT ACTION BAR */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '-1rem' }}>
         <a 
-          href={`http://127.0.0.1:8000/report/pdf/${id}`}
+          href={`http://localhost:8000/report/pdf/${id}`}
           target="_blank"
           rel="noreferrer"
           onClick={() => notify.success("📄 Report exported")}
@@ -114,7 +110,7 @@ export default function EmailDetails() {
           📄 Export PDF
         </a>
         <a 
-          href={`http://127.0.0.1:8000/report/json/${id}`}
+          href={`http://localhost:8000/report/json/${id}`}
           target="_blank"
           rel="noreferrer"
           onClick={() => notify.success("📄 Report exported")}

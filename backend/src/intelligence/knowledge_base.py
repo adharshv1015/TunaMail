@@ -7,7 +7,6 @@ Provides a curated, extensible, locally-stored knowledge base of:
 - Suspicious TLD patterns
 - Known attack pattern keywords (multi-signal; keywords alone never classify email)
 
-The knowledge base can be updated by analyst feedback (see feedback.py).
 A single analyst decision never permanently whitelists or blacklists an indicator.
 """
 
@@ -149,7 +148,6 @@ class KnowledgeBase:
     def get_sender_trust_adjustment(self, sender: str) -> float:
         return self._data.get("sender_trust_adjustments", {}).get(sender.lower(), 0.0)
 
-    # ---- Updates (from analyst feedback) ----
 
     def adjust_domain_trust(self, domain: str, delta: float):
         """

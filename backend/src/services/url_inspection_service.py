@@ -1599,7 +1599,7 @@ class URLInspectionService:
                         explanation=(
                             tls.get(
                                 "error_detail",
-                                "TLS inspection unavailable.",
+                                "TLS inspection could not be completed.",
                             )
                         ),
                         confidence=0.0,
@@ -2286,9 +2286,11 @@ class URLInspectionService:
     @staticmethod
     def _empty_threat_intelligence() -> Dict[str, Any]:
         return {
-            "status": "unavailable",
+            "status": "not_checked",
             "detections": 0,
             "engines": [],
+            "available": False,
+            "reason": "No external threat-intelligence provider was queried.",
         }
 
     @staticmethod

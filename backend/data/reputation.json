@@ -164,16 +164,19 @@
   },
   "sbi@communications.sbi.co.in": {
     "sender": "sbi@communications.sbi.co.in",
-    "messages_seen": 4,
+    "messages_seen": 7,
     "legitimate_count": 0,
-    "suspicious_count": 2,
-    "phishing_count": 2,
+    "suspicious_count": 3,
+    "phishing_count": 4,
     "reputation": "HIGH_RISK",
     "seen_message_ids": [
       "19ff717e04277c63",
       "19ff4cb834eeb8c6",
       "19fdc0e3facfaf19",
-      "19ffaee90d8a50f5"
+      "19ffaee90d8a50f5",
+      "1a004c4bb2621c90",
+      "1a00f38aca497de4",
+      "1a00559183a161e6"
     ]
   },
   "updates-noreply@linkedin.com": {
@@ -200,13 +203,14 @@
   },
   "hello@ollama.com": {
     "sender": "hello@ollama.com",
-    "messages_seen": 1,
+    "messages_seen": 2,
     "legitimate_count": 1,
     "suspicious_count": 0,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN",
+    "phishing_count": 1,
+    "reputation": "NEW",
     "seen_message_ids": [
-      "19ff4e7789345c1d"
+      "19ff4e7789345c1d",
+      "1a00a7427c329e8c"
     ]
   },
   "help@acct.epicgames.com": {
@@ -262,6 +266,73 @@
     "reputation": "UNKNOWN",
     "seen_message_ids": [
       "19ffadb798d89ad8"
+    ]
+  },
+  "cbsalerts.sbi@alerts.sbi.bank.in": {
+    "sender": "cbsalerts.sbi@alerts.sbi.bank.in",
+    "messages_seen": 1,
+    "legitimate_count": 0,
+    "suspicious_count": 1,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN",
+    "seen_message_ids": [
+      "1a00d8148cc4a735"
+    ]
+  },
+  "notifications-noreply@linkedin.com": {
+    "sender": "notifications-noreply@linkedin.com",
+    "messages_seen": 1,
+    "legitimate_count": 0,
+    "suspicious_count": 1,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN",
+    "seen_message_ids": [
+      "1a00adde8453754f"
+    ]
+  },
+  "recommendationnc@naukri.com": {
+    "sender": "recommendationnc@naukri.com",
+    "messages_seen": 1,
+    "legitimate_count": 0,
+    "suspicious_count": 1,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN",
+    "seen_message_ids": [
+      "1a00aceaaf4256a6"
+    ]
+  },
+  "amanyukrishnaak@gmail.com": {
+    "sender": "amanyukrishnaak@gmail.com",
+    "messages_seen": 1,
+    "legitimate_count": 0,
+    "suspicious_count": 1,
+    "phishing_count": 0,
+    "reputation": "NEW",
+    "seen_message_ids": [
+      "190360102a8a5641"
+    ]
+  },
+  "hr@oneteamsolutions.co.in": {
+    "sender": "hr@oneteamsolutions.co.in",
+    "messages_seen": 2,
+    "legitimate_count": 0,
+    "suspicious_count": 2,
+    "phishing_count": 0,
+    "reputation": "NEW",
+    "seen_message_ids": [
+      "1a00e787cda6aaf2",
+      "1a004c0d36000806"
+    ]
+  },
+  "store@email.epicgames.com": {
+    "sender": "store@email.epicgames.com",
+    "messages_seen": 1,
+    "legitimate_count": 0,
+    "suspicious_count": 1,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN",
+    "seen_message_ids": [
+      "1a006f6e91f86c4a"
     ]
   }
 }

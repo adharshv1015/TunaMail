@@ -27,7 +27,6 @@ const EvidenceCard = ({ item }) => {
 
 const AnalystExplanation = ({ messageId, decision, sender }) => {
   const [expanded, setExpanded] = useState(false);
-  const [feedbackState, setFeedbackState] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingLabel, setPendingLabel] = useState("");
   const [reason, setReason] = useState("");
@@ -54,17 +53,27 @@ const AnalystExplanation = ({ messageId, decision, sender }) => {
 
   const submitFeedback = async () => {
     try {
-      const res = await api.post(`/gmail/message/${messageId}/feedback`, {
-        label: pendingLabel,
-        reason,
-        sender,
-        previous_verdict: decision.verdict,
-        previous_risk_score: decision.risk_score
-      });
-      if (res.status === 200) {
-        setFeedbackState({ analyst_label: pendingLabel });
-        setModalOpen(false);
+      const response = await fetch(
+          `http://localhost:8000/gmail/message/${messageId}/feedback`,
+          {
+              method: "POST",
+              headers: {
+                  "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                  feedback: pendingLabel,
+              }),
+          }
+      );
+
+      if (!response.ok) {
+          throw new Error(
+              `Feedback request failed: ${response.status}`
+          );
       }
+      
+      setFeedbackState({ analyst_label: pendingLabel });
+      setModalOpen(false);
     } catch (e) {
       console.error(e);
     }
@@ -148,55 +157,9 @@ const AnalystExplanation = ({ messageId, decision, sender }) => {
             </div>
           </div>
 
-          {/* Analyst Feedback Section */}
-          <div className="mt-8 border-t border-slate-200 dark:border-slate-700 pt-4">
-            <h4 className="font-semibold text-slate-800 dark:text-slate-200 uppercase text-xs tracking-wider mb-3">Analyst Feedback</h4>
-            {feedbackState ? (
-              <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 p-2 rounded border border-emerald-500/20">
-                ✓ Feedback recorded: {feedbackState.analyst_label.replace(/_/g, ' ')}
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                <button onClick={() => handleFeedbackClick('CONFIRMED_SAFE')} className="px-3 py-1.5 text-xs font-semibold rounded bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-800/40">✓ Confirm Safe</button>
-                <button onClick={() => handleFeedbackClick('CONFIRMED_PHISHING')} className="px-3 py-1.5 text-xs font-semibold rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-800/40">⚠ Confirm Phishing</button>
-                <button onClick={() => handleFeedbackClick('FALSE_POSITIVE')} className="px-3 py-1.5 text-xs font-semibold rounded bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-800/40">↩ False Positive</button>
-                <button onClick={() => handleFeedbackClick('FALSE_NEGATIVE')} className="px-3 py-1.5 text-xs font-semibold rounded bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-800/40">↩ False Negative</button>
-                <button onClick={() => handleFeedbackClick('UNKNOWN')} className="px-3 py-1.5 text-xs font-semibold rounded bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">? Mark Unknown</button>
-              </div>
-            )}
-          </div>
         </div>
       )}
 
-      {/* Feedback Modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl max-w-md w-full m-4">
-            <h3 className="text-lg font-bold mb-4 text-slate-900 dark:text-white">Provide Reason (Optional)</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">You are marking this email as <strong>{pendingLabel.replace(/_/g, ' ')}</strong>.</p>
-            <textarea 
-              className="w-full border rounded p-2 text-sm bg-transparent dark:border-slate-700 text-slate-900 dark:text-white mb-4 h-24"
-              placeholder="e.g. This was a legitimate Microsoft password reset."
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            />
-            <div className="flex justify-end gap-2">
-              <button 
-                className="px-4 py-2 text-sm font-semibold rounded text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-                onClick={() => setModalOpen(false)}
-              >
-                Cancel
-              </button>
-              <button 
-                className="px-4 py-2 text-sm font-semibold rounded bg-blue-600 text-white hover:bg-blue-700"
-                onClick={submitFeedback}
-              >
-                Submit Feedback
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -10,7 +10,7 @@ export default function SystemStatus() {
   useEffect(() => {
     const fetchHealth = () => {
       axios
-        .get("http://127.0.0.1:8000/system/health")
+        .get("http://localhost:8000/system/health")
         .then((res) => {
           setStatus(res.data);
           if (previousState.current === "offline") {

@@ -158,14 +158,7 @@ def normalize_message_response(
 
     return parsed_email
 
-from src.ai.analyst_feedback import process_analyst_feedback, get_analyst_feedback, delete_analyst_feedback
 
-class FeedbackRequest(BaseModel):
-    label: str
-    reason: str = ""
-    sender: str = ""
-    previous_verdict: str = ""
-    previous_risk_score: int = 0
 
 router = APIRouter()
 
@@ -313,8 +306,49 @@ def process_single_message(connector, msg_id, is_batch=False):
 
         conflict_result = safe_analyze("EvidenceConflictEngine", msg_id, analyzers["conflict"].evaluate, tracker, parsed, auth_analysis, url_analysis, whois_analysis, content_analysis, attachment_analysis, trust_analysis, ai_analysis, url_page_intelligence)
 
-        decision_result = safe_analyze("DecisionFusionEngine", msg_id, analyzers["decision"].evaluate, tracker, are_result, conflict_result)
-        decision_result = analyzers["consistency_validator"].validate(decision_result)
+        decision_result = safe_analyze(
+            "DecisionFusionEngine",
+            msg_id,
+            analyzers["decision"].evaluate,
+            tracker,
+            are_result,
+            conflict_result,
+        )
+
+        # ------------------------------------------------------------
+        # FINAL DETERMINISTIC DECISION GUARD
+        # ------------------------------------------------------------
+        # Build the complete analysis context before applying the
+        # deterministic safety layer. This ensures the guard sees:
+        # authentication, content, URL, WHOIS, attachments, trust,
+        # AI, page intelligence, ARE evidence and conflict evidence.
+
+        final_analysis = {
+            **existing_analysis,
+            "ai": ai_analysis,
+            "reasoning": are_result.get(
+                "evidence",
+                {},
+            ),
+            "conflict": conflict_result,
+            "url_page_intelligence": url_page_intelligence,
+        }
+
+        # First normalize the fused decision through the existing
+        # consistency validator.
+        decision_result = analyzers[
+            "consistency_validator"
+        ].validate(
+            decision_result
+        )
+
+        # Then run the deterministic safety architecture that was
+        # previously only used by normalize_message_response().
+        decision_result = finalize_intelligence(
+            parsed,
+            final_analysis,
+            decision_result,
+        )
 
         with tracker.measure("LocalLearning"):
             analyzers["learner"].learn(parsed, existing_analysis, decision_result.get("verdict", "UNKNOWN"))
@@ -533,59 +567,3 @@ def get_message(
     return process_single_message(connector, message_id, is_batch=False)
 
 
-@router.post("/message/{message_id}/feedback")
-def submit_feedback(
-    request: Request,
-    message_id: str,
-    feedback: FeedbackRequest
-):
-    session_id = request.session.get("session_id")
-    server_session = session_manager.get_session(session_id)
-    
-    if not server_session or not server_session.get("authenticated"):
-        raise HTTPException(status_code=401, detail="Please login first.")
-        
-    result = process_analyst_feedback(
-        message_id=message_id,
-        sender=feedback.sender,
-        label=feedback.label,
-        reason=feedback.reason,
-        previous_verdict=feedback.previous_verdict,
-        previous_risk_score=feedback.previous_risk_score
-    )
-    
-    return {
-        "status": "success",
-        "message_id": message_id,
-        "label": feedback.label
-    }
-
-@router.get("/message/{message_id}/feedback")
-def get_feedback(
-    request: Request,
-    message_id: str
-):
-    session_id = request.session.get("session_id")
-    server_session = session_manager.get_session(session_id)
-    
-    if not server_session or not server_session.get("authenticated"):
-        raise HTTPException(status_code=401, detail="Please login first.")
-        
-    data = get_analyst_feedback(message_id)
-    if not data:
-        raise HTTPException(status_code=404, detail="Feedback not found.")
-    return data
-
-@router.delete("/message/{message_id}/feedback")
-def delete_feedback(
-    request: Request,
-    message_id: str
-):
-    session_id = request.session.get("session_id")
-    server_session = session_manager.get_session(session_id)
-    
-    if not server_session or not server_session.get("authenticated"):
-        raise HTTPException(status_code=401, detail="Please login first.")
-        
-    delete_analyst_feedback(message_id)
-    return {"status": "success"}

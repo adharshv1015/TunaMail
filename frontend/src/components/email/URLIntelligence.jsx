@@ -18,9 +18,9 @@ function EvidenceRow({ type, text }) {
   );
 }
 
-function IndicatorBadge({ label, isSuspicious, type="warning" }) {
+function IndicatorBadge({ label, isSuspicious, type = "warning" }) {
   if (!isSuspicious) return null;
-  
+
   const colors = {
     warning: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20",
     error: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
@@ -36,30 +36,30 @@ function IndicatorBadge({ label, isSuspicious, type="warning" }) {
 
 const SEVERITY_STYLES = {
   CRITICAL: "bg-red-500/15 text-red-400 border-red-500/30",
-  HIGH:     "bg-orange-500/15 text-orange-400 border-orange-500/30",
-  MEDIUM:   "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  LOW:      "bg-blue-500/15 text-blue-400 border-blue-500/30",
-  INFO:     "bg-gray-500/15 text-gray-400 border-gray-500/30",
+  HIGH: "bg-orange-500/15 text-orange-400 border-orange-500/30",
+  MEDIUM: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  LOW: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+  INFO: "bg-gray-500/15 text-gray-400 border-gray-500/30",
 };
 
 const SEVERITY_ICONS = {
   CRITICAL: "🔴",
-  HIGH:     "🟠",
-  MEDIUM:   "🟡",
-  LOW:      "🔵",
-  INFO:     "⚪",
+  HIGH: "🟠",
+  MEDIUM: "🟡",
+  LOW: "🔵",
+  INFO: "⚪",
 };
 
 const INDICATOR_LABELS = {
-  FAKE_ERROR_PAGE:        "Fake Error Page",
-  SPARSE_CREDENTIAL_FORM:"Credential Harvesting Form",
-  CREDENTIAL_FORM:        "Credential Form Detected",
-  SPARSE_EMAIL_FORM:      "Sparse Email Form",
-  SPARSE_FORM_PAGE:       "Sparse Form Page",
-  URGENCY_LANGUAGE:       "Urgency Language",
-  CREDENTIAL_SOLICITATION:"Sensitive Data Requested",
-  SUSPICIOUS_TITLE:       "Suspicious Page Title",
-  MULTI_DOMAIN_REDIRECT:  "Multi-Domain Redirect",
+  FAKE_ERROR_PAGE: "Fake Error Page",
+  SPARSE_CREDENTIAL_FORM: "Credential Harvesting Form",
+  CREDENTIAL_FORM: "Credential Form Detected",
+  SPARSE_EMAIL_FORM: "Sparse Email Form",
+  SPARSE_FORM_PAGE: "Sparse Form Page",
+  URGENCY_LANGUAGE: "Urgency Language",
+  CREDENTIAL_SOLICITATION: "Sensitive Data Requested",
+  SUSPICIOUS_TITLE: "Suspicious Page Title",
+  MULTI_DOMAIN_REDIRECT: "Multi-Domain Redirect",
 };
 
 function PageRiskMeter({ score }) {
@@ -175,7 +175,7 @@ function UrlCard({ item }) {
   const [expanded, setExpanded] = useState(false);
   const pageAnalysis = item.page_analysis;
   const pageHasRisk = pageAnalysis?.available && (pageAnalysis.page_risk_score > 0 || (pageAnalysis.indicators || []).length > 0);
-  
+
   const hasRisk = item.ip_based || item.shortener || item.obfuscated || item.punycode || item.suspicious_port || (item.keywords && item.keywords.length > 0) || item.brand_impersonation || (item.threat_intelligence && item.threat_intelligence.detections > 0) || pageHasRisk || item.tls_policy_violation;
 
   const getRiskFlags = () => {
@@ -189,14 +189,14 @@ function UrlCard({ item }) {
     if (pageHasRisk) flags.push("Page Risk");
     return flags;
   };
-  
+
   const flags = getRiskFlags();
 
   return (
     <div className={`flex flex-col rounded-[8px] border bg-[var(--tm-surface-secondary)] overflow-hidden transition-all duration-200 ${hasRisk ? "border-orange-500/30" : "border-[var(--tm-border)]"}`}>
-      
+
       {/* Compact Header (Always Visible) */}
-      <button 
+      <button
         onClick={() => setExpanded(!expanded)}
         className="flex items-center justify-between w-full p-3 text-left hover:bg-[var(--tm-surface)] transition-colors focus:outline-none"
       >
@@ -209,14 +209,14 @@ function UrlCard({ item }) {
             {item.url}
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3 shrink-0 ml-4">
           {flags.length > 0 ? (
             <span className="text-[10px] font-bold uppercase tracking-wider text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
               {flags.length} Flag{flags.length !== 1 ? "s" : ""}
             </span>
           ) : (
-             <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500 opacity-80">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500 opacity-80">
               Clean
             </span>
           )}
@@ -235,7 +235,7 @@ function UrlCard({ item }) {
               {item.url}
             </div>
           </div>
-          
+
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 min-w-0">
               <div className="text-[11px] font-bold text-[var(--tm-text-secondary)] uppercase tracking-wider mb-1.5">Domain Context</div>
@@ -265,63 +265,78 @@ function UrlCard({ item }) {
 
           {/* Page Analysis Panel */}
           {pageAnalysis && <PageAnalysisPanel pageAnalysis={pageAnalysis} />}
-          
+
           {/* Technical Evidence */}
           <div className="mt-2 flex flex-col gap-1 bg-[var(--tm-surface)] p-3 rounded-lg border border-[var(--tm-border)]/50">
             {/* DNS Evidence */}
             {item.dns && item.dns.resolved ? (
-               <EvidenceRow type="success" text={`DNS resolved successfully (${[...(item.dns.a || []), ...(item.dns.aaaa || [])].length} records)`} />
+              <EvidenceRow type="success" text={`DNS resolved successfully (${[...(item.dns.a || []), ...(item.dns.aaaa || [])].length} records)`} />
             ) : item.dns && item.dns.private_ip_detected ? (
-               <EvidenceRow type="error" text="DNS resolved to an internal/private IP (SSRF Blocked)" />
+              <EvidenceRow type="error" text="DNS resolved to an internal/private IP (SSRF Blocked)" />
             ) : (
-               <EvidenceRow type="warning" text="DNS resolution unavailable or failed" />
+              <EvidenceRow type="warning" text="DNS resolution unavailable or failed" />
             )}
-            
+
             {/* TLS Evidence */}
             {item.tls && item.tls.https ? (
               item.tls.certificate_valid ? (
-                 <EvidenceRow type="success" text={`TLS certificate valid (Issuer: ${item.tls.issuer || "Unknown"})`} />
+                <EvidenceRow type="success" text={`TLS certificate valid (Issuer: ${item.tls.issuer || "Unknown"})`} />
               ) : (
-                 <EvidenceRow type="error" text={item.tls.error_detail ? `TLS policy violation: ${item.tls.error_detail} (${item.tls.violation})` : "TLS certificate invalid or expired"} />
+                <EvidenceRow type="error" text={item.tls.error_detail ? `TLS policy violation: ${item.tls.error_detail} (${item.tls.violation})` : "TLS certificate invalid or expired"} />
               )
             ) : item.tls && item.tls.certificate_present === false && item.tls.violation ? (
-               <EvidenceRow type="warning" text={`TLS inspection issue: ${item.tls.error_detail} (${item.tls.violation})`} />
+              <EvidenceRow type="warning" text={`TLS inspection issue: ${item.tls.error_detail} (${item.tls.violation})`} />
             ) : (
-               <EvidenceRow type="warning" text="Connection does not use HTTPS" />
+              <EvidenceRow type="warning" text="Connection does not use HTTPS" />
             )}
-            
+
             {/* Redirects */}
             {item.redirects && item.redirects.detected ? (
-               <EvidenceRow type={item.redirects.external_domain_change ? "error" : "warning"} text={`Redirect chain detected (${item.redirects.chain.length} hops)${item.redirects.external_domain_change ? " - External domain change!" : ""}`} />
+              <EvidenceRow type={item.redirects.external_domain_change ? "error" : "warning"} text={`Redirect chain detected (${item.redirects.chain.length} hops)${item.redirects.external_domain_change ? " - External domain change!" : ""}`} />
             ) : (
-               <EvidenceRow type="success" text="No redirects detected" />
+              <EvidenceRow type="success" text="No redirects detected" />
             )}
-            
+
             {/* Threat Intel */}
-            {item.threat_intelligence && item.threat_intelligence.status === "available" ? (
-               item.threat_intelligence.detections > 0 ? (
-                 <EvidenceRow type="error" text={`Threat intelligence detected malicious activity (${item.threat_intelligence.detections} flags)`} />
-               ) : (
-                 <EvidenceRow type="success" text="No malicious reputation detected" />
-               )
+            {item.threat_intelligence?.status === "available" ? (
+              item.threat_intelligence.detections > 0 ? (
+                <EvidenceRow
+                  type="error"
+                  text={`Threat intelligence detected malicious activity (${item.threat_intelligence.detections} flags)`}
+                />
+              ) : (
+                <EvidenceRow type="success" text="No malicious reputation detected" />
+              )
             ) : (
-               <EvidenceRow type="neutral" text="Threat intelligence unavailable" />
+              <EvidenceRow type="neutral" text="Threat intelligence was not queried" />
             )}
-            
+
             {/* Email Alignment */}
             {item.email_alignment === "aligned" ? (
-               <EvidenceRow type="success" text="Sender domain matches URL registered domain" />
+              <EvidenceRow
+                type="success"
+                text="Sender domain matches URL registered domain"
+              />
             ) : item.email_alignment === "partially_aligned" ? (
-               <EvidenceRow type="warning" text="Partial alignment (e.g., matching return-path or unauthenticated sender)" />
+              <EvidenceRow
+                type="warning"
+                text="Partial alignment (e.g., matching return-path or unauthenticated sender)"
+              />
             ) : item.email_alignment === "misaligned" ? (
-               <EvidenceRow type="error" text="Sender domain is completely unrelated to URL domain" />
+              <EvidenceRow
+                type="error"
+                text="Sender domain is completely unrelated to URL domain"
+              />
             ) : (
-               <EvidenceRow type="neutral" text="Email alignment could not be verified" />
+              <EvidenceRow
+                type="neutral"
+                text="Email alignment was not evaluated for this URL"
+              />
             )}
 
             {/* Brand Match */}
             {item.brand_impersonation && (
-               <EvidenceRow type="error" text="URL attempts to impersonate a trusted brand" />
+              <EvidenceRow type="error" text="URL attempts to impersonate a trusted brand" />
             )}
           </div>
         </div>
@@ -339,14 +354,14 @@ function URLIntelligence({ urlAnalysis, urlPageIntelligence }) {
   return (
     <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-6 shadow-sm">
       <SectionHeader icon="🔗" title="URL Intelligence" subtitle={`${analyzedUrls.length} URL(s) analyzed via Active Evidence Engine`} />
-      
+
       {isLimitedContext && (
         <div className="mt-4 mb-2 p-3 rounded-lg border border-orange-500/30 bg-orange-500/10 flex items-start gap-3">
           <span className="text-orange-500 mt-0.5">⚠</span>
           <div className="flex flex-col">
             <span className="text-[13px] font-bold text-orange-600 dark:text-orange-400">Limited Context</span>
             <span className="text-[12px] text-orange-600/80 dark:text-orange-400/80 mt-0.5">
-              Only a URL was detected in this email. There is insufficient message context to confidently establish legitimacy. 
+              Only a URL was detected in this email. There is insufficient message context to confidently establish legitimacy.
             </span>
           </div>
         </div>
@@ -374,7 +389,7 @@ function URLIntelligence({ urlAnalysis, urlPageIntelligence }) {
                 <div className="text-[12px] font-mono text-[var(--tm-accent)] break-all border-b border-[var(--tm-border)]/50 pb-2 mb-2">
                   {url}
                 </div>
-                
+
                 {pageData.security?.error ? (
                   <div className="text-[12px] font-bold text-red-500">
                     Fetch Blocked/Failed: {pageData.security.error}
@@ -384,10 +399,10 @@ function URLIntelligence({ urlAnalysis, urlPageIntelligence }) {
                     <div className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-[12px]">
                       <span className="text-[var(--tm-text-secondary)] font-bold">Title:</span>
                       <span className="text-[var(--tm-text)]">{pageData.title || <span className="italic text-gray-500">None</span>}</span>
-                      
+
                       <span className="text-[var(--tm-text-secondary)] font-bold">Word Count:</span>
                       <span className="text-[var(--tm-text)]">{pageData.word_count || 0}</span>
-                      
+
                       <span className="text-[var(--tm-text-secondary)] font-bold">Forms:</span>
                       <span className={`font-bold ${(pageData.forms?.password_fields > 0 || pageData.forms?.email_fields > 0) ? "text-orange-500" : "text-[var(--tm-text)]"}`}>
                         {pageData.forms?.password_fields > 0 && <span>Password ({pageData.forms.password_fields}) </span>}

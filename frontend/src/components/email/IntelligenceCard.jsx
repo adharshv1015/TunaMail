@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import SectionHeader from "../common/SectionHeader";
-import { submitFeedback } from "../../api/intelligence";
 
 /* ─────────── helpers ─────────── */
 const VERDICT_COLORS = {
@@ -250,87 +249,6 @@ function IntelTimeline({ timeline }) {
   );
 }
 
-/* ─────────── Analyst Feedback ─────────── */
-function AnalystFeedback({ messageId, automatedVerdict }) {
-  const [verdict, setVerdict] = useState("");
-  const [comment, setComment] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = async () => {
-    if (!verdict) return;
-    setLoading(true);
-    setError("");
-    try {
-      await submitFeedback(messageId, verdict, automatedVerdict, comment);
-      setSubmitted(true);
-    } catch (e) {
-      setError("Failed to submit feedback. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const VERDICTS = [
-    { value: "TRUE_POSITIVE",  label: "✅ True Positive — correctly flagged malicious" },
-    { value: "FALSE_POSITIVE", label: "❌ False Positive — incorrectly flagged (actually safe)" },
-    { value: "TRUE_NEGATIVE",  label: "✅ True Negative — correctly identified as safe" },
-    { value: "FALSE_NEGATIVE", label: "⚠️ False Negative — missed malicious email" },
-    { value: "UNKNOWN",        label: "❓ Unknown — cannot determine" },
-  ];
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-start gap-2">
-        <div className="text-xs text-[var(--tm-text-secondary)] mt-0.5">
-          Automated verdict is always preserved. Your feedback is stored separately for audit purposes.
-        </div>
-      </div>
-
-      {submitted ? (
-        <div className="flex items-center gap-2 p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 text-emerald-500 dark:text-emerald-400 text-sm font-medium">
-          ✅ Feedback submitted. Automated verdict unchanged.
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          <select
-            value={verdict}
-            onChange={e => setVerdict(e.target.value)}
-            className="w-full rounded-xl border border-[var(--tm-border)] bg-[var(--tm-surface)] text-[var(--tm-text)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-colors"
-          >
-            <option value="">Select your verdict…</option>
-            {VERDICTS.map(v => (
-              <option key={v.value} value={v.value}>{v.label}</option>
-            ))}
-          </select>
-
-          <textarea
-            value={comment}
-            onChange={e => setComment(e.target.value)}
-            placeholder="Optional analyst comment (e.g. 'Legitimate Microsoft security notification')…"
-            rows={2}
-            className="w-full rounded-xl border border-[var(--tm-border)] bg-[var(--tm-surface)] text-[var(--tm-text)] px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/30 placeholder:text-[var(--tm-text-secondary)] transition-colors"
-          />
-
-          {error && <p className="text-xs text-red-400">{error}</p>}
-
-          <button
-            onClick={handleSubmit}
-            disabled={!verdict || loading}
-            className="self-start flex items-center gap-2 px-4 py-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 text-sm font-semibold hover:bg-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {loading ? (
-              <span className="h-3 w-3 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />
-            ) : "🧑‍💻"}
-            {loading ? "Submitting…" : "Submit Feedback"}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ─────────── MAIN INTELLIGENCE CARD ─────────── */
 function IntelligenceCard({ intelligence, messageId, automatedVerdict }) {
   const intel = intelligence || {};
@@ -347,7 +265,6 @@ function IntelligenceCard({ intelligence, messageId, automatedVerdict }) {
     { key: "related",   label: "Related",     badge: intel.related_messages?.length || null },
     { key: "trust",     label: "Trust",       badge: null },
     { key: "timeline",  label: "Timeline",    badge: null },
-    { key: "feedback",  label: "Feedback",    badge: null },
   ];
 
   return (
@@ -427,10 +344,6 @@ function IntelligenceCard({ intelligence, messageId, automatedVerdict }) {
           <IntelTimeline timeline={intel.timeline} />
         )}
 
-        {/* ── FEEDBACK ── */}
-        {activeTab === "feedback" && (
-          <AnalystFeedback messageId={messageId} automatedVerdict={automatedVerdict} />
-        )}
       </div>
     </section>
   );

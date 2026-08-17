@@ -140,15 +140,23 @@ class EvidenceCollector:
                             source="url_analyzer",
                             explanation=f"Invalid or missing TLS certificate for {domain}"
                         ))
-                else:
-                    evidence_items.append(EvidenceItem(
-                        category=EvidenceCategory.URL,
-                        type="tls_unavailable",
-                        severity=EvidenceSeverity.INFO,
+                elif tls_unavailable:
+                     evidence.append(
+                        EvidenceItem(
+                        category=EvidenceCategory.NETWORK,
                         direction=EvidenceDirection.NEUTRAL,
-                        source="url_analyzer",
-                        explanation=f"UNAVAILABLE: TLS inspection unavailable for {domain}"
-                    ))
+                        type="TLS_INSPECTION_UNAVAILABLE",
+                        severity="INFO",
+                        confidence=0.0,
+                        weight=0,
+                        explanation=(
+                            f"TLS inspection could not be completed for {domain}. "
+                            "This is an inspection limitation and is not evidence "
+                            "of malicious intent."
+                        )
+                    )
+                )
+                
 
                 # Redirects
                 redirects = u.get("redirects", {})

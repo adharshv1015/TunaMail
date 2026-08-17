@@ -13,7 +13,6 @@ import logging
 
 from src.api.session import session_manager
 from src.intelligence.db import get_db, rows_to_list, init_db
-from src.intelligence.feedback import FeedbackSystem, VALID_VERDICTS
 from src.intelligence.case_manager import CaseManager
 from src.intelligence.audit_log import AuditLog
 from src.intelligence.campaign_detector import CampaignDetector
@@ -39,11 +38,7 @@ def _require_auth(request: Request) -> dict:
 
 # ---- Request Models ----
 
-class FeedbackRequest(BaseModel):
-    message_id: str
-    analyst_verdict: str
-    automated_verdict: Optional[str] = None
-    comment: Optional[str] = ""
+
 
 
 class AnalystVerdictRequest(BaseModel):
@@ -124,12 +119,6 @@ def get_message_intelligence(request: Request, message_id: str):
                     pass
                 campaigns.append(c)
 
-            # Feedback for this message
-            feedback_rows = conn.execute(
-                "SELECT * FROM feedback WHERE message_id = ?", (message_id,)
-            ).fetchall()
-            feedback = rows_to_list(feedback_rows)
-
     except Exception as e:
         logger.error(f"intelligence/message/{message_id} DB error: {e}")
         raise HTTPException(status_code=500, detail="Database error")
@@ -141,7 +130,6 @@ def get_message_intelligence(request: Request, message_id: str):
         "iocs": iocs,
         "related_messages": related,
         "campaigns": campaigns,
-        "feedback": feedback
     }
 
 
@@ -256,28 +244,6 @@ def get_campaign(request: Request, campaign_id: str):
 
     return campaign
 
-
-@router.post("/feedback")
-def submit_feedback(request: Request, body: FeedbackRequest):
-    """
-    Submit analyst feedback for an email.
-    The automated verdict is NEVER overwritten — both verdicts are preserved separately.
-    """
-    _require_auth(request)
-
-    feedback_sys = FeedbackSystem()
-    result = feedback_sys.submit(
-        message_id=body.message_id,
-        analyst_verdict=body.analyst_verdict,
-        automated_verdict=body.automated_verdict,
-        comment=body.comment or "",
-        actor="analyst"
-    )
-
-    if not result.get("success"):
-        raise HTTPException(status_code=400, detail=result.get("message", "Feedback error"))
-
-    return result
 
 
 @router.post("/analyst-verdict")
