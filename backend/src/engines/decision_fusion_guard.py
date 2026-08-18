@@ -1,7 +1,3 @@
-# ============================================================
-# backend/src/engines/decision_fusion_guard.py
-# ============================================================
-
 from __future__ import annotations
 
 from typing import Any, Dict, List
@@ -85,23 +81,11 @@ def _safe_float(value: Any, default: float = 0.0) -> float:
 
 
 def _clamp_score(value: Any) -> int:
-    return max(
-        0,
-        min(
-            100,
-            _safe_int(value),
-        ),
-    )
+    return max(0, min(100, _safe_int(value)))
 
 
 def _clamp_confidence(value: Any) -> int:
-    return max(
-        0,
-        min(
-            100,
-            _safe_int(value),
-        ),
-    )
+    return max(0, min(100, _safe_int(value)))
 
 
 def _normalize_type(value: Any) -> str:
@@ -151,32 +135,21 @@ def _normalize_evidence(item: Any) -> Dict[str, Any] | None:
 
     return {
         "type": _normalize_type(item.get("type")),
-        "severity": _normalize_severity(
-            item.get("severity")
-        ),
+        "severity": _normalize_severity(item.get("severity")),
         "direction": _normalize_direction(
             item.get("direction", item.get("supports"))
         ),
-        "source": str(
-            item.get("source", "UNKNOWN")
-        ),
-        "explanation": str(
-            item.get("explanation", "")
-        ),
+        "source": str(item.get("source", "UNKNOWN")),
+        "explanation": str(item.get("explanation", "")),
         "confidence": max(
             0.0,
             min(
                 1.0,
-                _safe_float(
-                    item.get("confidence", 0.0)
-                ),
+                _safe_float(item.get("confidence", 0.0)),
             ),
         ),
         "reasoning_state": str(
-            item.get(
-                "reasoning_state",
-                "",
-            )
+            item.get("reasoning_state", "")
         ).upper(),
     }
 
@@ -185,17 +158,11 @@ def _collect_structured_evidence(
     decision: Dict[str, Any],
     analysis: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
+
     evidence: List[Dict[str, Any]] = []
 
-    # --------------------------------------------------------
-    # Primary source: final decision structured evidence
-    # --------------------------------------------------------
-
     for item in (
-        decision.get(
-            "structured_evidence",
-            [],
-        )
+        decision.get("structured_evidence", [])
         or []
     ):
         normalized = _normalize_evidence(item)
@@ -203,15 +170,8 @@ def _collect_structured_evidence(
         if normalized:
             evidence.append(normalized)
 
-    # --------------------------------------------------------
-    # Secondary source: ARE structured evidence
-    # --------------------------------------------------------
-
     for item in (
-        analysis.get(
-            "structured_evidence",
-            [],
-        )
+        analysis.get("structured_evidence", [])
         or []
     ):
         normalized = _normalize_evidence(item)
@@ -219,32 +179,17 @@ def _collect_structured_evidence(
         if normalized:
             evidence.append(normalized)
 
-    # --------------------------------------------------------
-    # Tertiary source: evidence graph
-    # --------------------------------------------------------
+    graph = analysis.get("evidence_graph", {})
 
-    if isinstance(analysis, dict):
-        graph = analysis.get(
-            "evidence_graph",
-            {},
-        )
+    if isinstance(graph, dict):
+        for item in (
+            graph.get("evidence", [])
+            or []
+        ):
+            normalized = _normalize_evidence(item)
 
-        if isinstance(graph, dict):
-            for item in (
-                graph.get(
-                    "evidence",
-                    [],
-                )
-                or []
-            ):
-                normalized = _normalize_evidence(item)
-
-                if normalized:
-                    evidence.append(normalized)
-
-    # --------------------------------------------------------
-    # De-duplicate
-    # --------------------------------------------------------
+            if normalized:
+                evidence.append(normalized)
 
     unique: List[Dict[str, Any]] = []
     seen = set()
@@ -275,11 +220,6 @@ def _collect_legacy_evidence(
     decision: Dict[str, Any],
     analysis: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
-    """
-    Backward-compatible fallback for old evidence arrays.
-
-    Structured evidence always has priority.
-    """
 
     reasoning = (
         decision.get("reasoning")
@@ -366,10 +306,7 @@ def _collect_legacy_evidence(
         "negative",
     ):
         for raw in (
-            reasoning.get(
-                category,
-                [],
-            )
+            reasoning.get(category, [])
             or []
         ):
             text = str(raw)
@@ -382,6 +319,7 @@ def _collect_legacy_evidence(
                 evidence_type,
                 evidence_severity,
             ) in mapping.items():
+
                 if pattern in lowered:
                     matched_type = evidence_type
                     severity = evidence_severity
@@ -412,6 +350,7 @@ def _collect_legacy_evidence(
 def _get_critical_evidence(
     evidence: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
+
     return [
         item
         for item in evidence
@@ -426,6 +365,7 @@ def _get_critical_evidence(
 def _get_strong_evidence(
     evidence: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
+
     return [
         item
         for item in evidence
@@ -443,6 +383,7 @@ def _get_strong_evidence(
 def _get_negative_evidence(
     evidence: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
+
     return [
         item
         for item in evidence
@@ -453,6 +394,7 @@ def _get_negative_evidence(
 def _get_contradictions(
     evidence: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
+
     return [
         item
         for item in evidence
@@ -471,11 +413,9 @@ def _get_contradictions(
 def _authentication_state(
     analysis: Dict[str, Any],
 ) -> str:
+
     authentication = (
-        analysis.get(
-            "authentication",
-            {},
-        )
+        analysis.get("authentication", {})
         or {}
     )
 
@@ -490,24 +430,15 @@ def _authentication_state(
         return "UNAVAILABLE"
 
     spf = str(
-        authentication.get(
-            "spf",
-            "",
-        )
+        authentication.get("spf", "")
     ).lower()
 
     dkim = str(
-        authentication.get(
-            "dkim",
-            "",
-        )
+        authentication.get("dkim", "")
     ).lower()
 
     dmarc = str(
-        authentication.get(
-            "dmarc",
-            "",
-        )
+        authentication.get("dmarc", "")
     ).lower()
 
     if (
@@ -535,11 +466,6 @@ def _trusted_sender_is_overrideable(
     decision: Dict[str, Any],
     analysis: Dict[str, Any],
 ) -> bool:
-    """
-    Trusted sender status is NEVER an automatic exemption.
-
-    A trusted sender can still be compromised.
-    """
 
     if not decision.get(
         "is_trusted_sender",
@@ -547,11 +473,52 @@ def _trusted_sender_is_overrideable(
     ):
         return False
 
-    authentication_state = _authentication_state(
-        analysis
+    return (
+        _authentication_state(analysis)
+        == "PASSED"
     )
 
-    return authentication_state == "PASSED"
+
+# ============================================================
+# Final normalization
+# ============================================================
+
+def _finalize(
+    decision: Dict[str, Any],
+) -> Dict[str, Any]:
+
+    decision["risk_score"] = _clamp_score(
+        decision.get("risk_score", 0)
+    )
+
+    decision["confidence"] = _clamp_confidence(
+        decision.get("confidence", 0)
+    )
+
+    verdict = str(
+        decision.get("verdict", "UNKNOWN")
+    ).upper()
+
+    allowed_verdicts = {
+        "SAFE",
+        "LOW RISK",
+        "LIKELY LEGITIMATE",
+        "VERIFIED LEGITIMATE",
+        "UNKNOWN",
+        "SUSPICIOUS",
+        "HIGH RISK",
+        "PHISHING",
+    }
+
+    if verdict not in allowed_verdicts:
+        verdict = "UNKNOWN"
+
+    decision["verdict"] = verdict
+
+    if not decision.get("detail_verdict"):
+        decision["detail_verdict"] = "UNKNOWN"
+
+    return decision
 
 
 # ============================================================
@@ -562,81 +529,34 @@ def enforce_deterministic_priority(
     decision: Dict[str, Any] | None,
     analysis: Dict[str, Any] | None,
 ) -> Dict[str, Any]:
-    """
-    Final deterministic safety guard.
 
-    Priority:
-
-    CURRENT CRITICAL DETERMINISTIC EVIDENCE
-        >
-    CURRENT STRONG SECURITY EVIDENCE
-        >
-    CONTRADICTIONS
-        >
-    LOCAL AI
-        >
-    HISTORICAL EVIDENCE
-
-    Historical trust and sender reputation can never suppress
-    current critical malicious evidence.
-    """
-
-    decision = dict(
-        decision or {}
-    )
-
-    analysis = dict(
-        analysis or {}
-    )
-
-    # --------------------------------------------------------
-    # Normalize base decision
-    # --------------------------------------------------------
+    decision = dict(decision or {})
+    analysis = dict(analysis or {})
 
     risk_score = _clamp_score(
-        decision.get(
-            "risk_score",
-            0,
-        )
+        decision.get("risk_score", 0)
     )
 
     confidence = _clamp_confidence(
-        decision.get(
-            "confidence",
-            0,
-        )
+        decision.get("confidence", 0)
     )
 
     verdict = str(
-        decision.get(
-            "verdict",
-            "UNKNOWN",
-        )
+        decision.get("verdict", "UNKNOWN")
     ).upper()
 
     detail_verdict = str(
-        decision.get(
-            "detail_verdict",
-            "",
-        )
+        decision.get("detail_verdict", "")
     ).upper()
 
     decision["risk_score"] = risk_score
     decision["confidence"] = confidence
     decision["verdict"] = verdict
-    decision["detail_verdict"] = (
-        detail_verdict
-    )
+    decision["detail_verdict"] = detail_verdict
 
-    # --------------------------------------------------------
-    # Collect evidence
-    # --------------------------------------------------------
-
-    structured_evidence = (
-        _collect_structured_evidence(
-            decision,
-            analysis,
-        )
+    structured_evidence = _collect_structured_evidence(
+        decision,
+        analysis,
     )
 
     existing_types = {
@@ -651,9 +571,7 @@ def enforce_deterministic_priority(
         if item["type"] not in existing_types:
             structured_evidence.append(item)
 
-    decision["structured_evidence"] = (
-        structured_evidence
-    )
+    decision["structured_evidence"] = structured_evidence
 
     critical = _get_critical_evidence(
         structured_evidence
@@ -674,13 +592,7 @@ def enforce_deterministic_priority(
     has_critical = bool(critical)
     has_strong = bool(strong)
     has_negative = bool(negative)
-    has_contradiction = bool(
-        contradictions
-    )
-
-    # --------------------------------------------------------
-    # Trust/history context
-    # --------------------------------------------------------
+    has_contradiction = bool(contradictions)
 
     is_trusted_sender = bool(
         decision.get(
@@ -690,20 +602,18 @@ def enforce_deterministic_priority(
     )
 
     history_conflict = any(
-        item["type"]
-        == "TRUST_HISTORY_CONFLICT"
+        item["type"] == "TRUST_HISTORY_CONFLICT"
         for item in structured_evidence
     )
 
     stale_history = any(
-        item["type"]
-        == "STALE_HISTORICAL_EVIDENCE"
+        item["type"] == "STALE_HISTORICAL_EVIDENCE"
         for item in structured_evidence
     )
 
     # --------------------------------------------------------
     # RULE 1
-    # Critical current malicious evidence ALWAYS wins.
+    # Critical malicious evidence ALWAYS wins.
     # --------------------------------------------------------
 
     if has_critical:
@@ -715,10 +625,6 @@ def enforce_deterministic_priority(
             80,
         )
 
-        # Do not artificially force 90/95.
-        # Preserve calibrated confidence but ensure
-        # critical evidence does not result in very low
-        # confidence.
         decision["confidence"] = max(
             confidence,
             70,
@@ -733,15 +639,11 @@ def enforce_deterministic_priority(
                 "POSSIBLE_COMPROMISED_SENDER"
             )
 
-        return _finalize(
-            decision,
-        )
+        return _finalize(decision)
 
     # --------------------------------------------------------
     # RULE 2
     # Trusted sender + strong current evidence.
-    #
-    # Trusted sender does NOT automatically stay safe.
     # --------------------------------------------------------
 
     if (
@@ -771,13 +673,11 @@ def enforce_deterministic_priority(
             70,
         )
 
-        return _finalize(
-            decision,
-        )
+        return _finalize(decision)
 
     # --------------------------------------------------------
     # RULE 3
-    # Strong current evidence for non-trusted senders.
+    # Strong current evidence.
     # --------------------------------------------------------
 
     if has_strong:
@@ -791,20 +691,16 @@ def enforce_deterministic_priority(
         else:
             decision["verdict"] = "SUSPICIOUS"
 
-        if not decision.get(
-            "detail_verdict"
-        ):
+        if not decision.get("detail_verdict"):
             decision["detail_verdict"] = (
                 "STRONG_SECURITY_EVIDENCE"
             )
 
-        return _finalize(
-            decision,
-        )
+        return _finalize(decision)
 
     # --------------------------------------------------------
     # RULE 4
-    # SAFE/LEGITIMATE + unresolved contradiction.
+    # Safe verdict + contradiction.
     # --------------------------------------------------------
 
     if (
@@ -823,25 +719,24 @@ def enforce_deterministic_priority(
             50,
         )
 
-        return _finalize(
-            decision,
-        )
+        return _finalize(decision)
 
     # --------------------------------------------------------
     # RULE 5
-    # UNKNOWN + current strong negative evidence.
+    # UNKNOWN + evidence.
     # --------------------------------------------------------
 
     if verdict == "UNKNOWN":
 
         if has_critical:
-            decision["verdict"] = (
-                "PHISHING"
-            )
+
+            decision["verdict"] = "PHISHING"
+
             decision["risk_score"] = max(
                 risk_score,
                 80,
             )
+
             decision["detail_verdict"] = (
                 "MALICIOUS_EVIDENCE"
             )
@@ -849,31 +744,23 @@ def enforce_deterministic_priority(
         elif has_strong:
 
             if risk_score >= 80:
-                decision["verdict"] = (
-                    "PHISHING"
-                )
+                decision["verdict"] = "PHISHING"
 
-            elif risk_score >=60:
-                decision["verdict"] = (
-                    "HIGH RISK"
-                )
-            
+            elif risk_score >= 60:
+                decision["verdict"] = "HIGH RISK"
+
             else:
-                decision["verdict"] = (
-                    "SUSPICIOUS"
-                )
+                decision["verdict"] = "SUSPICIOUS"
 
             decision["detail_verdict"] = (
                 "STRONG_SECURITY_EVIDENCE"
             )
 
-        return _finalize(
-            decision,
-        )
+        return _finalize(decision)
 
     # --------------------------------------------------------
     # RULE 6
-    # PHISHING must have supporting current evidence.
+    # PHISHING requires current negative evidence.
     # --------------------------------------------------------
 
     if (
@@ -881,15 +768,10 @@ def enforce_deterministic_priority(
         and not has_negative
     ):
 
-        decision["verdict"] = (
-            "SUSPICIOUS"
-        )
+        decision["verdict"] = "SUSPICIOUS"
 
         decision["risk_score"] = max(
-            min(
-                risk_score,
-                59,
-            ),
+            min(risk_score, 59),
             40,
         )
 
@@ -902,41 +784,43 @@ def enforce_deterministic_priority(
             "INSUFFICIENT_EVIDENCE"
         )
 
-        return _finalize(
-            decision,
-        )
+        return _finalize(decision)
 
     # --------------------------------------------------------
     # RULE 7
-    # Stale historical evidence has no current authority.
+    # Stale historical evidence has no authority.
     # --------------------------------------------------------
 
     if stale_history:
-        if decision.get(
-            "verdict"
-        ) in SAFE_VERDICTS and has_negative:
-            decision["verdict"] = (
-                "UNKNOWN"
-            )
+
+        if (
+            decision.get("verdict")
+            in SAFE_VERDICTS
+            and has_negative
+        ):
+
+            decision["verdict"] = "UNKNOWN"
+
             decision["confidence"] = min(
                 confidence,
                 50,
             )
+
             decision["detail_verdict"] = (
                 "STALE_HISTORICAL_EVIDENCE"
             )
 
     # --------------------------------------------------------
     # RULE 8
-    # Historical trust conflict is explanatory only unless
-    # current risk actually exists.
+    # Historical trust conflict.
     # --------------------------------------------------------
 
     if history_conflict:
 
-        if decision.get(
-            "verdict"
-        ) in RISK_VERDICTS:
+        if (
+            decision.get("verdict")
+            in RISK_VERDICTS
+        ):
 
             decision["detail_verdict"] = (
                 "POSSIBLE_COMPROMISED_SENDER"
@@ -944,9 +828,7 @@ def enforce_deterministic_priority(
 
         elif has_negative:
 
-            decision["verdict"] = (
-                "SUSPICIOUS"
-            )
+            decision["verdict"] = "SUSPICIOUS"
 
             decision["detail_verdict"] = (
                 "TRUST_HISTORY_CONFLICT"
@@ -957,9 +839,7 @@ def enforce_deterministic_priority(
                 55,
             )
 
-    return _finalize(
-        decision,
-    )
+    return _finalize(decision)
 
 
 # ============================================================
@@ -970,218 +850,43 @@ def enforce_unknown_when_insufficient(
     decision: Dict[str, Any] | None,
     analysis: Dict[str, Any] | None,
 ) -> Dict[str, Any]:
-    """
-    Ensures LIMITED_CONTEXT and INSUFFICIENT_EVIDENCE
-    cannot silently become a high-confidence safe verdict.
 
-    Critical/strong current malicious evidence is still allowed
-    to override UNKNOWN.
-    """
+    decision = dict(decision or {})
+    analysis = dict(analysis or {})
 
-    decision = dict(
-        decision or {}
-    )
-
-    analysis = dict(
-        analysis or {}
-    )
-
-    risk_score = _clamp_score(
-        decision.get(
-            "risk_score",
-            0,
-        )
-    )
-
-    confidence = _clamp_confidence(
-        decision.get(
-            "confidence",
-            0,
-        )
-    )
-
-    verdict = str(
-        decision.get(
-            "verdict",
-            "UNKNOWN",
-        )
-    ).upper()
-
-    detail_verdict = str(
-        decision.get(
-            "detail_verdict",
-            "",
-        )
-    ).upper()
-
-    ai = (
-        analysis.get(
-            "ai",
-            {},
-        )
-        or {}
-    )
-
-    context = (
-        ai.get(
-            "context",
-            {},
-        )
-        or {}
-    )
-
-    reasoning_state = str(
-        ai.get(
-            "reasoning_state",
-            "",
-        )
-    ).upper()
-
-    limited = (
-        context.get(
-            "state",
-            "",
-        )
-        in {
-            "LIMITED_CONTEXT",
-            "INSUFFICIENT_EVIDENCE",
-        }
-        or reasoning_state
-        in {
-            "LIMITED_CONTEXT",
-            "INSUFFICIENT_EVIDENCE",
-        }
-        or detail_verdict
-        in {
-            "LIMITED_CONTEXT",
-            "INSUFFICIENT_EVIDENCE",
-            "LINK_ONLY",
-        }
-    )
-
-    if limited:
-
-        # Do not downgrade a genuinely malicious current
-        # decision merely because the email had limited context.
-        structured = _collect_structured_evidence(
-            decision,
-            analysis,
-        )
-
-        critical = _get_critical_evidence(
-            structured
-        )
-
-        strong = _get_strong_evidence(
-            structured
-        )
-
-        if critical:
-            decision["verdict"] = "PHISHING"
-            decision["risk_score"] = max(
-                risk_score,
-                80,
-            )
-            decision["detail_verdict"] = (
-                "MALICIOUS_EVIDENCE"
-            )
-
-        elif strong and risk_score >= 60:
-            decision["verdict"] = "HIGH RISK"
-            decision["detail_verdict"] = (
-                "STRONG_SECURITY_EVIDENCE"
-            )
-
-        elif strong:
-            decision["verdict"] = "SUSPICIOUS"
-            decision["detail_verdict"] = (
-                "STRONG_SECURITY_EVIDENCE"
-            )
-
-        else:
-            decision["verdict"] = "UNKNOWN"
-            decision["confidence"] = min(
-                confidence,
-                40,
-            )
-
-            if detail_verdict not in {
-                "CONFLICTING_EVIDENCE",
-                "POSSIBLE_COMPROMISED_SENDER",
-            }:
-                decision["detail_verdict"] = (
-                    "LIMITED_CONTEXT"
-                )
-
-    decision["risk_score"] = _clamp_score(
-        decision.get(
-            "risk_score",
-            0,
-        )
-    )
-
-    decision["confidence"] = _clamp_confidence(
-        decision.get(
-            "confidence",
-            0,
-        )
-    )
-
-    return _finalize(
+    structured = _collect_structured_evidence(
         decision,
+        analysis,
     )
 
+    has_positive_evidence = any(
+        item.get("direction") == "POSITIVE"
+        for item in structured
+    )
 
-# ============================================================
-# Final normalization
-# ============================================================
+    has_negative_evidence = bool(
+        _get_negative_evidence(structured)
+    )
 
-def _finalize(
-    decision: Dict[str, Any],
-) -> Dict[str, Any]:
+    has_critical_evidence = bool(
+        _get_critical_evidence(structured)
+    )
+
+    if (
+        not has_positive_evidence
+        and not has_negative_evidence
+        and not has_critical_evidence
+    ):
+
+        decision["verdict"] = "UNKNOWN"
+        decision["confidence"] = 0
 
     decision["risk_score"] = _clamp_score(
-        decision.get(
-            "risk_score",
-            0,
-        )
+        decision.get("risk_score", 0)
     )
 
     decision["confidence"] = _clamp_confidence(
-        decision.get(
-            "confidence",
-            0,
-        )
+        decision.get("confidence", 0)
     )
 
-    verdict = str(
-        decision.get(
-            "verdict",
-            "UNKNOWN",
-        )
-    ).upper()
-
-    allowed_verdicts = {
-        "SAFE",
-        "LOW RISK",
-        "LIKELY LEGITIMATE",
-        "VERIFIED LEGITIMATE",
-        "UNKNOWN",
-        "SUSPICIOUS",
-        "HIGH RISK",
-        "PHISHING",
-    }
-
-    if verdict not in allowed_verdicts:
-        verdict = "UNKNOWN"
-
-    decision["verdict"] = verdict
-
-    if not decision.get(
-        "detail_verdict"
-    ):
-        decision["detail_verdict"] = (
-            "UNKNOWN"
-        )
-
-    return decision
+    return _finalize(decision)

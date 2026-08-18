@@ -20,7 +20,8 @@ class EmailParser:
             "authentication": {},
             "body": {},
             "urls": [],
-            "attachments": []
+            "attachments": [],
+            "content": {}
         }
 
         # Basic headers
@@ -41,8 +42,14 @@ class EmailParser:
         evidence["routing"] = {
             "received": msg.get_all("Received", []),
             "arc_seal": msg.get_all("ARC-Seal", []),
-            "arc_message_signature": msg.get_all("ARC-Message-Signature", []),
-            "authentication_results": msg.get_all("Authentication-Results", [])
+            "arc_message_signature": msg.get_all(
+                "ARC-Message-Signature",
+                []
+            ),
+            "authentication_results": msg.get_all(
+                "Authentication-Results",
+                []
+            )
         }
 
         # Sender information
@@ -53,8 +60,11 @@ class EmailParser:
         evidence["sender"] = {
             "name": sender_name,
             "email": sender_email,
-            "domain": sender_email.split("@")[-1]
-            if "@" in sender_email else None
+            "domain": (
+                sender_email.split("@")[-1]
+                if "@" in sender_email
+                else None
+            )
         }
 
         # Authentication headers
@@ -91,32 +101,112 @@ class EmailParser:
 
         # Attachment detection
         for part in msg.walk():
+
             if part.get_content_disposition() == "attachment":
-                payload = part.get_payload(decode=True)
+
+                payload = part.get_payload(
+                    decode=True
+                )
 
                 evidence["attachments"].append(
                     {
                         "filename": part.get_filename(),
                         "content_type": part.get_content_type(),
-                        "size": len(payload) if payload else 0
+                        "size": (
+                            len(payload)
+                            if payload
+                            else 0
+                        )
                     }
                 )
+
+        # Content analysis
+        body_lower = body.lower()
+
+        urgency_keywords = [
+            "urgent",
+            "immediately",
+            "act now",
+            "verify immediately",
+            "suspended",
+            "suspension",
+            "expires",
+            "final warning",
+        ]
+
+        credential_keywords = [
+            "password",
+            "username",
+            "credentials",
+            "login",
+            "verify your credentials",
+            "account verification",
+        ]
+
+        financial_keywords = [
+            "payment",
+            "invoice",
+            "bank",
+            "credit card",
+            "debit card",
+            "transfer",
+            "money",
+        ]
+
+        threat_keywords = [
+            "suspended",
+            "terminated",
+            "closed",
+            "legal action",
+            "penalty",
+        ]
+
+        evidence["content"] = {
+            "analysis_status": "AVAILABLE",
+
+            "urgency": any(
+                keyword in body_lower
+                for keyword in urgency_keywords
+            ),
+
+            "credential_request": any(
+                keyword in body_lower
+                for keyword in credential_keywords
+            ),
+
+            "financial_request": any(
+                keyword in body_lower
+                for keyword in financial_keywords
+            ),
+
+            "impersonation": False,
+
+            "threat_language": any(
+                keyword in body_lower
+                for keyword in threat_keywords
+            ),
+
+            "link_only": (
+                len(body.strip()) <= 250
+                and len(cleaned) > 0
+            ),
+        }
 
         return evidence
 
     def extract_auth(self, header, method):
 
         match = re.search(
-            method + r"=(pass|fail|neutral)",
+            method
+            + r"=(pass|fail|softfail|neutral|none|temperror|permerror)",
             header,
             re.I
         )
 
         if match:
-            return match.group(1)
+            return match.group(1).lower()
 
         return "unknown"
-
 
     def extract_body(self, msg):
 
@@ -128,10 +218,30 @@ class EmailParser:
 
                 if part.get_content_type() == "text/plain":
 
-                    body += part.get_content()
+                    try:
+                        body += part.get_content()
+
+                    except Exception:
+                        continue
+
+            if not body.strip():
+
+                for part in msg.walk():
+
+                    if part.get_content_type() == "text/html":
+
+                        try:
+                            body += part.get_content()
+
+                        except Exception:
+                            continue
 
         else:
 
-            body = msg.get_content()
+            try:
+                body = msg.get_content()
+
+            except Exception:
+                body = ""
 
         return body

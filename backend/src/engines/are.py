@@ -2998,6 +2998,8 @@ class AnalyticalReasoningEngine:
         # 10. FINAL SCORE
         # =====================================================
 
+        raw_score = score
+
         score = self._clamp_score(
             score
         )
@@ -3168,17 +3170,18 @@ class AnalyticalReasoningEngine:
 
             verdict = "PHISHING"
 
-        elif score >= 80:
+        elif raw_score >= 80:
 
             verdict = "PHISHING"
 
-        elif score >= 60:
+        elif raw_score >= 60:
 
             verdict = "HIGH RISK"
 
-        elif score >= 40:
+        elif raw_score >= 40:
 
             verdict = "SUSPICIOUS"
+        
 
         elif (
             unresolved_contradiction
@@ -3194,7 +3197,7 @@ class AnalyticalReasoningEngine:
 
             verdict = "UNKNOWN"
 
-        elif score < 20:
+        elif raw_score < 20:
 
             if (
                 independent_positive_sources >= 3
@@ -3281,7 +3284,7 @@ class AnalyticalReasoningEngine:
         elif (
             recommended == "PHISHING"
             and not has_negative
-            and score < 30
+            and raw_score < 30
         ):
 
             ai_state = (

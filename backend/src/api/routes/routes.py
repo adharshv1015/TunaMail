@@ -5,7 +5,6 @@ from src.connectors.upload_connector import UploadConnector
 
 router = APIRouter()
 
-
 @router.get("/health")
 def health():
 

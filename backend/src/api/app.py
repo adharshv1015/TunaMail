@@ -16,6 +16,7 @@ from src.api.reports import router as reports_router
 from src.api.system import router as system_router
 from src.api.intelligence import router as intelligence_router
 
+
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
@@ -92,11 +93,6 @@ app.include_router(
     prefix="/intelligence",
     tags=["Intelligence"]
 )
-
-
-
-
-
 
 @app.get("/")
 def home():
