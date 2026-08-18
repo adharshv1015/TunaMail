@@ -1,0 +1,95 @@
+[
+  {
+    "id": "dev-001",
+    "email": {
+      "subject": "Monthly Newsletter",
+      "from": "newsletter@example.com",
+      "body": "Here is our monthly newsletter. We hope you enjoy reading our updates. Visit our site to learn more.",
+      "headers": {
+        "Return-Path": "<newsletter@example.com>"
+      }
+    },
+    "analysis": {
+      "authentication": { "spf": "pass", "dkim": "pass", "dmarc": "pass" },
+      "url": { "analysis": [] }
+    },
+    "label": "LEGITIMATE"
+  },
+  {
+    "id": "dev-002",
+    "email": {
+      "subject": "URGENT: Verify your account immediately",
+      "from": "security@paypal-update.com",
+      "body": "Your account has been suspended due to suspicious activity. Please click the link below to verify your account immediately.\nhttps://paypal-update.com/login",
+      "headers": {
+        "Return-Path": "<security@paypal-update.com>"
+      }
+    },
+    "analysis": {
+      "authentication": { "spf": "pass", "dkim": "pass", "dmarc": "none" },
+      "url": {
+        "analysis": [
+          {
+            "brand_impersonation": true,
+            "dns": { "resolved": true },
+            "tls": { "certificate_valid": true }
+          }
+        ]
+      },
+      "content": {
+        "urgency": true,
+        "credential_request": true
+      }
+    },
+    "label": "PHISHING"
+  },
+  {
+    "id": "dev-003",
+    "email": {
+      "subject": "Project update",
+      "from": "colleague@company.com",
+      "body": "Hey, here is the project update. Let me know what you think.",
+      "headers": {
+        "Return-Path": "<colleague@company.com>"
+      }
+    },
+    "analysis": {
+      "authentication": { "spf": "pass", "dkim": "pass", "dmarc": "pass" },
+      "url": { "analysis": [] }
+    },
+    "label": "LIKELY_LEGITIMATE"
+  },
+  {
+    "id": "dev-004",
+    "email": {
+      "subject": "Check this out",
+      "from": "unknown@random-domain.com",
+      "body": "https://random-domain.com/free-stuff",
+      "headers": {
+        "Return-Path": "<unknown@random-domain.com>"
+      }
+    },
+    "analysis": {
+      "authentication": { "spf": "none", "dkim": "none", "dmarc": "none" },
+      "url": {
+        "analysis": [
+          {
+            "dns": { "resolved": true }
+          }
+        ]
+      }
+    },
+    "label": "SUSPICIOUS"
+  },
+  {
+    "id": "dev-005",
+    "email": {
+      "subject": "",
+      "from": "no-reply@unknown.com",
+      "body": "",
+      "headers": {}
+    },
+    "analysis": {},
+    "label": "UNKNOWN"
+  }
+]

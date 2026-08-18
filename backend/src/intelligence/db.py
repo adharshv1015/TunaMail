@@ -17,8 +17,15 @@ from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
-_DB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data")
+_DB_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "..",
+    "..",
+    "data",
+)
+
 _DB_PATH = os.path.join(_DB_DIR, "intelligence.db")
+
 
 _CREATE_STATEMENTS = [
     """
@@ -35,8 +42,11 @@ _CREATE_STATEMENTS = [
         occurrences INTEGER DEFAULT 1
     )
     """,
+
     "CREATE INDEX IF NOT EXISTS idx_ioc_normalized ON ioc_records(normalized)",
+
     "CREATE INDEX IF NOT EXISTS idx_ioc_message ON ioc_records(message_id)",
+
     """
     CREATE TABLE IF NOT EXISTS campaigns (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,16 +59,7 @@ _CREATE_STATEMENTS = [
         updated_at TEXT
     )
     """,
-    """
-    CREATE TABLE IF NOT EXISTS feedback (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        message_id TEXT NOT NULL,
-        automated_verdict TEXT,
-        analyst_verdict TEXT NOT NULL,
-        comment TEXT,
-        submitted_at TEXT
-    )
-    """,
+
     """
     CREATE TABLE IF NOT EXISTS cases (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,6 +73,7 @@ _CREATE_STATEMENTS = [
         updated_at TEXT
     )
     """,
+
     """
     CREATE TABLE IF NOT EXISTS case_notes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -80,6 +82,7 @@ _CREATE_STATEMENTS = [
         created_at TEXT
     )
     """,
+
     """
     CREATE TABLE IF NOT EXISTS audit_log (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -89,6 +92,7 @@ _CREATE_STATEMENTS = [
         timestamp TEXT NOT NULL
     )
     """,
+
     """
     CREATE TABLE IF NOT EXISTS indicators (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,6 +104,7 @@ _CREATE_STATEMENTS = [
         tags TEXT DEFAULT '[]'
     )
     """,
+
     "CREATE INDEX IF NOT EXISTS idx_indicator ON indicators(indicator)",
 ]
 
@@ -111,33 +116,58 @@ def _get_db_path():
 def init_db():
     """Initialize the SQLite database and create tables if they don't exist."""
     db_path = _get_db_path()
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+
+    os.makedirs(
+        os.path.dirname(os.path.abspath(db_path)),
+        exist_ok=True,
+    )
+
     try:
         conn = sqlite3.connect(db_path)
+
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA foreign_keys=ON")
+
         for stmt in _CREATE_STATEMENTS:
             conn.execute(stmt)
+
         conn.commit()
         conn.close()
-        logger.info(f"Intelligence DB initialized at {db_path}")
+
+        logger.info(
+            "Intelligence DB initialized at %s",
+            db_path,
+        )
+
     except Exception as e:
-        logger.error(f"Failed to initialize intelligence DB: {e}")
+        logger.error(
+            "Failed to initialize intelligence DB: %s",
+            e,
+        )
 
 
 @contextmanager
 def get_db():
     """Context manager that yields a thread-safe SQLite connection."""
     db_path = _get_db_path()
-    conn = sqlite3.connect(db_path, check_same_thread=False)
+
+    conn = sqlite3.connect(
+        db_path,
+        check_same_thread=False,
+    )
+
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA foreign_keys=ON")
+
     try:
         yield conn
         conn.commit()
+
     except Exception:
         conn.rollback()
         raise
+
     finally:
         conn.close()
 
@@ -146,9 +176,10 @@ def row_to_dict(row):
     """Convert a sqlite3.Row to a plain dict."""
     if row is None:
         return None
+
     return dict(row)
 
 
 def rows_to_list(rows):
     """Convert a list of sqlite3.Row objects to plain dicts."""
-    return [dict(r) for r in rows]
+    return [dict(row) for row in rows]

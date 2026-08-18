@@ -291,7 +291,7 @@ class TrustAnalyzer:
 
         if sender_org:
 
-            score += 20
+            score += 10
 
             message = (
                 f"Recognized sender organization: "
@@ -490,7 +490,7 @@ class TrustAnalyzer:
 
                 mismatched_url_count += 1
 
-                score += 0
+                score -= 10
 
                 structured_evidence.append(
                     self._evidence(
@@ -515,8 +515,8 @@ class TrustAnalyzer:
                 len(
                     trusted_organizations
                 )
-                * 10,
-                30,
+                * 5,
+                15,
             )
 
             score += trusted_url_score
@@ -578,7 +578,7 @@ class TrustAnalyzer:
 
                     same_org_found = True
 
-                    score += 20
+                    score += 10
 
                     message = (
                         "Sender and URL belong to the "
@@ -638,6 +638,8 @@ class TrustAnalyzer:
                     mismatch_message
                 )
 
+                score -= 10
+
                 structured_evidence.append(
                     self._evidence(
                         type_="ORGANIZATION_MISMATCH",
@@ -654,7 +656,7 @@ class TrustAnalyzer:
         # ----------------------------------------------------
 
         if auth_fully_passed:
-            score += 15
+            score += 10
 
             message = (
                 "SPF, DKIM and DMARC all passed."
@@ -676,6 +678,8 @@ class TrustAnalyzer:
             )
 
         elif auth_state == "FAILED":
+
+            score -= 25
 
             structured_evidence.append(
                 self._evidence(
@@ -700,9 +704,15 @@ class TrustAnalyzer:
         # ----------------------------------------------------
 
         if critical_url_count:
-            score = max(
+            score = min(
                 score,
-                10,
+                20,
+            )
+
+        elif suspicious_url_count:
+            score = min(
+                score,
+                60,
             )
 
         # Trust score is intentionally not allowed to reach 100
@@ -825,12 +835,50 @@ class TrustAnalyzer:
                 and same_org_found
             ),
 
+            "trust_is_supporting_evidence": True,
+
+            "trust_cannot_override_negative_evidence": True,
+
+            "negative_security_indicators_present": (
+                bool(
+                    critical_url_count
+                    or suspicious_url_count
+                    or mismatched_url_count
+                    or auth_state == "FAILED"
+                )
+            ),
+
             "evidence": evidence,
 
             "structured_evidence": (
                 structured_evidence
             ),
         }
+
+    @staticmethod
+    def _extract_domain(
+        value: Any,
+    ) -> str:
+
+        if not value:
+            return ""
+
+        try:
+            value = str(value).strip().lower()
+        except Exception:
+            return ""
+
+        if "://" in value:
+            value = value.split("://", 1)[1]
+
+        if "@" in value:
+            value = value.rsplit("@", 1)[1]
+            value = value.split("/", 1)[0]
+            value = value.split("?", 1)[0]
+            value = value.split("#", 1)[0]
+            value = value.split(":", 1)[0]
+
+        return TrustAnalyzer._normalize_domain(value)
 
     # ========================================================
     # Domain helpers

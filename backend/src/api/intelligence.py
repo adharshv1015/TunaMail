@@ -17,6 +17,7 @@ from src.intelligence.case_manager import CaseManager
 from src.intelligence.audit_log import AuditLog
 from src.intelligence.campaign_detector import CampaignDetector
 
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -37,15 +38,6 @@ def _require_auth(request: Request) -> dict:
 
 
 # ---- Request Models ----
-
-
-
-
-class AnalystVerdictRequest(BaseModel):
-    message_id: str
-    analyst_verdict: str
-    comment: Optional[str] = ""
-
 
 class CreateCaseRequest(BaseModel):
     title: str
@@ -243,50 +235,6 @@ def get_campaign(request: Request, campaign_id: str):
         raise HTTPException(status_code=500, detail="Database error")
 
     return campaign
-
-
-
-@router.post("/analyst-verdict")
-def submit_analyst_verdict(request: Request, body: AnalystVerdictRequest):
-    """
-    Submit an analyst override verdict for a message.
-    The original automated verdict remains intact in the database.
-    """
-    _require_auth(request)
-
-    if body.analyst_verdict not in VALID_VERDICTS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid verdict. Must be one of: {', '.join(VALID_VERDICTS)}"
-        )
-
-    AuditLog().log(
-        "verdict_overridden",
-        {
-            "message_id": body.message_id,
-            "analyst_verdict": body.analyst_verdict,
-            "has_comment": bool(body.comment)
-        }
-    )
-
-    try:
-        with get_db() as conn:
-            conn.execute(
-                """INSERT INTO feedback (message_id, automated_verdict, analyst_verdict, comment, submitted_at)
-                   VALUES (?, NULL, ?, ?, ?)""",
-                (body.message_id, body.analyst_verdict, body.comment or "", __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat())
-            )
-    except Exception as e:
-        logger.error(f"analyst-verdict DB error: {e}")
-        raise HTTPException(status_code=500, detail="Database error")
-
-    return {
-        "success": True,
-        "message_id": body.message_id,
-        "analyst_verdict": body.analyst_verdict,
-        "note": "Original automated verdict is preserved and unmodified."
-    }
-
 
 # ---- Case Management ----
 

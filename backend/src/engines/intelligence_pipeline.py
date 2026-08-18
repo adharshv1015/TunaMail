@@ -415,21 +415,33 @@ class IntelligencePipeline:
                 "analysis_status": "UNAVAILABLE"
             }
 
-        # ----------------------------------------------------
+                # ----------------------------------------------------
         # URL
         # ----------------------------------------------------
 
         if self.url_analyzer:
 
+            url_callable = getattr(
+                self.url_analyzer,
+                "analyze",
+                self.url_analyzer,
+            )
+
             result, trace = self._run(
                 "URLAnalyzer",
-                getattr(
-                    self.url_analyzer,
-                    "analyze",
-                    self.url_analyzer,
-                ),
-                body=body,
-                headers=headers,
+                self._call_flexible,
+                positional_args=[
+                    url_callable,
+                ],
+                keyword_args={
+                    "positional_args": [
+                        body,
+                    ],
+                    "keyword_args": {
+                        "body": body,
+                        "headers": headers,
+                    },
+                },
             )
 
             analysis[
@@ -445,39 +457,146 @@ class IntelligencePipeline:
                 "analysis_status": "UNAVAILABLE",
                 "analysis": [],
             }
-
-        # ----------------------------------------------------
+               # ----------------------------------------------------
         # WHOIS
         # ----------------------------------------------------
 
         if self.whois_analyzer:
 
-            result, trace = self._run(
-                "WhoisAnalyzer",
-                getattr(
-                    self.whois_analyzer,
-                    "analyze",
-                    self.whois_analyzer,
-                ),
-                analysis.get(
-                    "urls",
-                    {},
-                ),
+            whois_callable = getattr(
+                self.whois_analyzer,
+                "analyze",
+                self.whois_analyzer,
             )
+
+            url_analysis = analysis.get(
+                "urls",
+                {},
+            )
+
+            whois_domains = []
+
+            if isinstance(
+                url_analysis,
+                dict,
+            ):
+
+                url_items = (
+                    url_analysis.get(
+                        "analysis",
+                        [],
+                    )
+                    or []
+                )
+
+                if isinstance(
+                    url_items,
+                    list,
+                ):
+
+                    for item in url_items:
+
+                        if not isinstance(
+                            item,
+                            dict,
+                        ):
+                            continue
+
+                        domain = (
+                            item.get(
+                                "domain"
+                            )
+                            or item.get(
+                                "url"
+                            )
+                        )
+
+                        if domain:
+                            whois_domains.append(
+                                domain
+                            )
+
+            elif isinstance(
+                url_analysis,
+                list,
+            ):
+
+                for item in url_analysis:
+
+                    if not isinstance(
+                        item,
+                        dict,
+                    ):
+                        continue
+
+                    domain = (
+                        item.get(
+                            "domain"
+                        )
+                        or item.get(
+                            "url"
+                        )
+                    )
+
+                    if domain:
+                        whois_domains.append(
+                            domain
+                        )
+
+            whois_results = []
+
+            seen_domains = set()
+
+            for domain in whois_domains:
+
+                domain_key = str(
+                    domain
+                ).strip().lower()
+
+                if not domain_key:
+                    continue
+
+                if domain_key in seen_domains:
+                    continue
+
+                seen_domains.add(
+                    domain_key
+                )
+
+                result, trace = self._run(
+                    "WhoisAnalyzer",
+                    whois_callable,
+                    domain,
+                )
+
+                if isinstance(
+                    result,
+                    dict,
+                ):
+                    whois_results.append(
+                        result
+                    )
+
+                pipeline.append(trace)
 
             analysis[
                 "whois"
-            ] = result or {}
-
-            pipeline.append(trace)
+            ] = {
+                "analysis_status": (
+                    "AVAILABLE"
+                    if whois_results
+                    else "UNAVAILABLE"
+                ),
+                "analysis": whois_results,
+            }
 
         else:
             analysis[
                 "whois"
             ] = {
-                "analysis_status": "UNAVAILABLE"
+                "analysis_status": "UNAVAILABLE",
+                "analysis": [],
             }
-
         # ----------------------------------------------------
         # Attachments
         # ----------------------------------------------------

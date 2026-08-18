@@ -1,3 +1,4 @@
+```python
 """
 Stage 14 — Store maintenance / data retention utilities.
 
@@ -18,7 +19,6 @@ Usage (can be called during startup or on a periodic schedule):
 
 from __future__ import annotations
 
-import datetime
 import logging
 import os
 import time
@@ -74,7 +74,6 @@ def _prune_dict_by_timestamp(
 
     # Enforce max entries by evicting oldest
     if max_entries and len(kept) > max_entries:
-        # Sort by timestamp ascending; drop oldest
         sorted_keys = sorted(
             kept.keys(),
             key=lambda k: (kept[k].get(key_field) or 0),
@@ -94,7 +93,8 @@ def _prune_behavior_store() -> int:
         data = store.store.get_all()
         original_count = len(data)
 
-        # Behavior entries contain a list of timestamps; keep entry if any timestamp is recent
+        # Behavior entries contain a list of timestamps;
+        # keep entry if any timestamp is recent.
         max_age = _days_to_seconds(HISTORY_RETENTION_DAYS)
         now = time.time()
         kept: Dict[str, Any] = {}
@@ -102,30 +102,44 @@ def _prune_behavior_store() -> int:
         for sender, record in data.items():
             if not isinstance(record, dict):
                 continue
+
             timestamps = record.get("timestamps", [])
+
             if not timestamps:
                 # No activity recorded — prune
                 continue
-            # Keep if the most recent activity is within retention window
+
             try:
                 most_recent = max(float(t) for t in timestamps)
+
                 if now - most_recent <= max_age:
                     # Trim old timestamps within the entry
                     record["timestamps"] = [
-                        t for t in timestamps if now - float(t) <= max_age
+                        t for t in timestamps
+                        if now - float(t) <= max_age
                     ]
                     kept[sender] = record
+
             except (TypeError, ValueError):
                 kept[sender] = record
 
         removed = original_count - len(kept)
+
         if removed > 0:
             store.store._atomic_write(kept)  # type: ignore[protected-access]
             store.store._cache = kept         # type: ignore[protected-access]
-            logger.info("StoreMaintenance: behavior_store pruned %d stale entries", removed)
+            logger.info(
+                "StoreMaintenance: behavior_store pruned %d stale entries",
+                removed,
+            )
+
         return removed
+
     except Exception as e:
-        logger.warning("StoreMaintenance: behavior_store prune failed: %s", e)
+        logger.warning(
+            "StoreMaintenance: behavior_store prune failed: %s",
+            e,
+        )
         return 0
 
 
@@ -145,59 +159,38 @@ def _prune_campaign_store() -> int:
         for cid, record in data.items():
             if not isinstance(record, dict):
                 continue
+
             last_seen = record.get("last_seen") or record.get("timestamp")
+
             if last_seen is None:
                 # No timestamp — keep conservatively
                 kept[cid] = record
                 continue
+
             try:
                 if now - float(last_seen) <= max_age:
                     kept[cid] = record
+
             except (TypeError, ValueError):
                 kept[cid] = record
 
         removed = original_count - len(kept)
+
         if removed > 0:
             store.store._atomic_write(kept)   # type: ignore[protected-access]
             store.store._cache = kept          # type: ignore[protected-access]
-            logger.info("StoreMaintenance: campaign_store pruned %d stale entries", removed)
+            logger.info(
+                "StoreMaintenance: campaign_store pruned %d stale entries",
+                removed,
+            )
+
         return removed
+
     except Exception as e:
-        logger.warning("StoreMaintenance: campaign_store prune failed: %s", e)
-        return 0
-
-
-
-        store = get_feedback_store()
-        data = store.store.get_all()
-        original_count = len(data)
-
-        max_age = _days_to_seconds(FEEDBACK_RETENTION_DAYS)
-        now = time.time()
-        kept: Dict[str, Any] = {}
-
-        for msg_id, record in data.items():
-            if not isinstance(record, dict):
-                kept[msg_id] = record
-                continue
-            ts = record.get("timestamp")
-            if ts is None:
-                kept[msg_id] = record
-                continue
-            try:
-                if now - float(ts) <= max_age:
-                    kept[msg_id] = record
-            except (TypeError, ValueError):
-                kept[msg_id] = record
-
-        removed = original_count - len(kept)
-        if removed > 0:
-            store.store._atomic_write(kept)   # type: ignore[protected-access]
-            store.store._cache = kept          # type: ignore[protected-access]
-            logger.info("StoreMaintenance: feedback_store pruned %d stale entries", removed)
-        return removed
-    except Exception as e:
-        logger.warning("StoreMaintenance: feedback_store prune failed: %s", e)
+        logger.warning(
+            "StoreMaintenance: campaign_store prune failed: %s",
+            e,
+        )
         return 0
 
 
@@ -216,7 +209,9 @@ def _prune_reputation_store() -> int:
         for sender, record in data.items():
             if not isinstance(record, dict):
                 continue
+
             seen = record.get("seen_message_ids", [])
+
             if len(seen) > MAX_HISTORY_ENTRIES:
                 record["seen_message_ids"] = seen[-MAX_HISTORY_ENTRIES:]
                 trimmed += 1
@@ -224,10 +219,18 @@ def _prune_reputation_store() -> int:
         if trimmed > 0:
             store.store._atomic_write(data)   # type: ignore[protected-access]
             store.store._cache = data          # type: ignore[protected-access]
-            logger.info("StoreMaintenance: reputation_store trimmed %d oversized histories", trimmed)
+            logger.info(
+                "StoreMaintenance: reputation_store trimmed %d oversized histories",
+                trimmed,
+            )
+
         return trimmed
+
     except Exception as e:
-        logger.warning("StoreMaintenance: reputation_store trim failed: %s", e)
+        logger.warning(
+            "StoreMaintenance: reputation_store trim failed: %s",
+            e,
+        )
         return 0
 
 
@@ -239,10 +242,17 @@ def run_maintenance() -> Dict[str, int]:
     Safe to call at startup or on a schedule.
     """
     logger.info("StoreMaintenance: starting maintenance run")
+
     results = {
         "behavior_pruned": _prune_behavior_store(),
         "campaign_pruned": _prune_campaign_store(),
         "reputation_trimmed": _prune_reputation_store(),
     }
-    logger.info("StoreMaintenance: completed — %s", results)
+
+    logger.info(
+        "StoreMaintenance: completed — %s",
+        results,
+    )
+
     return results
+```

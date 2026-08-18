@@ -1,0 +1,42 @@
+{
+  "msg_123": {
+    "message_id": "msg_123",
+    "analyst_label": "CONFIRMED_PHISHING",
+    "timestamp": "2026-08-12T05:01:41.181748",
+    "previous_verdict": "UNKNOWN",
+    "previous_risk_score": 50,
+    "reason": "I checked the URL manually"
+  },
+  "msg_f1": {
+    "message_id": "msg_f1",
+    "analyst_label": "SAFE",
+    "timestamp": "2026-08-13T11:38:38.235403",
+    "previous_verdict": "MALICIOUS",
+    "previous_risk_score": 100,
+    "reason": "Test 2"
+  },
+  "19ff467ac8fdaf80": {
+    "message_id": "19ff467ac8fdaf80",
+    "analyst_label": "CONFIRMED_PHISHING",
+    "timestamp": "2026-08-13T05:33:07.308345",
+    "previous_verdict": "PHISHING",
+    "previous_risk_score": 95,
+    "reason": "phishing"
+  },
+  "19ff99e7b5921494": {
+    "message_id": "19ff99e7b5921494",
+    "analyst_label": "FALSE_NEGATIVE",
+    "timestamp": "2026-08-13T05:36:11.376465",
+    "previous_verdict": "LOW RISK",
+    "previous_risk_score": 0,
+    "reason": "its safe"
+  },
+  "19ff99e489628c44": {
+    "message_id": "19ff99e489628c44",
+    "analyst_label": "FALSE_POSITIVE",
+    "timestamp": "2026-08-13T06:44:48.158030",
+    "previous_verdict": "PHISHING",
+    "previous_risk_score": 95,
+    "reason": "false positive "
+  }
+}
