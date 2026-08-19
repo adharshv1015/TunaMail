@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Any
 from .http_fetcher import HTTPFetcher
-# from .browser_fetcher import BrowserFetcher
+from .browser_fetcher import BrowserFetcher
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +32,51 @@ class URLWorker:
         # If the page is essentially empty (often happens with JS-rendered SPAs)
         # we would trigger the browser fallback here.
         if word_count < cls.MIN_VISIBLE_TEXT and forms_count == 0:
-            logger.info(f"Insufficient content for {url} in Stage A, browser fallback recommended.")
-            # browser_result = BrowserFetcher.fetch(url)
-            # if browser_result:
-            #     return browser_result
+            logger.info(f"Insufficient content for {url} in Stage A, using browser fallback.")
+
+            browser_result = BrowserFetcher.fetch(url)
+
+            if browser_result:
+                try:
+                    from src.services.url_inspection_service import (
+                        URLInspectionService,
+                    )
+
+                    service_result = (
+                        URLInspectionService().inspect(url)
+                    )
+
+                    merged_result = dict(
+                        service_result
+                    )
+
+                    merged_result.update(
+                        browser_result
+                    )
+
+                    if (
+                        isinstance(
+                            service_result.get(
+                                "structured_evidence"
+                            ),
+                            list,
+                        )
+                    ):
+                        merged_result[
+                            "structured_evidence"
+                        ] = service_result[
+                            "structured_evidence"
+                        ]
+
+                    return merged_result
+
+                except Exception:
+                    logger.exception(
+                        "Could not merge URL service inspection "
+                        "with browser result for %s",
+                        url,
+                    )
+
+                    return browser_result
         
         return result

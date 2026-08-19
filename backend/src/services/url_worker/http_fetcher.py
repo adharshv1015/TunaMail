@@ -47,15 +47,53 @@ class HTTPFetcher:
                     if "text/html" not in content_type and "text/plain" not in content_type:
                         return cls._build_result(current_url, resp.status_code, redirect_chain, error="Not HTML content")
                         
-                    content_length = int(resp.headers.get("Content-Length", 0))
+                    content_length_header = resp.headers.get("Content-Length")
+                    try:
+                        content_length = int(
+                            content_length_header
+                            ) if content_length_header else 0
+                    except (
+                        TypeError,
+                        ValueError,
+                        ):
+                        return cls._build_result(
+                            current_url,
+                            resp.status_code,
+                            redirect_chain,
+                            error="Invalid Content-Length",
+                        )
+
+                    if content_length < 0:
+                        return cls._build_result(
+                            current_url,
+                            resp.status_code,
+                            redirect_chain,
+                            error="Invalid Content-Length",
+                        )
+
                     if content_length > cls.MAX_CONTENT_LENGTH:
-                        return cls._build_result(current_url, resp.status_code, redirect_chain, error="Content too large")
+                        return cls._build_result(
+                            current_url,
+                            resp.status_code,
+                            redirect_chain,
+                            error="Content too large",
+                        )
                         
                     text_content = resp.text
                     extracted = ContentExtractor.extract(text_content)
-                    return cls._build_result(current_url, resp.status_code, redirect_chain, extracted=extracted)
+                    return cls._build_result(
+                        current_url,
+                        resp.status_code,
+                        redirect_chain,
+                        extracted=extracted
+                    )
                     
-            return cls._build_result(current_url, 0, redirect_chain, error="Too many redirects")
+            return cls._build_result(
+                current_url, 
+                0, 
+                redirect_chain, 
+                error="Too many redirects"
+            )
             
         except URLSafetyException as e:
             return cls._build_result(current_url, 0, redirect_chain, error=f"Safety blocked: {str(e)}", blocked=True)

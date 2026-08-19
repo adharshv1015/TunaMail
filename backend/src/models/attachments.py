@@ -1,5 +1,5 @@
-from src.entities.metadata import EmailMetadata
-from src.analysis.evidence import Evidence
+from src.models.metadata import EmailMetadata
+from src.models.evidence import Evidence
 
 class AttachmentEvidenceExtractor:
     def extract(self, metadata: EmailMetadata) -> list[Evidence]:

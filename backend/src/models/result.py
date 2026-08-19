@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from src.entities.metadata import EmailMetadata
-from src.analysis.evidence import Evidence
-from src.reasoning.hypothesis import Hypothesis
+from src.models.metadata import EmailMetadata
+from src.models.evidence import Evidence
+from src.reasoning.hypothesis import Hypothesis # Keep this import unchanged only if src.reasoning.hypothesis exists.
 
 @dataclass
 class AnalysisResult:

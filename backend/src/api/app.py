@@ -17,6 +17,7 @@ from src.api.system import router as system_router
 from src.api.intelligence import router as intelligence_router
 
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -117,14 +118,6 @@ app.include_router(
     tags=["Gmail"]
 )
 
-
-app.include_router(
-    reports_router,
-    prefix="/report",
-    tags=["Reports"]
-)
-
-
 app.include_router(
     system_router,
     prefix="/system",
@@ -138,6 +131,11 @@ app.include_router(
     tags=["Intelligence"]
 )
 
+app.include_router(
+    reports_router,
+    prefix="/reports",
+    tags=["Reports"]
+)
 
 # ============================================================
 # 6. Root Endpoint

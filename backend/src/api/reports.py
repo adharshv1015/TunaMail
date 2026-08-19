@@ -91,10 +91,30 @@ def generate_pdf_report(parsed_data: dict) -> io.BytesIO:
         if items:
             story.append(Paragraph(category.capitalize(), styles['Heading3']))
             for item in items:
-                # Remove emojis for reportlab standard fonts
-                safe_item = str(item).replace('✓', '').replace('⚠', '').strip()
-                prefix = "[+]" if "pass" in safe_item.lower() or "clean" in safe_item.lower() else "[-]"
-                story.append(Paragraph(f"{prefix} {safe_item}", normal_style))
+                # Escape untrusted content before passing it to ReportLab's
+                # HTML-like paragraph parser.
+                from xml.sax.saxutils import escape
+
+                safe_item = (
+                    str(item)
+                    .replace('✓', '')
+                    .replace('⚠', '')
+                    .strip()
+                )
+                safe_item = escape(safe_item)
+
+                prefix = (
+                    "[+]"
+                    if "pass" in safe_item.lower() or "clean" in safe_item.lower()
+                    else "[-]"
+                )
+
+                story.append(
+                    Paragraph(
+                        f"{prefix} {safe_item}",
+                        normal_style
+                    )
+                )
     
     # Generate PDF
     doc.build(story)

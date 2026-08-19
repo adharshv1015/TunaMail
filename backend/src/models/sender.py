@@ -1,6 +1,6 @@
-from src.entities.metadata import EmailMetadata
+from src.models.metadata import EmailMetadata
 from email.utils import parseaddr
-from src.analysis.evidence import Evidence
+from src.models.evidence import Evidence
 
 class SenderEvidenceExtractor:
     def _get_base_domain(self, domain: str) -> str:
