@@ -1,4 +1,4 @@
-```python
+
 """
 Stage 14 — Store maintenance / data retention utilities.
 
@@ -255,4 +255,3 @@ def run_maintenance() -> Dict[str, int]:
     )
 
     return results
-```

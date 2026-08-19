@@ -691,10 +691,9 @@ def enforce_deterministic_priority(
         else:
             decision["verdict"] = "SUSPICIOUS"
 
-        if not decision.get("detail_verdict"):
-            decision["detail_verdict"] = (
-                "STRONG_SECURITY_EVIDENCE"
-            )
+        decision["detail_verdict"] = (
+            "STRONG_SECURITY_EVIDENCE"
+        )
 
         return _finalize(decision)
 

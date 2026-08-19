@@ -146,9 +146,9 @@
     "normal_domains": [
       "example.com"
     ],
-    "messages_analyzed": 68,
+    "messages_analyzed": 72,
     "first_seen": "2026-08-12T09:44:49.945931",
-    "last_seen": "2026-08-13T11:38:38.558529"
+    "last_seen": "2026-08-19T11:07:40.029836"
   },
   "jobalerts-noreply@linkedin.com": {
     "normal_domains": [

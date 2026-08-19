@@ -1174,8 +1174,13 @@ class URLAnalyzer:
             )
 
             brand_present = any(
-                brand == label
-                or brand in label
+                (
+                    len(brand) >= 4
+                    and (
+                        brand == label
+                        or brand in label
+                    )
+                )
                 for label in labels
             )
 

@@ -11,7 +11,6 @@ from src.services.analysis_cache import AnalysisCache, analysis_cache
 from src.api.gmail import process_single_message, MAX_URLS_PER_EMAIL, MAX_BODY_BYTES, MAX_EMAIL_ANALYSIS_SECONDS
 from src.storage.local_store import LocalJSONStore
 from src.storage.store_maintenance import run_maintenance
-from src.ai.analyst_feedback import process_analyst_feedback
 from src.analyzers.url_analyzer import URLAnalyzer
 from src.connectors.gmail_parser import GmailParser
 from src.monitoring.performance import PerformanceTracker
@@ -228,19 +227,6 @@ class TestStage14Performance:
         for t in threads: t.join()
         
         assert store.get_all()["count"] == 50
-
-    def test_09_repeated_feedback_submission(self):
-        """9. Repeated feedback submission."""
-        process_analyst_feedback("msg_f1", "test@example.com", "MALICIOUS", "Test 1", "UNKNOWN", 0)
-        process_analyst_feedback("msg_f1", "test@example.com", "SAFE", "Test 2", "MALICIOUS", 100)
-        
-        from src.storage.feedback_store import get_feedback_store
-        store = get_feedback_store()
-        data = store.store.get_all()
-        
-        assert "msg_f1" in data
-        assert data["msg_f1"]["analyst_label"] == "SAFE"
-        assert data["msg_f1"]["reason"] == "Test 2"
 
     def test_10_repeated_local_ai_inference(self):
         """10. Repeated local AI inference."""

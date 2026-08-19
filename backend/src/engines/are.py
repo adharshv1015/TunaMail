@@ -1,5 +1,6 @@
 # pyrefly: ignore [missing-import]
 
+from asyncio import selector_events
 from src.config.scoring import SCORING
 
 
@@ -736,7 +737,7 @@ class AnalyticalReasoningEngine:
                 or ""
             ).lower()
 
-            if spf != "pass":
+            if spf == "fail":
 
                 score += self._safe_number(
                     auth_rules.get(
@@ -761,7 +762,7 @@ class AnalyticalReasoningEngine:
                     "confidence": 0.95,
                 })
 
-            if dkim != "pass":
+            if dkim == "fail":
 
                 score += self._safe_number(
                     auth_rules.get(
@@ -786,7 +787,7 @@ class AnalyticalReasoningEngine:
                     "confidence": 0.95,
                 })
 
-            if dmarc != "pass":
+            if dmarc == "fail":
 
                 score += self._safe_number(
                     auth_rules.get(
@@ -890,15 +891,15 @@ class AnalyticalReasoningEngine:
             and misaligned_url_count == 0
         )
 
-        if (
+        trusted_sender_context = (
             auth_fully_passed
             and (
                 trust_score >= 40
                 or strong_authenticated_context
             )
-        ):
+        )
 
-            score -= 30
+        if trusted_sender_context:
 
             evidence["technical"].append(
                 "Trusted sender with full authentication"
@@ -3000,6 +3001,16 @@ class AnalyticalReasoningEngine:
 
         raw_score = score
 
+        # Critical malicious evidence must contribute to
+        # the numeric risk score as well as the verdict.
+        if self._has_current_critical_evidence(
+            structured_evidence
+        ):
+            score = max(
+                score,
+                80,
+            )
+
         score = self._clamp_score(
             score
         )
@@ -3181,7 +3192,10 @@ class AnalyticalReasoningEngine:
         elif raw_score >= 40:
 
             verdict = "SUSPICIOUS"
-        
+
+        elif has_strong:
+
+            verdict = "SUSPICIOUS"
 
         elif (
             unresolved_contradiction
@@ -3423,6 +3437,8 @@ class AnalyticalReasoningEngine:
                 90,
             )
 
+            ai_state = "MALICIOUS_EVIDENCE"
+
         # A legitimate verdict with meaningful negative
         # evidence is never allowed.
 
@@ -3466,6 +3482,8 @@ class AnalyticalReasoningEngine:
             )
 
         # Contradictions reduce confidence.
+        # Strong current negative evidence takes precedence
+        # over contradiction handling.
 
         if final_contradiction:
 
@@ -3475,11 +3493,9 @@ class AnalyticalReasoningEngine:
             )
 
             if (
-                verdict
-                not in {
-                    "PHISHING",
-                }
-                and not final_has_critical
+                not final_has_critical
+                and not final_has_strong
+                and verdict != "PHISHING"
             ):
 
                 verdict = "UNKNOWN"
@@ -3509,16 +3525,6 @@ class AnalyticalReasoningEngine:
                 50,
             )
 
-        # Recalculate score after all evidence.
-
-        score = self._clamp_score(
-            score
-        )
-
-        confidence = self._clamp_confidence(
-            confidence
-        )
-
         # =====================================================
         # 18. FINAL EXPLANATION
         # =====================================================
@@ -3526,6 +3532,28 @@ class AnalyticalReasoningEngine:
         explanation = self.generate_explanation(
             verdict,
             evidence,
+        )
+
+        if (
+            trusted_sender_context
+            and not final_has_negative
+            and not final_has_critical
+            and not final_has_strong
+        ):
+            score -= 30
+
+        if final_has_critical:
+            score = max(
+                score,
+                80,
+            )
+
+        score = self._clamp_score(
+            score
+        )
+
+        confidence = self._clamp_confidence(
+            confidence
         )
 
         # =====================================================

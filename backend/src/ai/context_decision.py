@@ -41,15 +41,17 @@ def apply_context_rules(
 
     if context["state"] == "INSUFFICIENT_EVIDENCE":
 
-        decision["verdict"] = "UNKNOWN"
-        decision["detail_verdict"] = (
-            "INSUFFICIENT_EVIDENCE"
-        )
+        if not positive["score"] >= 45:
 
-        confidence = min(
-            confidence,
-            35,
-        )
+            decision["verdict"] = "UNKNOWN"
+            decision["detail_verdict"] = (
+                "INSUFFICIENT_EVIDENCE"
+            )
+
+            confidence = min(
+                confidence,
+                35,
+            )
 
     elif context["state"] == "LIMITED_CONTEXT":
 
