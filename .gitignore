@@ -75,3 +75,13 @@ desktop.ini
 .agents/
 backend.zip
 feedback_backup\backend
+
+
+#test
+stage16_test.py
+test_email.eml
+test_ssl_err.py
+test_tls_e2e.py
+test_tls.py
+backend/test_certs
+backend/tests
