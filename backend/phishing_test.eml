@@ -1,7 +1,6 @@
-From: security@example.com
-To: user@example.com
+From: Microsoft Security <security@evil-example.com>
+To: test@example.com
 Subject: Urgent Account Verification Required
+Content-Type: text/plain; charset=utf-8
 
-Your account will be suspended unless you verify your credentials immediately. Click the link below and enter your username and password.
-
-http://example.com/login
+Your account will be suspended. Verify your credentials immediately at https://evil-example.com/login
