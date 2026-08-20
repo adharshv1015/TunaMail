@@ -54,6 +54,9 @@ class URLWorker:
                         browser_result
                     )
 
+                    if result.get("redirects"):
+                        merged_result["redirects"] = result["redirects"]
+
                     if (
                         isinstance(
                             service_result.get(
