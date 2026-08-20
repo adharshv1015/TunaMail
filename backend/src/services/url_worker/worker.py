@@ -55,11 +55,7 @@ class URLWorker:
                     )
 
                     if result.get("redirects"):
-                        merged_result[
-                            "redirects"
-                        ] = result[
-                            "redirects"
-                        ]
+                        merged_result["redirects"] = result["redirects"]
 
                     if (
                         isinstance(
