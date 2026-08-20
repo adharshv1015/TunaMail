@@ -1,5 +1,3 @@
-# pyrefly: ignore [missing-import]
-
 from src.config.scoring import SCORING
 
 
@@ -1918,6 +1916,22 @@ class AnalyticalReasoningEngine:
                         0,
                     )
 
+                    payment_fields = self._safe_number(
+                        forms.get(
+                            "payment_fields",
+                            0,
+                        ),
+                        0,
+                    )
+
+                    card_fields = self._safe_number(
+                        forms.get(
+                            "card_fields",
+                            0,
+                        ),
+                        0,
+                    )
+
                     # -----------------------------------------
                     # Password field
                     # -----------------------------------------
@@ -1968,6 +1982,52 @@ class AnalyticalReasoningEngine:
                                 "an email/login input."
                             ),
                             "confidence": 0.90,
+                        })
+
+                    # -----------------------------------------
+                    # Payment / card fields
+                    # -----------------------------------------
+
+                    payment_fields = self._safe_number(
+                        forms.get(
+                            "payment_fields",
+                            0,
+                        ),
+                        0,
+                    )
+
+                    card_fields = self._safe_number(
+                        forms.get(
+                            "card_fields",
+                            0,
+                        ),
+                        0,
+                    )
+
+                    if (
+                        payment_fields > 0
+                        or card_fields > 0
+                    ):
+                        score += 35
+                        page_risk_found = True
+
+                        evidence["behavioral"].append(
+                            "Destination page requests "
+                            "payment/card information: "
+                            f"{url}"
+                        )
+
+                        structured_evidence.append({
+                            "type": "PAYMENT_CARD_HARVESTING",
+                            "severity": "CRITICAL",
+                            "direction": "NEGATIVE",
+                            "source": "URLPageInspection",
+                            "explanation": (
+                                "Destination page contains "
+                                "payment or card information "
+                                "input fields."
+                            ),
+                            "confidence": 0.95,
                         })
 
                     # -----------------------------------------

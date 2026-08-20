@@ -1,6 +1,3 @@
-# pyrefly: ignore [missing-import]
-
-from asyncio import selector_events
 from src.config.scoring import SCORING
 
 
@@ -2102,6 +2099,110 @@ class AnalyticalReasoningEngine:
                             ),
                             "confidence": 0.90,
                         })
+
+                    # -----------------------------------------
+                    # Payment / card fields
+                    # -----------------------------------------
+
+                    payment_fields = self._safe_number(
+                        forms.get(
+                            "payment_fields",
+                            0,
+                        ),
+                        0,
+                    )
+
+                    card_fields = self._safe_number(
+                        forms.get(
+                            "card_fields",
+                            0,
+                        ),
+                        0,
+                    )
+
+                    if (
+                        payment_fields > 0
+                        or card_fields > 0
+                    ):
+
+                        page_intel = (
+                            page_data.get(
+                                "ai",
+                                {},
+                            )
+                            or {}
+                        )
+
+                        page_intent = self._normalize_type(
+                            page_intel.get(
+                                "intent",
+                                "",
+                            )
+                        )
+
+                        payment_risk_context = (
+                            page_intent == "PAYMENT_SCAM"
+                            or any(
+                                isinstance(item, dict)
+                                and item.get(
+                                    "direction"
+                                ) == "NEGATIVE"
+                                and item.get(
+                                    "severity"
+                                ) in {
+                                    "HIGH",
+                                    "CRITICAL",
+                                }
+                                and item.get(
+                                    "type"
+                                ) in {
+                                    "DOMAIN_MISMATCH",
+                                    "THREAT_INTELLIGENCE_DETECTION",
+                                    "SUSPICIOUS_URL",
+                                }
+                                for item in structured_evidence
+                            )
+                        )
+
+                        if payment_risk_context:
+
+                            score += 35
+                            page_risk_found = True
+
+                            evidence["behavioral"].append(
+                                "Destination page requests "
+                                "payment/card information "
+                                "in a suspicious context: "
+                                f"{url}"
+                            )
+
+                            structured_evidence.append({
+                                "type": (
+                                    "PAYMENT_CARD_HARVESTING"
+                                ),
+                                "severity": "CRITICAL",
+                                "direction": "NEGATIVE",
+                                "source": (
+                                    "URLPageInspection"
+                                ),
+                                "explanation": (
+                                    "Destination page contains "
+                                    "payment or card information "
+                                    "input fields in combination "
+                                    "with suspicious URL, domain, "
+                                    "threat-intelligence, or "
+                                    "payment-scam indicators."
+                                ),
+                                "confidence": 0.95,
+                            })
+
+                        else:
+
+                            evidence["positive"].append(
+                                "Destination page contains "
+                                "payment/card fields without "
+                                "independent malicious indicators."
+                            )
 
                     # -----------------------------------------
                     # Page AI
