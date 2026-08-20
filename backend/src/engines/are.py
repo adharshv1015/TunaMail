@@ -949,6 +949,54 @@ class AnalyticalReasoningEngine:
                 continue
 
             # -------------------------------------------------
+            # URL structured evidence
+            # -------------------------------------------------
+
+            for item in (
+                url.get(
+                    "structured_evidence",
+                    [],
+                )
+                or []
+            ):
+
+                if not isinstance(item, dict):
+                    continue
+
+                evidence_type = str(
+                    item.get(
+                        "type",
+                        "",
+                    )
+                    or ""
+                ).upper()
+
+                if evidence_type == "OFFICIAL_BRAND":
+
+                    evidence["positive"].append(
+                        "URL exactly matches a recognized "
+                        "official domain."
+                    )
+
+                    structured_evidence.append({
+                        "type": "OFFICIAL_BRAND",
+                        "severity": "LOW",
+                        "direction": "POSITIVE",
+                        "source": "URLAnalyzer",
+                        "explanation": (
+                            "URL exactly matches a recognized "
+                            "official domain."
+                        ),
+                        "confidence": self._safe_number(
+                            item.get(
+                                "confidence",
+                                0.95,
+                            ),
+                            0.95,
+                        ),
+                    })
+
+            # -------------------------------------------------
             # IP-based URL
             # -------------------------------------------------
 
@@ -1860,7 +1908,91 @@ class AnalyticalReasoningEngine:
                 "Limited context: Email contains "
                 "mostly URLs with minimal surrounding text"
             )
+            # -----------------------------------------
+            # URL Threat Intelligence
+            # -----------------------------------------
 
+            for url_item in (
+                url_analysis.get(
+                    "analysis",
+                    [],
+                )
+                or []
+            ):
+
+                if not isinstance(
+                    url_item,
+                    dict,
+                ):
+                    continue
+
+                threat_intelligence = (
+                    url_item.get(
+                        "threat_intelligence",
+                        {},
+                    )
+                    or {}
+                )
+
+                if not isinstance(
+                    threat_intelligence,
+                    dict,
+                ):
+                    continue
+
+                if not threat_intelligence.get(
+                    "available"
+                ):
+                    continue
+
+                status = str(
+                    threat_intelligence.get(
+                        "status",
+                        "",
+                    )
+                    or ""
+                ).lower()
+
+                detections = self._safe_number(
+                    threat_intelligence.get(
+                        "detections",
+                        0,
+                    ),
+                    0,
+                )
+
+                if (
+                    status
+                    in {
+                        "malicious",
+                        "phishing",
+                        "unsafe",
+                        "dangerous",
+                    }
+                    or detections > 0
+                ):
+
+                    score += 50
+
+                    evidence["network"].append(
+                        "URL threat intelligence "
+                        "detected malicious activity"
+                    )
+
+                    structured_evidence.append({
+                        "type": (
+                            "THREAT_INTELLIGENCE_DETECTION"
+                        ),
+                        "severity": "CRITICAL",
+                        "direction": "NEGATIVE",
+                        "source": "ThreatIntelligence",
+                        "explanation": (
+                            "Threat intelligence detected "
+                            f"the URL as {status or 'malicious'} "
+                            f"with {detections} detection(s)."
+                        ),
+                        "confidence": 0.99,
+                    })
             if url_page_intelligence:
 
                 page_risk_found = False
@@ -3513,17 +3645,45 @@ class AnalyticalReasoningEngine:
             and not final_has_critical
         ):
 
-            if verdict in {
-                "VERIFIED LEGITIMATE",
-                "LIKELY LEGITIMATE",
-            }:
+            if (
+                final_has_strong
+                or final_has_negative
+            ):
+
+                if verdict in {
+                    "VERIFIED LEGITIMATE",
+                    "LIKELY LEGITIMATE",
+                }:
+
+                    verdict = "UNKNOWN"
+
+                confidence = min(
+                    confidence,
+                    50,
+                )
+
+            elif (
+                independent_positive_sources >= 3
+                and not final_contradiction
+            ):
+
+                verdict = "LIKELY LEGITIMATE"
+
+                confidence = min(
+                    confidence,
+                    75,
+                )
+
+                ai_state = "LIMITED_CONTEXT"
+
+            else:
 
                 verdict = "UNKNOWN"
 
-            confidence = min(
-                confidence,
-                50,
-            )
+                confidence = min(
+                    confidence,
+                    50,
+                )
 
         # =====================================================
         # 18. FINAL EXPLANATION
