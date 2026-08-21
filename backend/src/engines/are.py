@@ -576,6 +576,8 @@ class AnalyticalReasoningEngine:
         low=5,
         default=10,
     ):
+        severity = str(severity or "").upper().strip()  
+
         return {
             "CRITICAL": critical,
             "HIGH": high,
@@ -593,7 +595,7 @@ class AnalyticalReasoningEngine:
     def evaluate(
         self,
         authentication,
-        url_analysis,
+        url_analysis,   
         whois_analysis,
         content_analysis,
         attachment_analysis,
@@ -1899,12 +1901,13 @@ class AnalyticalReasoningEngine:
             )
         )
 
-        if limited_context:
+        if limited_context or url_page_intelligence:
 
-            evidence["behavioral"].append(
-                "Limited context: Email contains "
-                "mostly URLs with minimal surrounding text"
-            )
+            if limited_context:
+                evidence["behavioral"].append(
+                    "Limited context: Email contains "
+                    "mostly URLs with minimal surrounding text"
+                )
             # -----------------------------------------
             # URL Threat Intelligence
             # -----------------------------------------

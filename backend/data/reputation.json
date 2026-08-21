@@ -141,14 +141,15 @@
   },
   "jobalerts-noreply@linkedin.com": {
     "sender": "jobalerts-noreply@linkedin.com",
-    "messages_seen": 2,
+    "messages_seen": 3,
     "legitimate_count": 0,
-    "suspicious_count": 0,
+    "suspicious_count": 1,
     "phishing_count": 2,
-    "reputation": "UNKNOWN",
+    "reputation": "NEW",
     "seen_message_ids": [
       "19ff91c4863157b6",
-      "19fc0765ec375b7c"
+      "19fc0765ec375b7c",
+      "1a022bd0a86a8fcd"
     ]
   },
   "naukrialerts@naukri.com": {
@@ -314,14 +315,15 @@
   },
   "hr@oneteamsolutions.co.in": {
     "sender": "hr@oneteamsolutions.co.in",
-    "messages_seen": 2,
+    "messages_seen": 3,
     "legitimate_count": 0,
     "suspicious_count": 2,
-    "phishing_count": 0,
+    "phishing_count": 1,
     "reputation": "NEW",
     "seen_message_ids": [
       "1a00e787cda6aaf2",
-      "1a004c0d36000806"
+      "1a004c0d36000806",
+      "1a022f94df293e96"
     ]
   },
   "store@email.epicgames.com": {
