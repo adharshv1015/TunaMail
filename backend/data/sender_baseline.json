@@ -303,5 +303,16 @@
     "messages_analyzed": 1,
     "first_seen": "2026-08-17T11:40:27.748509",
     "last_seen": "2026-08-17T11:40:27.748522"
+  },
+  "adharsh8055@gmail.com": {
+    "normal_domains": [
+      "gmail.com"
+    ],
+    "normal_authentication": {
+      "spf": "pass"
+    },
+    "messages_analyzed": 2,
+    "first_seen": "2026-08-21T10:15:17.965129",
+    "last_seen": "2026-08-21T10:51:04.876118"
   }
 }

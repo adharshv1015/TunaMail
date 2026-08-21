@@ -981,14 +981,41 @@ class URLAnalyzer:
     # ========================================================
     # Alignment
     # ========================================================
+    @staticmethod
+    def get_email_domain(value: Any) -> str:
+        """
+        Extract the normalized domain from an email address or
+        a full email header value such as:
+        'Security Team <security@example.com>'.
+        """
+        if not value:
+            return ""
 
+        try:
+            _, address = parseaddr(str(value))
+        except Exception:
+            address = str(value)
+
+        address = address.strip().lower()
+
+        if "@" not in address:
+            return ""
+
+        domain = address.rsplit("@", 1)[-1].strip().strip(">").strip()
+
+        if not domain:
+            return ""
+
+        try:
+            return domain.encode("idna").decode("ascii").lower()
+        except Exception:
+            return domain.lower()   
     def evaluate_alignment(
         self,
         inspection_data: Dict[str, Any],
         sender_headers: Dict[str, Any] | None,
         auth_results: Dict[str, Any] | None,
     ) -> str:
-
         if not sender_headers:
             return "unknown"
 
@@ -1002,20 +1029,35 @@ class URLAnalyzer:
         if not url_registered_domain:
             return "unknown"
 
+        def _header_value(*names: str) -> str:
+            for name in names:
+                value = sender_headers.get(name)
+                if value:
+                    return str(value)
+
+            lowered = {
+                str(key).lower(): value
+                for key, value in sender_headers.items()
+            }
+
+            for name in names:
+                value = lowered.get(name.lower())
+                if value:
+                    return str(value)
+
+            return ""
+
         from_domain = self.get_email_domain(
-            sender_headers.get(
+            _header_value(
                 "from",
-                "",
+                "From",
             )
         )
 
         return_path_domain = self.get_email_domain(
-            sender_headers.get(
+            _header_value(
                 "return-path",
-                sender_headers.get(
-                    "Return-Path",
-                    "",
-                ),
+                "Return-Path",
             )
         )
 
@@ -1046,29 +1088,30 @@ class URLAnalyzer:
             sender_registered_domain
             == url_registered_domain
         ):
-
             if auth_state == "PASSED":
                 return "aligned"
 
-            if auth_state == "PARTIAL":
-                return "partially_aligned"
+            if auth_state == "FAILED":
+                return "misaligned"
 
-            if auth_state == "UNAVAILABLE":
-                return "partially_aligned"
-
-            return "partially_aligned"
+            return "unknown"
 
         if (
             return_path_registered_domain
+            and return_path_registered_domain
             == url_registered_domain
+            and auth_state == "PASSED"
         ):
+            return "aligned"
 
-            if auth_state == "PASSED":
-                return "partially_aligned"
+        if (
+            sender_registered_domain
+            and sender_registered_domain
+            != url_registered_domain
+        ):
+            return "misaligned"
 
-            return "partially_aligned"
-
-        return "misaligned"
+        return "unknown"
 
     # ========================================================
     # Brand relationship

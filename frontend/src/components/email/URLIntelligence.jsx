@@ -174,12 +174,27 @@ function PageAnalysisPanel({ pageAnalysis }) {
 function UrlCard({ item }) {
   const [expanded, setExpanded] = useState(false);
   const pageAnalysis = item.page_analysis;
-  const pageHasRisk = pageAnalysis?.available && (pageAnalysis.page_risk_score > 0 || (pageAnalysis.indicators || []).length > 0);
 
-  const hasRisk = item.ip_based || item.shortener || item.obfuscated || item.punycode || item.suspicious_port || (item.keywords && item.keywords.length > 0) || item.brand_impersonation || (item.threat_intelligence && item.threat_intelligence.detections > 0) || pageHasRisk || item.tls_policy_violation;
+  const pageHasRisk =
+    pageAnalysis?.available &&
+    (pageAnalysis.page_risk_score > 0 ||
+      (pageAnalysis.indicators || []).length > 0);
+
+  const hasRisk =
+    item.ip_based ||
+    item.shortener ||
+    item.obfuscated ||
+    item.punycode ||
+    item.suspicious_port ||
+    (item.keywords && item.keywords.length > 0) ||
+    item.brand_impersonation ||
+    (item.threat_intelligence && item.threat_intelligence.detections > 0) ||
+    pageHasRisk ||
+    item.tls_policy_violation;
 
   const getRiskFlags = () => {
-    let flags = [];
+    const flags = [];
+
     if (item.ip_based) flags.push("IP-Based");
     if (item.shortener) flags.push("Shortener");
     if (item.obfuscated) flags.push("Obfuscated");
@@ -187,164 +202,358 @@ function UrlCard({ item }) {
     if (item.brand_impersonation) flags.push("Impersonation");
     if (item.tls_policy_violation) flags.push("TLS Violation");
     if (pageHasRisk) flags.push("Page Risk");
+
     return flags;
   };
 
   const flags = getRiskFlags();
 
   return (
-    <div className={`flex flex-col rounded-[8px] border bg-[var(--tm-surface-secondary)] overflow-hidden transition-all duration-200 ${hasRisk ? "border-orange-500/30" : "border-[var(--tm-border)]"}`}>
-
-      {/* Compact Header (Always Visible) */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="flex items-center justify-between w-full p-3 text-left hover:bg-[var(--tm-surface)] transition-colors focus:outline-none"
+    <>
+      {/* Compact URL Card */}
+      <div
+        className={`flex min-w-0 rounded-[8px] border bg-[var(--tm-surface-secondary)] overflow-hidden transition-all duration-200 ${hasRisk
+          ? "border-orange-500/30"
+          : "border-[var(--tm-border)]"
+          }`}
       >
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className={`shrink-0 w-2 h-2 rounded-full ${hasRisk ? "bg-orange-500" : "bg-emerald-500"}`} />
-          <div className="font-mono text-[13px] text-[var(--tm-accent)] font-semibold truncate max-w-[200px]">
-            {item.domain || "Unknown"}
-          </div>
-          <div className="text-[12px] text-[var(--tm-text-muted)] truncate min-w-0 flex-1 opacity-70">
-            {item.url}
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          aria-label={`View URL intelligence for ${item.domain || "Unknown"}`}
+          className="flex items-center justify-between w-full min-w-0 p-3 text-left hover:bg-[var(--tm-surface)] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--tm-accent)]"
+        >
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div
+              className={`shrink-0 w-2 h-2 rounded-full ${hasRisk ? "bg-orange-500" : "bg-emerald-500"
+                }`}
+            />
 
-        <div className="flex items-center gap-3 shrink-0 ml-4">
-          {flags.length > 0 ? (
-            <span className="text-[10px] font-bold uppercase tracking-wider text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
-              {flags.length} Flag{flags.length !== 1 ? "s" : ""}
-            </span>
-          ) : (
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500 opacity-80">
-              Clean
-            </span>
-          )}
-          <span className="text-[10px] text-[var(--tm-text-muted)] w-4 text-center">
-            {expanded ? "▲" : "▼"}
-          </span>
-        </div>
-      </button>
-
-      {/* Expanded Content */}
-      {expanded && (
-        <div className="p-4 border-t border-[var(--tm-border)]/50 bg-[var(--tm-surface-secondary)]/50 flex flex-col gap-4">
-          <div className="flex flex-col">
-            <div className="text-[11px] font-bold text-[var(--tm-text-secondary)] uppercase tracking-wider mb-1">Full URL</div>
-            <div className="break-all font-mono text-[12px] text-[var(--tm-text)] opacity-90 leading-relaxed bg-[var(--tm-surface)] p-2 rounded border border-[var(--tm-border)]/50" style={{ wordBreak: "break-word" }}>
-              {item.url}
+            <div className="font-mono text-[11px] text-[var(--tm-accent)] font-semibold truncate min-w-0">
+              {item.domain || "Unknown"}
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 min-w-0">
-              <div className="text-[11px] font-bold text-[var(--tm-text-secondary)] uppercase tracking-wider mb-1.5">Domain Context</div>
-              {item.registered_domain && item.registered_domain !== item.domain && (
-                <div className="text-[11px] text-[var(--tm-text-muted)] font-mono opacity-80">Root: {item.registered_domain}</div>
-              )}
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {!hasRisk && <span className="inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">NO FLAGS</span>}
-                <IndicatorBadge label="IP-Based" isSuspicious={item.ip_based} type="warning" />
-                <IndicatorBadge label="Shortener" isSuspicious={item.shortener} type="warning" />
-                <IndicatorBadge label="Obfuscated" isSuspicious={item.obfuscated} type="error" />
-                <IndicatorBadge label="Punycode" isSuspicious={item.punycode} type="error" />
-                <IndicatorBadge label="Brand Impersonation" isSuspicious={item.brand_impersonation} type="error" />
-                <IndicatorBadge label="Suspicious Port" isSuspicious={item.suspicious_port} type="warning" />
-                <IndicatorBadge label="TLS Violation" isSuspicious={item.tls_policy_violation} type="error" />
-                <IndicatorBadge label="Insecure Transport" isSuspicious={item.http_policy_warning} type="warning" />
-                <IndicatorBadge label="TLS Inspection Failed" isSuspicious={item.tls_inspection_unavailable} type="warning" />
-                {item.keywords && item.keywords.length > 0 && (
-                  <IndicatorBadge label={`KEYWORDS: ${item.keywords.join(", ")}`} isSuspicious={true} type="warning" />
+          <div className="flex items-center gap-2 shrink-0 ml-2">
+            {flags.length > 0 ? (
+              <span className="text-[9px] font-bold uppercase tracking-wider text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded border border-orange-500/20 whitespace-nowrap">
+                {flags.length} FLAG{flags.length !== 1 ? "S" : ""}
+              </span>
+            ) : (
+              <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-500 opacity-80 whitespace-nowrap">
+                CLEAN
+              </span>
+            )}
+
+            <span className="text-[10px] text-[var(--tm-text-muted)]">
+              ▼
+            </span>
+          </div>
+        </button>
+      </div>
+
+      {/* Floating URL Details Popup */}
+      {expanded && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-[2px]"
+          onClick={() => setExpanded(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`URL intelligence details for ${item.domain || "Unknown"}`}
+        >
+          <div
+            className="relative w-full max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl border border-[var(--tm-border)] bg-[var(--tm-surface)] shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {/* Popup Header */}
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-[var(--tm-border)] bg-[var(--tm-surface-secondary)]">
+              <div className="flex items-center gap-2 min-w-0">
+                <div
+                  className={`shrink-0 w-2.5 h-2.5 rounded-full ${hasRisk ? "bg-orange-500" : "bg-emerald-500"
+                    }`}
+                />
+
+                <div className="min-w-0">
+                  <div className="font-mono text-[13px] font-bold text-[var(--tm-accent)] truncate">
+                    {item.domain || "Unknown"}
+                  </div>
+
+                  <div className="text-[10px] text-[var(--tm-text-muted)] truncate">
+                    {item.url}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {flags.length > 0 ? (
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-orange-400 bg-orange-500/10 px-2 py-1 rounded border border-orange-500/20 whitespace-nowrap">
+                    {flags.length} FLAG{flags.length !== 1 ? "S" : ""}
+                  </span>
+                ) : (
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 whitespace-nowrap">
+                    CLEAN
+                  </span>
                 )}
-                {item.email_alignment === "misaligned" && (
-                  <IndicatorBadge label="Sender Misalignment" isSuspicious={true} type="warning" />
+
+                <button
+                  type="button"
+                  onClick={() => setExpanded(false)}
+                  aria-label="Close URL details"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--tm-text-muted)] hover:bg-[var(--tm-border)] hover:text-[var(--tm-text)] transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Popup Scrollable Content */}
+            <div className="max-h-[calc(85vh-61px)] overflow-y-auto p-4 sm:p-5">
+              <div className="flex flex-col gap-4">
+                {/* Full URL */}
+                <div className="flex flex-col">
+                  <div className="text-[11px] font-bold text-[var(--tm-text-secondary)] uppercase tracking-wider mb-1">
+                    Full URL
+                  </div>
+
+                  <div
+                    className="break-all font-mono text-[12px] text-[var(--tm-text)] opacity-90 leading-relaxed bg-[var(--tm-surface-secondary)] p-3 rounded-lg border border-[var(--tm-border)]/50"
+                    style={{ wordBreak: "break-word" }}
+                  >
+                    {item.url}
+                  </div>
+                </div>
+
+                {/* Domain Context */}
+                <div className="flex flex-col">
+                  <div className="text-[11px] font-bold text-[var(--tm-text-secondary)] uppercase tracking-wider mb-1.5">
+                    Domain Context
+                  </div>
+
+                  {item.registered_domain &&
+                    item.registered_domain !== item.domain && (
+                      <div className="text-[11px] text-[var(--tm-text-muted)] font-mono opacity-80">
+                        Root: {item.registered_domain}
+                      </div>
+                    )}
+
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {!hasRisk && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
+                        NO FLAGS
+                      </span>
+                    )}
+
+                    <IndicatorBadge
+                      label="IP-Based"
+                      isSuspicious={item.ip_based}
+                      type="warning"
+                    />
+
+                    <IndicatorBadge
+                      label="Shortener"
+                      isSuspicious={item.shortener}
+                      type="warning"
+                    />
+
+                    <IndicatorBadge
+                      label="Obfuscated"
+                      isSuspicious={item.obfuscated}
+                      type="error"
+                    />
+
+                    <IndicatorBadge
+                      label="Punycode"
+                      isSuspicious={item.punycode}
+                      type="error"
+                    />
+
+                    <IndicatorBadge
+                      label="Brand Impersonation"
+                      isSuspicious={item.brand_impersonation}
+                      type="error"
+                    />
+
+                    <IndicatorBadge
+                      label="Suspicious Port"
+                      isSuspicious={item.suspicious_port}
+                      type="warning"
+                    />
+
+                    <IndicatorBadge
+                      label="TLS Violation"
+                      isSuspicious={item.tls_policy_violation}
+                      type="error"
+                    />
+
+                    <IndicatorBadge
+                      label="Insecure Transport"
+                      isSuspicious={item.http_policy_warning}
+                      type="warning"
+                    />
+
+                    <IndicatorBadge
+                      label="TLS Inspection Failed"
+                      isSuspicious={item.tls_inspection_unavailable}
+                      type="warning"
+                    />
+
+                    {item.keywords && item.keywords.length > 0 && (
+                      <IndicatorBadge
+                        label={`KEYWORDS: ${item.keywords.join(", ")}`}
+                        isSuspicious={true}
+                        type="warning"
+                      />
+                    )}
+
+                    {item.email_alignment === "misaligned" && (
+                      <IndicatorBadge
+                        label="Sender Misalignment"
+                        isSuspicious={true}
+                        type="warning"
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* Page Analysis */}
+                {pageAnalysis && (
+                  <PageAnalysisPanel pageAnalysis={pageAnalysis} />
                 )}
+
+                {/* Technical Evidence */}
+                <div className="mt-1 flex flex-col gap-1 bg-[var(--tm-surface-secondary)] p-3 rounded-lg border border-[var(--tm-border)]/50">
+                  {/* DNS Evidence */}
+                  {item.dns && item.dns.resolved ? (
+                    <EvidenceRow
+                      type="success"
+                      text={`DNS resolved successfully (${[
+                        ...(item.dns.a || []),
+                        ...(item.dns.aaaa || []),
+                      ].length} records)`}
+                    />
+                  ) : item.dns && item.dns.private_ip_detected ? (
+                    <EvidenceRow
+                      type="error"
+                      text="DNS resolved to an internal/private IP (SSRF Blocked)"
+                    />
+                  ) : (
+                    <EvidenceRow
+                      type="warning"
+                      text="DNS resolution unavailable or failed"
+                    />
+                  )}
+
+                  {/* TLS Evidence */}
+                  {item.tls && item.tls.https ? (
+                    item.tls.certificate_valid ? (
+                      <EvidenceRow
+                        type="success"
+                        text={`TLS certificate valid (Issuer: ${item.tls.issuer || "Unknown"
+                          })`}
+                      />
+                    ) : (
+                      <EvidenceRow
+                        type="error"
+                        text={
+                          item.tls.error_detail
+                            ? `TLS policy violation: ${item.tls.error_detail} (${item.tls.violation})`
+                            : "TLS certificate invalid or expired"
+                        }
+                      />
+                    )
+                  ) : item.tls &&
+                    item.tls.certificate_present === false &&
+                    item.tls.violation ? (
+                    <EvidenceRow
+                      type="warning"
+                      text={`TLS inspection issue: ${item.tls.error_detail} (${item.tls.violation})`}
+                    />
+                  ) : (
+                    <EvidenceRow
+                      type="warning"
+                      text="Connection does not use HTTPS"
+                    />
+                  )}
+
+                  {/* Redirects */}
+                  {item.redirects && item.redirects.detected ? (
+                    <EvidenceRow
+                      type={
+                        item.redirects.external_domain_change
+                          ? "error"
+                          : "warning"
+                      }
+                      text={`Redirect chain detected (${item.redirects.chain.length} hops)${item.redirects.external_domain_change
+                        ? " - External domain change!"
+                        : ""
+                        }`}
+                    />
+                  ) : (
+                    <EvidenceRow
+                      type="success"
+                      text="No redirects detected"
+                    />
+                  )}
+
+                  {/* Threat Intelligence */}
+                  {item.threat_intelligence?.status === "available" ? (
+                    item.threat_intelligence.detections > 0 ? (
+                      <EvidenceRow
+                        type="error"
+                        text={`Threat intelligence detected malicious activity (${item.threat_intelligence.detections} flags)`}
+                      />
+                    ) : (
+                      <EvidenceRow
+                        type="success"
+                        text="No malicious reputation detected"
+                      />
+                    )
+                  ) : (
+                    <EvidenceRow
+                      type="neutral"
+                      text="Threat intelligence was not queried"
+                    />
+                  )}
+
+                  {/* Email Alignment */}
+                  {item.email_alignment === "aligned" ? (
+                    <EvidenceRow
+                      type="success"
+                      text="Sender domain matches URL registered domain"
+                    />
+                  ) : item.email_alignment === "partially_aligned" ? (
+                    <EvidenceRow
+                      type="warning"
+                      text="Partial alignment (e.g., matching return-path or unauthenticated sender)"
+                    />
+                  ) : item.email_alignment === "misaligned" ? (
+                    <EvidenceRow
+                      type="error"
+                      text="Sender domain is completely unrelated to URL domain"
+                    />
+                  ) : (
+                    <EvidenceRow
+                      type="neutral"
+                      text="Email alignment was not evaluated for this URL"
+                    />
+                  )}
+
+                  {/* Brand Match */}
+                  {item.brand_impersonation && (
+                    <EvidenceRow
+                      type="error"
+                      text="URL attempts to impersonate a trusted brand"
+                    />
+                  )}
+                </div>
               </div>
             </div>
           </div>
-
-          {/* Page Analysis Panel */}
-          {pageAnalysis && <PageAnalysisPanel pageAnalysis={pageAnalysis} />}
-
-          {/* Technical Evidence */}
-          <div className="mt-2 flex flex-col gap-1 bg-[var(--tm-surface)] p-3 rounded-lg border border-[var(--tm-border)]/50">
-            {/* DNS Evidence */}
-            {item.dns && item.dns.resolved ? (
-              <EvidenceRow type="success" text={`DNS resolved successfully (${[...(item.dns.a || []), ...(item.dns.aaaa || [])].length} records)`} />
-            ) : item.dns && item.dns.private_ip_detected ? (
-              <EvidenceRow type="error" text="DNS resolved to an internal/private IP (SSRF Blocked)" />
-            ) : (
-              <EvidenceRow type="warning" text="DNS resolution unavailable or failed" />
-            )}
-
-            {/* TLS Evidence */}
-            {item.tls && item.tls.https ? (
-              item.tls.certificate_valid ? (
-                <EvidenceRow type="success" text={`TLS certificate valid (Issuer: ${item.tls.issuer || "Unknown"})`} />
-              ) : (
-                <EvidenceRow type="error" text={item.tls.error_detail ? `TLS policy violation: ${item.tls.error_detail} (${item.tls.violation})` : "TLS certificate invalid or expired"} />
-              )
-            ) : item.tls && item.tls.certificate_present === false && item.tls.violation ? (
-              <EvidenceRow type="warning" text={`TLS inspection issue: ${item.tls.error_detail} (${item.tls.violation})`} />
-            ) : (
-              <EvidenceRow type="warning" text="Connection does not use HTTPS" />
-            )}
-
-            {/* Redirects */}
-            {item.redirects && item.redirects.detected ? (
-              <EvidenceRow type={item.redirects.external_domain_change ? "error" : "warning"} text={`Redirect chain detected (${item.redirects.chain.length} hops)${item.redirects.external_domain_change ? " - External domain change!" : ""}`} />
-            ) : (
-              <EvidenceRow type="success" text="No redirects detected" />
-            )}
-
-            {/* Threat Intel */}
-            {item.threat_intelligence?.status === "available" ? (
-              item.threat_intelligence.detections > 0 ? (
-                <EvidenceRow
-                  type="error"
-                  text={`Threat intelligence detected malicious activity (${item.threat_intelligence.detections} flags)`}
-                />
-              ) : (
-                <EvidenceRow type="success" text="No malicious reputation detected" />
-              )
-            ) : (
-              <EvidenceRow type="neutral" text="Threat intelligence was not queried" />
-            )}
-
-            {/* Email Alignment */}
-            {item.email_alignment === "aligned" ? (
-              <EvidenceRow
-                type="success"
-                text="Sender domain matches URL registered domain"
-              />
-            ) : item.email_alignment === "partially_aligned" ? (
-              <EvidenceRow
-                type="warning"
-                text="Partial alignment (e.g., matching return-path or unauthenticated sender)"
-              />
-            ) : item.email_alignment === "misaligned" ? (
-              <EvidenceRow
-                type="error"
-                text="Sender domain is completely unrelated to URL domain"
-              />
-            ) : (
-              <EvidenceRow
-                type="neutral"
-                text="Email alignment was not evaluated for this URL"
-              />
-            )}
-
-            {/* Brand Match */}
-            {item.brand_impersonation && (
-              <EvidenceRow type="error" text="URL attempts to impersonate a trusted brand" />
-            )}
-          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
-
 
 function URLIntelligence({ urlAnalysis, urlPageIntelligence }) {
   const data = urlAnalysis || {};
@@ -370,7 +579,7 @@ function URLIntelligence({ urlAnalysis, urlPageIntelligence }) {
       {analyzedUrls.length === 0 ? (
         <EmptyState icon="✓" message="No URLs detected in this email." />
       ) : (
-        <div className="mt-5 space-y-4">
+        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {analyzedUrls.map((item, index) => (
             <UrlCard key={`${item.url}-${index}`} item={item} />
           ))}
