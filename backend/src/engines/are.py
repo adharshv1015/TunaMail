@@ -49,7 +49,6 @@ class AnalyticalReasoningEngine:
 
     STRONG_NEGATIVE_TYPES = {
         "DOMAIN_MISMATCH",
-        "URL_DOMAIN_MISMATCH",
         "SUSPICIOUS_URL",
         "SUSPICIOUS_REDIRECT",
         "HOMOGRAPH_DOMAIN",
@@ -442,17 +441,10 @@ class AnalyticalReasoningEngine:
             if (
                 item.get("direction")
                 == "NEGATIVE"
-                and (
-                    item.get("severity")
-                    in {
-                        "HIGH",
-                        "CRITICAL",
-                    }
-                    or item.get("type")
-                    in (
-                        self.CRITICAL_NEGATIVE_TYPES
-                        | self.STRONG_NEGATIVE_TYPES
-                    )
+                and item.get("type")
+                in (
+                    self.CRITICAL_NEGATIVE_TYPES
+                    | self.STRONG_NEGATIVE_TYPES
                 )
             ):
                 return True
@@ -1273,10 +1265,13 @@ class AnalyticalReasoningEngine:
             alignment = str(
                 url.get(
                     "email_alignment",
-                    "",
+                    url.get(
+                        "alignment",
+                        "",
+                    ),
                 )
                 or ""
-            ).lower()
+            ).lower().strip()
 
             if alignment == "misaligned":
 
@@ -3409,7 +3404,7 @@ class AnalyticalReasoningEngine:
                     "LIMITED_CONTEXT"
                 )
 
-        # =====================================================
+       # =====================================================
         # 14. FINAL VERDICT
         # =====================================================
 
@@ -3426,10 +3421,6 @@ class AnalyticalReasoningEngine:
             verdict = "HIGH RISK"
 
         elif raw_score >= 40:
-
-            verdict = "SUSPICIOUS"
-
-        elif has_strong:
 
             verdict = "SUSPICIOUS"
 
@@ -3455,9 +3446,7 @@ class AnalyticalReasoningEngine:
                 and not unresolved_contradiction
             ):
 
-                verdict = (
-                    "VERIFIED LEGITIMATE"
-                )
+                verdict = "VERIFIED LEGITIMATE"
 
             elif (
                 independent_positive_sources >= 2
@@ -3465,18 +3454,19 @@ class AnalyticalReasoningEngine:
                 and not unresolved_contradiction
             ):
 
-                verdict = (
-                    "LIKELY LEGITIMATE"
-                )
+                verdict = "LIKELY LEGITIMATE"
 
             else:
 
-                verdict = "UNKNOWN"
+                verdict = "SAFE"
+
+        elif raw_score < 40:
+
+            verdict = "SAFE"
 
         else:
 
             verdict = "UNKNOWN"
-
         # =====================================================
         # 15. AI RECOMMENDATION — EVIDENCE ONLY
         # =====================================================
@@ -3484,7 +3474,7 @@ class AnalyticalReasoningEngine:
         recommended = self._normalize_type(
             ai_analysis.get(
                 "recommended_classification",
-                "",
+                "", 
             )
         )
 
@@ -3634,161 +3624,69 @@ class AnalyticalReasoningEngine:
         # Recalculate current evidence after all AI,
         # historical and adaptive evidence has been added.
 
-        final_has_critical = (
-            self._has_current_critical_evidence(
-                structured_evidence
-            )
+        final_has_critical = self._has_current_critical_evidence(structured_evidence)
+        final_has_negative = self._has_current_negative_evidence(structured_evidence)
+        final_has_strong = self._has_current_strong_evidence(structured_evidence)
+        final_contradiction = self._has_unresolved_contradiction(
+            ai_analysis,
+            structured_evidence,
+            historical_evidence,
         )
 
-        final_has_negative = (
-            self._has_current_negative_evidence(
-                structured_evidence
-            )
-        )
-
-        final_has_strong = (
-            self._has_current_strong_evidence(
-                structured_evidence
-            )
-        )
-
-        final_contradiction = (
-            self._has_unresolved_contradiction(
-                ai_analysis,
-                structured_evidence,
-                historical_evidence,
-            )
-        )
-
-        # Absolute deterministic safety rule:
-        # critical malicious evidence cannot result in
-        # a legitimate verdict.
-
+        # Critical malicious evidence always wins.
         if final_has_critical:
-
             verdict = "PHISHING"
-
-            confidence = max(
-                confidence,
-                90,
-            )
-
+            confidence = max(confidence, 90)
             ai_state = "MALICIOUS_EVIDENCE"
 
-        # A legitimate verdict with meaningful negative
-        # evidence is never allowed.
-
-        if (
-            verdict
-            in {
-                "VERIFIED LEGITIMATE",
-                "LIKELY LEGITIMATE",
-            }
+        # Legitimate verdicts cannot remain legitimate
+        # when meaningful negative evidence exists.
+        elif (
+            verdict in {"VERIFIED LEGITIMATE", "LIKELY LEGITIMATE"}
             and final_has_negative
         ):
-
             verdict = "UNKNOWN"
+            confidence = min(confidence, 50)
+            ai_state = "CONFLICTING_EVIDENCE"
 
-            confidence = min(
-                confidence,
-                50,
-            )
-
-            ai_state = (
-                "CONFLICTING_EVIDENCE"
-            )
-
-        # Strong negative evidence should prevent
-        # an unsupported legitimate verdict.
-
-        if (
+        # Strong negative evidence prevents unsupported
+        # legitimate verdicts.
+        elif (
             final_has_strong
-            and verdict
-            in {
-                "VERIFIED LEGITIMATE",
-                "LIKELY LEGITIMATE",
-            }
+            and verdict in {"VERIFIED LEGITIMATE", "LIKELY LEGITIMATE"}
         ):
-
             verdict = "SUSPICIOUS"
+            confidence = min(confidence, 65)
 
-            confidence = min(
-                confidence,
-                65,
-            )
+        # Score below 40 is SAFE.
+        elif raw_score < 40:
+            verdict = "SAFE"
 
         # Contradictions reduce confidence.
-        # Strong current negative evidence takes precedence
-        # over contradiction handling.
-
         if final_contradiction:
+            confidence = min(confidence, 50)
 
-            confidence = min(
-                confidence,
-                50,
-            )
-
-            if (
-                not final_has_critical
-                and not final_has_strong
-                and verdict != "PHISHING"
-            ):
-
-                verdict = "UNKNOWN"
-
-                if not ai_state:
-                    ai_state = (
-                        "CONFLICTING_EVIDENCE"
-                    )
-
-        # Limited context prevents high-confidence
-        # legitimacy.
-
-        if (
-            limited_context
-            and not final_has_critical
-        ):
-
-            if (
-                final_has_strong
-                or final_has_negative
-            ):
-
-                if verdict in {
-                    "VERIFIED LEGITIMATE",
-                    "LIKELY LEGITIMATE",
-                }:
-
+        # Limited context must not overwrite SAFE.
+        if limited_context and not final_has_critical:
+            if final_has_strong or final_has_negative:
+                if verdict in {"VERIFIED LEGITIMATE", "LIKELY LEGITIMATE"}:
                     verdict = "UNKNOWN"
 
-                confidence = min(
-                    confidence,
-                    50,
-                )
+            confidence = min(confidence, 50)
 
-            elif (
-                independent_positive_sources >= 3
-                and not final_contradiction
-            ):
+        # Positive evidence can only promote messages that
+        # are not already classified as SAFE.
+        elif (
+            independent_positive_sources >= 3
+            and not final_contradiction
+            and verdict != "SAFE"
+        ):
+            verdict = "LIKELY LEGITIMATE"
+            confidence = min(confidence, 75)
+            ai_state = "LIMITED_CONTEXT"
 
-                verdict = "LIKELY LEGITIMATE"
-
-                confidence = min(
-                    confidence,
-                    75,
-                )
-
-                ai_state = "LIMITED_CONTEXT"
-
-            else:
-
-                verdict = "UNKNOWN"
-
-                confidence = min(
-                    confidence,
-                    50,
-                )
-
+        if not ai_state:
+            ai_state = "CONFLICTING_EVIDENCE"
         # =====================================================
         # 18. FINAL EXPLANATION
         # =====================================================

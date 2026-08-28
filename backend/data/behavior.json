@@ -249,7 +249,8 @@
       1786579693.086018,
       1786582212.719415,
       1787272174.208192,
-      1787287138.414821
+      1787287138.414821,
+      1787874872.505167
     ],
     "url_domains": [
       "www.linkedin.com",
@@ -264,7 +265,8 @@
   },
   "naukrialerts@naukri.com": {
     "timestamps": [
-      1786579715.574074
+      1786579715.574074,
+      1787882874.950736
     ],
     "url_domains": [
       "fonts.googleapis.com",
@@ -274,7 +276,8 @@
       "cm.naukri.com",
       "www.ieplads.com",
       "img.naukimg.com",
-      "www.ambitionbox.com"
+      "www.ambitionbox.com",
+      "tr.naukri.com"
     ],
     "auth_summary": [
       "SPF:pass DKIM:pass DMARC:pass"
@@ -308,7 +311,8 @@
   "updates-noreply@linkedin.com": {
     "timestamps": [
       1786579740.608661,
-      1787287311.470262
+      1787287311.470262,
+      1787882923.814274
     ],
     "url_domains": [
       "www.linkedin.com",
@@ -321,7 +325,8 @@
   },
   "messages-noreply@linkedin.com": {
     "timestamps": [
-      1786579748.394492
+      1786579748.394492,
+      1787882667.944637
     ],
     "url_domains": [
       "www.linkedin.com",
@@ -452,9 +457,12 @@
   },
   "amanyukrishnaak@gmail.com": {
     "timestamps": [
-      1786921765.657253
+      1786921765.657253,
+      1787878521.767353
     ],
-    "url_domains": [],
+    "url_domains": [
+      "www.acer.com"
+    ],
     "auth_summary": [
       "SPF:pass DKIM:pass DMARC:pass"
     ]
@@ -482,9 +490,14 @@
   "noreply@nedm.asus.com": {
     "timestamps": [
       1787287168.443645,
-      1787287248.699881
+      1787287248.699881,
+      1787874946.261946
     ],
-    "url_domains": [],
+    "url_domains": [
+      "dlcdnimgs.asus.com",
+      "omicard.asus.com",
+      "rog.asus.com"
+    ],
     "auth_summary": [
       "SPF:pass DKIM:pass DMARC:pass"
     ]
@@ -503,6 +516,84 @@
       1787287517.987488
     ],
     "url_domains": [],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "no-reply@mail.bookmyshow.com": {
+    "timestamps": [
+      1787879586.968515
+    ],
+    "url_domains": [
+      "link.mail.bookmyshow.com",
+      "d1ldtsunu0i0zh.cloudfront.net",
+      "mailer-assets-in.bmscdn.com",
+      "wizrocketmail.net"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "noreply@email.openai.com": {
+    "timestamps": [
+      1787882659.54041
+    ],
+    "url_domains": [
+      "u.email.openai.com",
+      "cdn.mcauto-images-production.sendgrid.net",
+      "www.w3.org",
+      "cdn.openai.com"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "noreply@mail.instagram.com": {
+    "timestamps": [
+      1787882698.121374
+    ],
+    "url_domains": [
+      "www.instagram.com",
+      "static.xx.fbcdn.net",
+      "scontent.cdninstagram.com",
+      "scontent.xx.fbcdn.net",
+      "www.facebook.com"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "marketing@engage.canva.com": {
+    "timestamps": [
+      1787882856.008025
+    ],
+    "url_domains": [
+      "fonts.googleapis.com",
+      "l.engage.canva.com",
+      "braze-images.com",
+      "content-management-files.canva.com"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "mitxadmin@mit.edu": {
+    "timestamps": [
+      1787883041.727479
+    ],
+    "url_domains": [
+      "fonts.googleapis.com",
+      "fonts.gstatic.com",
+      "us.list-manage.com",
+      "mailchi.mp",
+      "mcusercontent.com",
+      "mit.us6.list-manage.com",
+      "cdn-images.mailchimp.com",
+      "sawa-dev-2-storage-bucket.storage.googleapis.com",
+      "openlearning.mit.edu",
+      "micromasters.mit.edu",
+      "learn.mit.edu"
+    ],
     "auth_summary": [
       "SPF:pass DKIM:pass DMARC:pass"
     ]

@@ -661,6 +661,9 @@ def enforce_deterministic_priority(
         elif risk_score >= 60:
             decision["verdict"] = "HIGH RISK"
 
+        elif risk_score < 40:
+            decision["verdict"] = "SAFE"
+
         else:
             decision["verdict"] = "SUSPICIOUS"
 
@@ -687,6 +690,9 @@ def enforce_deterministic_priority(
 
         elif risk_score >= 60:
             decision["verdict"] = "HIGH RISK"
+
+        elif risk_score < 40:
+            decision["verdict"] = "SAFE"
 
         else:
             decision["verdict"] = "SUSPICIOUS"
@@ -747,6 +753,9 @@ def enforce_deterministic_priority(
 
             elif risk_score >= 60:
                 decision["verdict"] = "HIGH RISK"
+
+            elif risk_score < 40:
+                decision["verdict"] = "SAFE"
 
             else:
                 decision["verdict"] = "SUSPICIOUS"
@@ -826,13 +835,12 @@ def enforce_deterministic_priority(
             )
 
         elif has_negative:
-
-            decision["verdict"] = "SUSPICIOUS"
-
-            decision["detail_verdict"] = (
-                "TRUST_HISTORY_CONFLICT"
-            )
-
+            if risk_score < 40:
+                decision["verdict"] = "SAFE"
+            else:
+                decision["verdict"] = "SUSPICIOUS"
+                decision["detail_verdict"] = "TRUST_HISTORY_CONFLICT"
+            
             decision["confidence"] = min(
                 confidence,
                 55,

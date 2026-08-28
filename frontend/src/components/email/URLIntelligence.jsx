@@ -382,7 +382,7 @@ function UrlCard({ item }) {
                     <IndicatorBadge
                       label="TLS Violation"
                       isSuspicious={item.tls_policy_violation}
-                      type="error"
+                      type="warning"
                     />
 
                     <IndicatorBadge
@@ -453,7 +453,7 @@ function UrlCard({ item }) {
                       />
                     ) : (
                       <EvidenceRow
-                        type="error"
+                        type="warning"
                         text={
                           item.tls.error_detail
                             ? `TLS policy violation: ${item.tls.error_detail} (${item.tls.violation})`
@@ -492,26 +492,6 @@ function UrlCard({ item }) {
                     <EvidenceRow
                       type="success"
                       text="No redirects detected"
-                    />
-                  )}
-
-                  {/* Threat Intelligence */}
-                  {item.threat_intelligence?.status === "available" ? (
-                    item.threat_intelligence.detections > 0 ? (
-                      <EvidenceRow
-                        type="error"
-                        text={`Threat intelligence detected malicious activity (${item.threat_intelligence.detections} flags)`}
-                      />
-                    ) : (
-                      <EvidenceRow
-                        type="success"
-                        text="No malicious reputation detected"
-                      />
-                    )
-                  ) : (
-                    <EvidenceRow
-                      type="neutral"
-                      text="Threat intelligence was not queried"
                     />
                   )}
 

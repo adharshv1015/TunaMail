@@ -190,9 +190,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 2,
+    "messages_analyzed": 3,
     "first_seen": "2026-08-13T05:39:08.171378",
-    "last_seen": "2026-08-13T09:00:47.575684"
+    "last_seen": "2026-08-28T07:34:27.690388"
   },
   "help@acct.epicgames.com": {
     "normal_domains": [
@@ -278,9 +278,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 2,
+    "messages_analyzed": 4,
     "first_seen": "2026-08-17T04:39:25.620705",
-    "last_seen": "2026-08-17T04:57:34.242249"
+    "last_seen": "2026-08-28T06:25:21.745522"
   },
   "hr@oneteamsolutions.co.in": {
     "normal_domains": [

@@ -281,6 +281,8 @@ class DecisionValidator:
                     verdict = "PHISHING"
                 elif risk >= 60:
                     verdict = "HIGH RISK"
+                elif risk < 40:
+                    verdict = "SAFE"
                 else:
                     verdict = "SUSPICIOUS"
 
@@ -302,6 +304,8 @@ class DecisionValidator:
                     verdict = "PHISHING"
                 elif risk >= 60:
                     verdict = "HIGH RISK"
+                elif risk < 40:
+                    verdict = "SAFE"
                 else:
                     verdict = "SUSPICIOUS"
 
@@ -397,6 +401,10 @@ class DecisionValidator:
             elif risk >= 60:
                 verdict = "HIGH RISK"
                 detail = "STRONG_SECURITY_EVIDENCE"
+
+            elif risk < 40:
+                verdict = "SAFE"
+                detail = "SAFE_EVIDENCE"
 
             else:
                 verdict = "SUSPICIOUS"

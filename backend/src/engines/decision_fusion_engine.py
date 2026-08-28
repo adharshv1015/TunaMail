@@ -660,6 +660,9 @@ class DecisionFusionEngine:
             elif risk_score >= 40:
                 verdict = "SUSPICIOUS"
 
+            elif risk_score < 40:
+                verdict = "SAFE"
+
             else:
                 verdict = "SUSPICIOUS"
 
@@ -676,6 +679,9 @@ class DecisionFusionEngine:
 
         elif risk_score >= 40:
             verdict = "SUSPICIOUS"
+
+        elif risk_score < 40:
+            verdict = "SAFE"
 
         # -----------------------------------------------------
         # Priority 4:
@@ -704,6 +710,8 @@ class DecisionFusionEngine:
 
             if risk_score >= 40:
                 verdict = "SUSPICIOUS"
+            elif risk_score < 40:
+                verdict = "SAFE"
 
         # -----------------------------------------------------
         # Priority 5:

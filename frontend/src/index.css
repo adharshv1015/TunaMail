@@ -16,11 +16,11 @@
     --tm-accent-hover: #6366f1;
 
     /* Semantic Colors */
-    --color-safe: #10b981;
-    --color-low: #3b82f6;
-    --color-suspicious: #f59e0b;
-    --color-high: #f97316;
-    --color-phishing: #ef4444;
+    --risk-safe: #10b981;
+    --risk-low: #3b82f6;
+    --risk-suspicious: #f59e0b;
+    --risk-high: #f97316;
+    --risk-phishing: #ef4444;
   }
 
   .dark {
@@ -50,31 +50,38 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
+
   .custom-scrollbar::-webkit-scrollbar-track {
     background: #f1f5f9;
   }
+
   .dark .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
+
   .custom-scrollbar::-webkit-scrollbar-thumb {
     background-color: #cbd5e1;
     border-radius: 9999px;
   }
+
   .dark .custom-scrollbar::-webkit-scrollbar-thumb {
     background-color: #334155;
   }
+
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: #94a3b8;
   }
+
   .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: #475569;
   }

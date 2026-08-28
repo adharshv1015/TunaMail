@@ -12,10 +12,10 @@ export function getVerdictStyle(verdict = "") {
     case "UNKNOWN":
       return "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-500/12 dark:text-yellow-400 dark:border-yellow-500/25";
     case "LOW RISK":
-    case "SAFE":
       return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/12 dark:text-blue-400 dark:border-blue-500/25";
     case "LIKELY LEGITIMATE":
       return "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-500/12 dark:text-teal-400 dark:border-teal-500/25";
+    case "SAFE":
     case "VERIFIED LEGITIMATE":
       return "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/12 dark:text-emerald-400 dark:border-emerald-500/25";
     case "UNANALYZED":
