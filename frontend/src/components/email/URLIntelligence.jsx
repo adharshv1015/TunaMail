@@ -382,7 +382,7 @@ function UrlCard({ item }) {
                     <IndicatorBadge
                       label="TLS Violation"
                       isSuspicious={item.tls_policy_violation}
-                      type="warning"
+                      type="error"
                     />
 
                     <IndicatorBadge
@@ -453,7 +453,7 @@ function UrlCard({ item }) {
                       />
                     ) : (
                       <EvidenceRow
-                        type="warning"
+                        type="error"
                         text={
                           item.tls.error_detail
                             ? `TLS policy violation: ${item.tls.error_detail} (${item.tls.violation})`

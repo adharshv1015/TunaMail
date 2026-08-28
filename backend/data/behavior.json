@@ -291,7 +291,9 @@
       1786601746.166902,
       1786921600.767053,
       1786943510.230554,
-      1786946999.097983
+      1786946999.097983,
+      1787889259.017287,
+      1787897850.400228
     ],
     "url_domains": [
       "imagescommunications.sbi.bank.in",
@@ -326,7 +328,8 @@
   "messages-noreply@linkedin.com": {
     "timestamps": [
       1786579748.394492,
-      1787882667.944637
+      1787882667.944637,
+      1787897829.255913
     ],
     "url_domains": [
       "www.linkedin.com",
@@ -334,7 +337,10 @@
       "apps.microsoft.com",
       "itunes.apple.com",
       "play.google.com",
-      "www.w3.org"
+      "www.w3.org",
+      "in.linkedin.com",
+      "media.licdn.com",
+      "schema.org"
     ],
     "auth_summary": [
       "SPF:pass DKIM:pass DMARC:pass"
@@ -471,9 +477,15 @@
     "timestamps": [
       1786937211.485451,
       1786946977.667281,
-      1787275953.692111
+      1787275953.692111,
+      1787897923.539408
     ],
-    "url_domains": [],
+    "url_domains": [
+      "us.list-manage.com",
+      "oneteamsolutions.us6.list-manage.com",
+      "www.w3.org",
+      "mcusercontent.com"
+    ],
     "auth_summary": [
       "SPF:pass DKIM:pass DMARC:pass"
     ]

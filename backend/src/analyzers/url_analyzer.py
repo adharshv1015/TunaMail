@@ -16,6 +16,7 @@ from urllib.parse import (
 )
 
 import tldextract
+from src.services.mta_sts_service import MTASTSService
 
 try:
     from bs4 import BeautifulSoup
@@ -182,6 +183,8 @@ class URLAnalyzer:
             if inspection_service is not None
             else URLInspectionService()
         )
+
+        self.mta_sts_service = MTASTSService()
 
         self._tld_cache: Dict[
             str,
@@ -731,6 +734,28 @@ class URLAnalyzer:
             ] = registered_domain
 
         # ----------------------------------------------------
+        # ----------------------------------------------------
+        # MTA-STS policy
+        # ----------------------------------------------------
+
+        try:
+            mta_sts_result = self.mta_sts_service.analyze(
+                registered_domain
+            )
+        except Exception as exc:
+            mta_sts_result = {
+                "available": False,
+                "mode": "unknown",
+                "strict": False,
+                "valid_policy": False,
+                "issues": [str(exc)],
+                "severity": "INFO",
+                "evidence_type": "MTA_STS_POLICY",
+            }
+
+        inspection_data["mta_sts"] = mta_sts_result
+
+        # ----------------------------------------------------
         # Basic lexical indicators
         # ----------------------------------------------------
 
@@ -1221,7 +1246,8 @@ class URLAnalyzer:
                     len(brand) >= 4
                     and (
                         brand == label
-                        or brand in label
+                        or f"{brand}-" in label
+                        or f"-{brand}" in label
                     )
                 )
                 for label in labels
@@ -1254,6 +1280,13 @@ class URLAnalyzer:
                         label
                     )
                 )
+
+                if normalized_label in {
+                    "static", "mail", "login", "accounts", "support", 
+                    "cdn", "api", "www", "app", "web", "secure",
+                    "update", "auth", "billing", "help", "myaccount"
+                }:
+                    continue
 
                 if (
                     normalized_label
@@ -2019,6 +2052,62 @@ class URLAnalyzer:
                 )
             )
 
+        # ----------------------------------------------------
+        # MTA-STS
+        # ----------------------------------------------------
+
+        mta_sts = (
+            inspection_data.get(
+                "mta_sts",
+                {},
+            )
+            or {}
+        )
+
+        if mta_sts.get("strict") and mta_sts.get("valid_policy"):
+            evidence.append(
+                self._evidence(
+                    type_="MTA_STS_STRICT",
+                    severity="LOW",
+                    direction="POSITIVE",
+                    source="MTASTSService",
+                    explanation=(
+                        "Receiving domain publishes a valid MTA-STS "
+                        "policy in enforce mode."
+                    ),
+                    confidence=0.95,
+                )
+            )
+
+        elif mta_sts.get("available") and mta_sts.get("issues"):
+            evidence.append(
+                self._evidence(
+                    type_="MTA_STS_POLICY",
+                    severity=self._normalize_severity(
+                        mta_sts.get(
+                            "severity",
+                            "MEDIUM",
+                        )
+                    ),
+                    direction="NEGATIVE",
+                    source="MTASTSService",
+                    explanation=(
+                        "MTA-STS policy issue: "
+                        + "; ".join(
+                            str(item)
+                            for item in (
+                                mta_sts.get(
+                                    "issues",
+                                    [],
+                                )
+                                or []
+                            )
+                        )
+                    ),
+                    confidence=0.85,
+                )
+            )
+
         return evidence
 
     # ========================================================
@@ -2490,3 +2579,11 @@ class URLAnalyzer:
             )
 
         return result
+
+
+
+
+
+
+
+

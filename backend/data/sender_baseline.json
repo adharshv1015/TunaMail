@@ -157,9 +157,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 4,
+    "messages_analyzed": 6,
     "first_seen": "2026-08-13T05:38:12.860920",
-    "last_seen": "2026-08-13T08:59:27.332123"
+    "last_seen": "2026-08-28T11:49:33.348963"
   },
   "sbi@communications.sbi.co.in": {
     "normal_domains": [
@@ -190,9 +190,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 3,
+    "messages_analyzed": 5,
     "first_seen": "2026-08-13T05:39:08.171378",
-    "last_seen": "2026-08-28T07:34:27.690388"
+    "last_seen": "2026-08-28T11:58:13.148159"
   },
   "help@acct.epicgames.com": {
     "normal_domains": [

@@ -27,7 +27,6 @@ STRONG_NEGATIVE_TYPES = {
     "HOMOGRAPH_DOMAIN",
     "PUNYCODE_DOMAIN",
     "HOSTNAME_MISMATCH",
-    "TLS_POLICY_VIOLATION",
     "CREDENTIAL_REQUEST",
     "FINANCIAL_REQUEST",
     "AUTHENTICATION_FAILURE",
@@ -265,7 +264,7 @@ def _collect_legacy_evidence(
         ),
         "tls policy violation": (
             "TLS_POLICY_VIOLATION",
-            "HIGH",
+            "MEDIUM",
         ),
         "punycode domain detected": (
             "PUNYCODE_DOMAIN",

@@ -22,7 +22,6 @@ class DecisionConsistencyValidator:
         "SUSPICIOUS_REDIRECT",
         "DOMAIN_MISMATCH",
         "HOSTNAME_MISMATCH",
-        "TLS_POLICY_VIOLATION",
     }
 
     def validate(self, final_decision, evidence_graph=None):

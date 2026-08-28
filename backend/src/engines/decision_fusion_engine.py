@@ -36,7 +36,6 @@ class DecisionFusionEngine:
         "HOMOGRAPH_DOMAIN",
         "PUNYCODE_DOMAIN",
         "HOSTNAME_MISMATCH",
-        "TLS_POLICY_VIOLATION",
         "CREDENTIAL_REQUEST",
         "FINANCIAL_REQUEST",
         "AUTHENTICATION_FAILURE",
@@ -344,9 +343,6 @@ class DecisionFusionEngine:
             "hostname mismatch": (
                 "HOSTNAME_MISMATCH"
             ),
-            "tls policy violation": (
-                "TLS_POLICY_VIOLATION"
-            ),
             "punycode": (
                 "PUNYCODE_DOMAIN"
             ),
@@ -361,6 +357,12 @@ class DecisionFusionEngine:
             ),
             "financial request": (
                 "FINANCIAL_REQUEST"
+            ),
+        }
+
+        medium_patterns = {
+            "tls policy violation": (
+                "TLS_POLICY_VIOLATION"
             ),
         }
 
@@ -393,6 +395,15 @@ class DecisionFusionEngine:
                         if pattern in lowered:
                             matched_type = evidence_type
                             severity = "HIGH"
+                            break
+
+                if not matched_type:
+                    for pattern, evidence_type in (
+                        medium_patterns.items()
+                    ):
+                        if pattern in lowered:
+                            matched_type = evidence_type
+                            severity = "MEDIUM"
                             break
 
                 if matched_type:

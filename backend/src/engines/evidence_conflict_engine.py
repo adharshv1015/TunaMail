@@ -48,7 +48,6 @@ class EvidenceConflictEngine:
         "HOMOGRAPH_DOMAIN",
         "PUNYCODE_DOMAIN",
         "HOSTNAME_MISMATCH",
-        "TLS_POLICY_VIOLATION",
         "CREDENTIAL_REQUEST",
         "FINANCIAL_REQUEST",
         "AUTHENTICATION_FAILURE",
