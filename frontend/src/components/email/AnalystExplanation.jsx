@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import api from "../../services/api";
+import React, { useState } from 'react';
 
 const SEVERITY_COLORS = {
   CRITICAL: 'bg-red-500/10 text-red-600 border-red-500/20 dark:text-red-400',
@@ -16,7 +15,13 @@ const EvidenceCard = ({ item }) => {
     <div className={`p-3 rounded-lg border text-sm mb-2 ${colorClass}`}>
       <div className="flex justify-between items-center mb-1">
         <span className="font-bold">[{item.severity}] {item.type.replace(/_/g, ' ').toUpperCase()}</span>
-        <span className="text-xs opacity-75">Confidence: {item.confidence}%</span>
+        <span className="text-xs opacity-75">
+          Confidence: {Math.round(
+            Number(item.confidence) <= 1
+              ? Number(item.confidence) * 100
+              : Number(item.confidence)
+          )}%
+        </span>
       </div>
       <div className="mb-1"><span className="font-semibold">Source:</span> {item.source}</div>
       {item.observation && item.observation !== item.explanation && <div className="mb-1"><span className="font-semibold">Observation:</span> {item.observation}</div>}
@@ -27,67 +32,14 @@ const EvidenceCard = ({ item }) => {
 
 const AnalystExplanation = ({ messageId, decision, sender }) => {
   const [expanded, setExpanded] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [pendingLabel, setPendingLabel] = useState("");
-  const [reason, setReason] = useState("");
 
   const explanation = decision?.explanation || {};
 
-  useEffect(() => {
-    // Fetch previous feedback if any
-    api.get(`/gmail/message/${messageId}/feedback`)
-      .then(r => {
-        if (r.data && r.data.analyst_label) {
-          setFeedbackState(r.data);
-        }
-      })
-      .catch(e => {
-        // usually 404 if no feedback exists yet
-      });
-  }, [messageId]);
-
-  const handleFeedbackClick = (label) => {
-    setPendingLabel(label);
-    setModalOpen(true);
-  };
-
-  const submitFeedback = async () => {
-    try {
-      const response = await fetch(
-          `http://localhost:8000/gmail/message/${messageId}/feedback`,
-          {
-              method: "POST",
-              headers: {
-                  "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                  feedback: pendingLabel,
-              }),
-          }
-      );
-
-      if (!response.ok) {
-          throw new Error(
-              `Feedback request failed: ${response.status}`
-          );
-      }
-      
-      setFeedbackState({ analyst_label: pendingLabel });
-      setModalOpen(false);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  // Support both Stage 13 (groups) and legacy (summary) schemas
-  const hasStage13 = explanation && explanation.groups;
-  const hasLegacy  = explanation && explanation.summary;
-
-  if (!decision || (!hasStage13 && !hasLegacy)) return null;
+  if (!decision) return null;
 
   return (
     <div className="mt-6 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 overflow-hidden">
-      <div 
+      <div
         className="p-4 bg-slate-100 dark:bg-slate-800 flex justify-between items-center cursor-pointer select-none"
         onClick={() => setExpanded(!expanded)}
       >
@@ -96,8 +48,9 @@ const AnalystExplanation = ({ messageId, decision, sender }) => {
             🛡️ ANALYST EXPLANATION
           </h3>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-            Verdict: <span className="font-bold">{decision.verdict}</span> | 
-            Risk: {decision.risk_score}/100 | 
+            Verdict: <span className="font-bold">{decision.verdict}</span> |
+            Detail: <span className="font-bold">{decision.detail_verdict || 'N/A'}</span> |
+            Risk: {decision.risk_score}/100 |
             Confidence: {decision.confidence}%
           </p>
         </div>
@@ -143,7 +96,7 @@ const AnalystExplanation = ({ messageId, decision, sender }) => {
                 <div className="text-sm text-slate-500 italic p-2">No negative evidence.</div>
               )}
             </div>
-            
+
             <div>
               <h4 className="font-semibold text-slate-800 dark:text-slate-200 uppercase text-xs tracking-wider mb-2">
                 Positive Security Evidence ({explanation.positive_evidence?.length || 0})

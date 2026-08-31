@@ -141,8 +141,8 @@
   },
   "jobalerts-noreply@linkedin.com": {
     "sender": "jobalerts-noreply@linkedin.com",
-    "messages_seen": 5,
-    "legitimate_count": 0,
+    "messages_seen": 6,
+    "legitimate_count": 1,
     "suspicious_count": 2,
     "phishing_count": 3,
     "reputation": "HIGH_RISK",
@@ -151,7 +151,8 @@
       "19fc0765ec375b7c",
       "1a022bd0a86a8fcd",
       "1a0224f2787787f8",
-      "1a0465bb4028ddaf"
+      "1a0465bb4028ddaf",
+      "1a050a86b13ea4ba"
     ]
   },
   "naukrialerts@naukri.com": {
@@ -187,15 +188,16 @@
   },
   "updates-noreply@linkedin.com": {
     "sender": "updates-noreply@linkedin.com",
-    "messages_seen": 3,
-    "legitimate_count": 0,
+    "messages_seen": 4,
+    "legitimate_count": 1,
     "suspicious_count": 1,
     "phishing_count": 2,
     "reputation": "UNKNOWN",
     "seen_message_ids": [
       "19ff6f6fcfe357ac",
       "1a01fbbfb31bdcae",
-      "1a040c7782b1e417"
+      "1a040c7782b1e417",
+      "1a051f1fd1b7815c"
     ]
   },
   "messages-noreply@linkedin.com": {
@@ -247,14 +249,15 @@
   },
   "donotreply@match.indeed.com": {
     "sender": "donotreply@match.indeed.com",
-    "messages_seen": 2,
-    "legitimate_count": 0,
+    "messages_seen": 3,
+    "legitimate_count": 1,
     "suspicious_count": 1,
     "phishing_count": 1,
     "reputation": "NEW",
     "seen_message_ids": [
       "19fbe287c2fa5309",
-      "1a01ff9c4cceda98"
+      "1a01ff9c4cceda98",
+      "1a04e4d62900ad5c"
     ]
   },
   "ansonkalleri@gmail.com": {
@@ -326,16 +329,17 @@
   },
   "hr@oneteamsolutions.co.in": {
     "sender": "hr@oneteamsolutions.co.in",
-    "messages_seen": 4,
+    "messages_seen": 5,
     "legitimate_count": 0,
-    "suspicious_count": 3,
+    "suspicious_count": 4,
     "phishing_count": 1,
     "reputation": "HIGH_RISK",
     "seen_message_ids": [
       "1a00e787cda6aaf2",
       "1a004c0d36000806",
       "1a022f94df293e96",
-      "1a047fabc200cea7"
+      "1a047fabc200cea7",
+      "1a0569037df5575e"
     ]
   },
   "store@email.epicgames.com": {
@@ -351,15 +355,16 @@
   },
   "noreply@nedm.asus.com": {
     "sender": "noreply@nedm.asus.com",
-    "messages_seen": 3,
-    "legitimate_count": 0,
+    "messages_seen": 4,
+    "legitimate_count": 1,
     "suspicious_count": 3,
     "phishing_count": 0,
     "reputation": "NEW",
     "seen_message_ids": [
       "1a021cd5e4f8b6f3",
       "1a02073a24437546",
-      "1a044565813a8088"
+      "1a044565813a8088",
+      "1a053d40f6f3115b"
     ]
   },
   "noreply@embark.email": {
@@ -437,6 +442,28 @@
     "reputation": "UNKNOWN",
     "seen_message_ids": [
       "1a03ff4f429d006a"
+    ]
+  },
+  "info@naukri.com": {
+    "sender": "info@naukri.com",
+    "messages_seen": 1,
+    "legitimate_count": 1,
+    "suspicious_count": 0,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN",
+    "seen_message_ids": [
+      "1a055e72ebd0d644"
+    ]
+  },
+  "contentnc@naukri.com": {
+    "sender": "contentnc@naukri.com",
+    "messages_seen": 1,
+    "legitimate_count": 1,
+    "suspicious_count": 0,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN",
+    "seen_message_ids": [
+      "1a052d5e1f3bb67a"
     ]
   }
 }

@@ -3,7 +3,8 @@
 # ============================================================
 
 from __future__ import annotations
-
+from functools import lru_cache
+from src.services.url_inspection_service import _resolve_dns
 import difflib
 import ipaddress
 import re
@@ -173,7 +174,22 @@ class URLAnalyzer:
         r"[A-Za-z0-9._%+-]+@"
         r"[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
     )
+    @staticmethod
+    @lru_cache(maxsize=128)
+    def _get_domain_ips(domain: str) -> set:
+        """Resolve a domain to a set of validated IP addresses with caching."""
+        if not domain:
+            return set()
 
+        try:
+            dns_result = _resolve_dns(domain) or {}
+
+            return set(
+                dns_result.get("validated_ips") or []
+            )
+
+        except Exception:
+            return set()
     def __init__(
         self,
         inspection_service=None,
@@ -1095,6 +1111,12 @@ class URLAnalyzer:
             )
         )
 
+        # Store for downstream evidence building before any
+        # alignment return statements.
+        inspection_data[
+            "sender_registered_domain"
+        ] = sender_registered_domain
+
         return_path_registered_domain = (
             self._registered_domain(
                 return_path_domain
@@ -1137,7 +1159,6 @@ class URLAnalyzer:
             return "misaligned"
 
         return "unknown"
-
     # ========================================================
     # Brand relationship
     # ========================================================
@@ -1964,7 +1985,6 @@ class URLAnalyzer:
             )
 
         elif alignment == "misaligned":
-
             evidence.append(
                 self._evidence(
                     type_="DOMAIN_MISMATCH",
@@ -1978,6 +1998,37 @@ class URLAnalyzer:
                 )
             )
 
+            # Supporting DNS infrastructure evidence only.
+            # Never changes alignment from misaligned to aligned.
+            url_dns = inspection_data.get("dns") or {}
+            url_ips = set(url_dns.get("validated_ips") or [])
+
+            sender_registered = inspection_data.get(
+                "sender_registered_domain"
+            )
+
+            if url_ips and sender_registered:
+                sender_ips = self._get_domain_ips(
+                    sender_registered
+                )
+
+                if not sender_ips.isdisjoint(url_ips):
+                    evidence.append(
+                        self._evidence(
+                            type_="DNS_INFRASTRUCTURE_MATCH",
+                            severity="INFO",
+                            direction="POSITIVE",
+                            source="URLAnalyzer",
+                            explanation=(
+                                "Sender and destination domains share "
+                                "resolved IP infrastructure despite domain "
+                                "mismatch; shared infrastructure does not "
+                                "establish common ownership."
+                            ),
+                            confidence=0.55,
+                        )
+                    )
+        return evidence
         # ----------------------------------------------------
         # TLS
         # ----------------------------------------------------

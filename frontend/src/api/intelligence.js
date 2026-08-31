@@ -23,15 +23,6 @@ export const getRelatedMessages = (messageId) =>
 export const getCampaign = (campaignId) =>
   api.get(`${BASE}/campaign/${campaignId}`);
 
-/** Submit analyst feedback */
-export const submitFeedback = (messageId, analystVerdict, automatedVerdict, comment = "") =>
-  api.post(`${BASE}/feedback`, {
-    message_id: messageId,
-    analyst_verdict: analystVerdict,
-    automated_verdict: automatedVerdict,
-    comment,
-  });
-
 /** Submit analyst verdict override (automated verdict preserved separately) */
 export const submitAnalystVerdict = (messageId, analystVerdict, comment = "") =>
   api.post(`${BASE}/analyst-verdict`, {

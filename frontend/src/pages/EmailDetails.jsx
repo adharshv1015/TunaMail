@@ -26,7 +26,7 @@ export default function EmailDetails() {
     };
 
     fetchEmail();
-  }, [id]);
+  }, [id, notify]);
 
   if (loading) {
     return <div style={{ color: 'var(--text-main)', textAlign: 'center', marginTop: '3rem' }}>Loading email details...</div>;
@@ -47,11 +47,11 @@ export default function EmailDetails() {
   const intel = analysis.intelligence || {};
 
   const verdict = decision.verdict || "UNKNOWN";
-  const verdictColor = verdict === 'PHISHING' ? 'var(--risk-phishing)' : 
-                       verdict === 'HIGH RISK' ? 'var(--risk-high)' : 
-                       verdict === 'SUSPICIOUS' ? 'var(--risk-suspicious)' : 
-                       verdict === 'UNKNOWN' ? 'var(--tm-text-secondary)' : 
-                       'var(--risk-safe)';
+  const verdictColor = verdict === 'PHISHING' ? 'var(--risk-phishing)' :
+    verdict === 'HIGH RISK' ? 'var(--risk-high)' :
+      verdict === 'SUSPICIOUS' ? 'var(--risk-suspicious)' :
+        verdict === 'UNKNOWN' ? 'var(--tm-text-secondary)' :
+          'var(--risk-safe)';
 
   const getRiskColor = (score) => {
     if (score <= 30) return 'var(--risk-safe)';
@@ -60,7 +60,7 @@ export default function EmailDetails() {
   };
 
   let bannerConfig = { bgColor: 'rgba(113, 113, 122, 0.1)', borderColor: '#71717a', color: '#71717a', icon: '❓', text: 'UNKNOWN', description: 'This email could not be fully verified.' };
-  
+
   if (verdict === 'VERIFIED LEGITIMATE' || verdict === 'LIKELY LEGITIMATE') {
     bannerConfig = { bgColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'var(--risk-safe)', color: 'var(--risk-safe)', icon: '🛡️', text: verdict, description: 'This email appears legitimate and safe to open.' };
   } else if (verdict === 'PHISHING' || verdict === 'HIGH RISK') {
@@ -71,7 +71,7 @@ export default function EmailDetails() {
 
   return (
     <div className="email-details-page" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      
+
       {/* VERDICT BANNER */}
       <div style={{
         display: 'flex',
@@ -98,7 +98,7 @@ export default function EmailDetails() {
 
       {/* EXPORT ACTION BAR */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '-1rem' }}>
-        <a 
+        <a
           href={`http://localhost:8000/report/pdf/${id}`}
           target="_blank"
           rel="noreferrer"
@@ -109,7 +109,7 @@ export default function EmailDetails() {
         >
           📄 Export PDF
         </a>
-        <a 
+        <a
           href={`http://localhost:8000/report/json/${id}`}
           target="_blank"
           rel="noreferrer"
@@ -128,10 +128,10 @@ export default function EmailDetails() {
         <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '0.5rem 1rem', fontSize: '0.95rem' }}>
           <span style={{ color: 'var(--text-muted)' }}>From:</span>
           <span style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>{email.from || email.sender || "Unknown Sender"}</span>
-          
+
           <span style={{ color: 'var(--text-muted)' }}>To:</span>
           <span style={{ color: 'var(--text-main)' }}>{email.to || "Unknown Recipient"}</span>
-          
+
           <span style={{ color: 'var(--text-muted)' }}>Date:</span>
           <span style={{ color: 'var(--text-main)' }}>{email.date || email.time || "Unknown Date"}</span>
 
@@ -156,9 +156,9 @@ export default function EmailDetails() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', overflowX: 'auto', paddingBottom: '1rem' }}>
           {['Authentication', 'Content Analysis', 'URL Inspection', 'WHOIS', 'Local AI', 'ARE', 'Decision Fusion'].map((stage, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <div style={{ 
-                padding: '0.5rem 1rem', 
-                borderRadius: '8px', 
+              <div style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
                 backgroundColor: 'rgba(255,255,255,0.05)',
                 border: '1px solid var(--border-color)',
                 fontSize: '0.85rem',
@@ -183,9 +183,9 @@ export default function EmailDetails() {
         <div className="glass" style={{ padding: '2rem', borderRadius: '12px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           <h2 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Risk Score</h2>
           <div style={{ width: '100%', maxWidth: '200px', height: '12px', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '999px', overflow: 'hidden', marginBottom: '0.5rem' }}>
-            <div style={{ 
-              height: '100%', 
-              width: `${reasoning.risk_score || 0}%`, 
+            <div style={{
+              height: '100%',
+              width: `${reasoning.risk_score || 0}%`,
               backgroundColor: getRiskColor(reasoning.risk_score || 0),
               transition: 'width 1s ease-out'
             }} />
@@ -215,7 +215,7 @@ export default function EmailDetails() {
 
       {/* EVIDENCE CARDS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
-        
+
         {/* Technical */}
         <div className="glass" style={{ padding: '2rem', borderRadius: '12px', borderTop: '4px solid #3b82f6' }}>
           <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Technical</h2>
@@ -293,7 +293,7 @@ export default function EmailDetails() {
 
       {/* ANALYSIS GRID */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
-        
+
         {/* AUTHENTICATION */}
         <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
           <h2 style={{ marginBottom: '1rem' }}>Authentication</h2>
@@ -302,12 +302,12 @@ export default function EmailDetails() {
             <span style={{ color: (auth.spf === 'pass' || auth.spf_result === 'pass') ? 'var(--risk-safe)' : 'var(--risk-high)', fontWeight: 'bold' }}>
               {(auth.spf || auth.spf_result || "unknown").toUpperCase()}
             </span>
-            
+
             <span style={{ color: 'var(--text-muted)' }}>DKIM:</span>
             <span style={{ color: (auth.dkim === 'pass' || auth.dkim_result === 'pass') ? 'var(--risk-safe)' : 'var(--risk-high)', fontWeight: 'bold' }}>
               {(auth.dkim || auth.dkim_result || "unknown").toUpperCase()}
             </span>
-            
+
             <span style={{ color: 'var(--text-muted)' }}>DMARC:</span>
             <span style={{ color: (auth.dmarc === 'pass' || auth.dmarc_result === 'pass') ? 'var(--risk-safe)' : 'var(--risk-high)', fontWeight: 'bold' }}>
               {(auth.dmarc || auth.dmarc_result || "unknown").toUpperCase()}
@@ -363,7 +363,7 @@ export default function EmailDetails() {
         {(analysis.ai || analysis.explanation) && (
           <div className="glass" style={{ padding: '2rem', borderRadius: '12px', borderTop: '4px solid #f43f5e', gridColumn: '1 / -1' }}>
             <h2 style={{ marginBottom: '1rem' }}>AI Evidence & Reasoning</h2>
-            
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
               <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px' }}>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>AI Assessment</div>
@@ -408,355 +408,490 @@ export default function EmailDetails() {
               </div>
             </div>
 
-            {analysis.explanation && (
-              <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
-                <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem', color: 'var(--accent-secondary)' }}>Why this verdict?</h3>
-                <div style={{ fontSize: '0.95rem', color: 'var(--text-main)', marginBottom: '0.5rem' }}>{analysis.explanation.summary}</div>
-                {analysis.explanation.confidence_reason && (
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>{analysis.explanation.confidence_reason}</div>
+            {decision.explanation && (
+              <div
+                style={{
+                  marginTop: '1.5rem',
+                  padding: '1.5rem',
+                  backgroundColor: 'rgba(255,255,255,0.05)',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)'
+                }}>
+                <h3
+                  style={{
+                    fontSize: '1.1rem',
+                    marginBottom: '1rem',
+                    color: 'var(--accent-secondary)'
+                  }}>
+                  🛡️ Analyst Explanation
+                </h3>
+
+                {decision.explanation.primary_reason && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div
+                      style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        color: 'var(--text-muted)',
+                        marginBottom: '0.4rem'
+                      }}
+                    >
+                      Primary Reason
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: '0.95rem',
+                        color: 'var(--text-main)'
+                      }}
+                    >
+                      {decision.explanation.primary_reason}
+                    </div>
+                  </div>
                 )}
+
+                {decision.explanation.confidence_factors?.length > 0 && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div
+                      style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        color: 'var(--text-muted)',
+                        marginBottom: '0.4rem'
+                      }}
+                    >
+                      Confidence Factors
+                    </div>
+
+                    <ul
+                      style={{
+                        paddingLeft: '1.5rem',
+                        margin: 0,
+                        fontSize: '0.9rem',
+                        color: 'var(--text-main)'
+                      }}
+                    >
+                      {decision.explanation.confidence_factors.map((factor, i) => (
+                        <li key={i}>{factor}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {decision.explanation.limitations?.length > 0 && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div
+                      style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        color: 'var(--risk-suspicious)',
+                        marginBottom: '0.4rem'
+                      }}
+                    >
+                      Limitations & Contradictions
+                    </div>
+
+                    <ul
+                      style={{
+                        paddingLeft: '1.5rem',
+                        margin: 0,
+                        fontSize: '0.9rem',
+                        color: 'var(--text-main)'
+                      }}
+                    >
+                      {decision.explanation.limitations.map((limitation, i) => (
+                        <li key={i}>{limitation}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {decision.explanation.negative_evidence?.length > 0 && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div
+                      style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        color: 'var(--risk-high)',
+                        marginBottom: '0.4rem'
+                      }}
+                    >
+                      Negative Security Evidence
+                    </div>
+
+                    {decision.explanation.negative_evidence.map((ev, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          padding: '0.75rem',
+                          marginBottom: '0.5rem',
+                          borderRadius: '6px',
+                          backgroundColor: 'rgba(239,68,68,0.08)',
+                          border: '1px solid rgba(239,68,68,0.2)'
+                        }}
+                      >
+                        <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>
+                          [{ev.severity}] {String(ev.type || '').replace(/_/g, ' ')}
+                        </div>
+
+                        <div
+                          style={{
+                            fontSize: '0.8rem',
+                            color: 'var(--text-muted)',
+                            marginTop: '0.25rem'
+                          }}
+                        >
+                          Source: {ev.source} · Confidence: {ev.confidence}
+                        </div>
+
+                        {ev.explanation && (
+                          <div
+                            style={{
+                              fontSize: '0.85rem',
+                              marginTop: '0.4rem',
+                              color: 'var(--text-main)'
+                            }}
+                          >
+                            {ev.explanation}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {decision.explanation.positive_evidence?.length > 0 && (
+                  <div>
+                    <div
+                      style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        color: 'var(--risk-safe)',
+                        marginBottom: '0.4rem'
+                      }}
+                    >
+                      Positive Security Evidence
+                    </div>
+
+                    {decision.explanation.positive_evidence.map((ev, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          padding: '0.75rem',
+                          marginBottom: '0.5rem',
+                          borderRadius: '6px',
+                          backgroundColor: 'rgba(16,185,129,0.08)',
+                          border: '1px solid rgba(16,185,129,0.2)'
+                        }}
+                      >
+                        <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>
+                          [{ev.severity}] {String(ev.type || '').replace(/_/g, ' ')}
+                        </div>
+
+                        <div
+                          style={{
+                            fontSize: '0.8rem',
+                            color: 'var(--text-muted)',
+                            marginTop: '0.25rem'
+                          }}
+                        >
+                          Source: {ev.source} · Confidence: {ev.confidence}
+                        </div>
+
+                        {ev.explanation && (
+                          <div
+                            style={{
+                              fontSize: '0.85rem',
+                              marginTop: '0.4rem',
+                              color: 'var(--text-main)'
+                            }}
+                          >
+                            {ev.explanation}
+                          </div>
+                        )}
+
+                      </div>
+                    ))}
+                  </div>
+                )}
+
               </div>
             )}
-          </div>
-        )}
-      </div>
 
-      {/* ORIGINAL BODY */}
-      <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
-        <h2 style={{ marginBottom: '1rem' }}>Body</h2>
-        <div style={{ 
-            color: 'var(--text-main)', 
-            whiteSpace: 'pre-wrap', 
-            backgroundColor: 'rgba(0,0,0,0.2)', 
-            padding: '1.5rem', 
-            borderRadius: '8px',
-            maxHeight: '400px',
-            overflowY: 'auto',
-            fontFamily: 'sans-serif',
-            fontSize: '0.9rem',
-            lineHeight: '1.5'
-          }}>
-          {email.body || "No body content available."}
-        </div>
-      </div>
 
-      {/* RAW HEADERS */}
-      <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
-        <h2 style={{ marginBottom: '1rem' }}>Headers</h2>
-        <div style={{ 
-            color: 'var(--text-muted)', 
-            fontFamily: 'monospace', 
-            whiteSpace: 'pre-wrap', 
-            backgroundColor: 'rgba(0,0,0,0.3)', 
-            padding: '1.5rem', 
-            borderRadius: '8px',
-            maxHeight: '300px',
-            overflowY: 'auto',
-            fontSize: '0.8rem',
-            wordBreak: 'break-all'
-          }}>
-          {email.headers ? (typeof email.headers === 'string' ? email.headers : JSON.stringify(email.headers, null, 2)) : "No raw headers available."}
-        </div>
-      </div>
+            {/* ORIGINAL BODY */}
+            <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
+              <h2 style={{ marginBottom: '1rem' }}>Body</h2>
+              <div style={{
+                color: 'var(--text-main)',
+                whiteSpace: 'pre-wrap',
+                backgroundColor: 'rgba(0,0,0,0.2)',
+                padding: '1.5rem',
+                borderRadius: '8px',
+                maxHeight: '400px',
+                overflowY: 'auto',
+                fontFamily: 'sans-serif',
+                fontSize: '0.9rem',
+                lineHeight: '1.5'
+              }}>
+                {email.body || "No body content available."}
+              </div>
+            </div>
 
-      {/* ====================================================
+            {/* RAW HEADERS */}
+            <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
+              <h2 style={{ marginBottom: '1rem' }}>Headers</h2>
+              <div style={{
+                color: 'var(--text-muted)',
+                fontFamily: 'monospace',
+                whiteSpace: 'pre-wrap',
+                backgroundColor: 'rgba(0,0,0,0.3)',
+                padding: '1.5rem',
+                borderRadius: '8px',
+                maxHeight: '300px',
+                overflowY: 'auto',
+                fontSize: '0.8rem',
+                wordBreak: 'break-all'
+              }}>
+                {email.headers ? (typeof email.headers === 'string' ? email.headers : JSON.stringify(email.headers, null, 2)) : "No raw headers available."}
+              </div>
+            </div>
+
+            {/* ====================================================
            STAGE 5 INTELLIGENCE SECTIONS
            All sections below are additive — existing layout unchanged
          ==================================================== */}
 
-      {/* ATTACK PATTERNS */}
-      {intel.attack_patterns && intel.attack_patterns.length > 0 && (
-        <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
-          <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>⚔️ Attack Patterns Detected</h2>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-            {intel.attack_patterns.map((p, i) => (
-              <div key={i} style={{
-                padding: '0.6rem 1.2rem',
-                borderRadius: '8px',
-                backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                border: '1px solid rgba(239, 68, 68, 0.4)',
-                color: 'var(--risk-phishing)',
-                fontSize: '0.85rem',
-                fontWeight: 'bold'
-              }}>
-                {p.name.replace(/_/g, ' ')} — {p.confidence}% confidence
+            {/* ATTACK PATTERNS */}
+            {intel.attack_patterns && intel.attack_patterns.length > 0 && (
+              <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
+                <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>⚔️ Attack Patterns Detected</h2>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  {intel.attack_patterns.map((p, i) => (
+                    <div key={i} style={{
+                      padding: '0.6rem 1.2rem',
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid rgba(239, 68, 68, 0.4)',
+                      color: 'var(--risk-phishing)',
+                      fontSize: '0.85rem',
+                      fontWeight: 'bold'
+                    }}>
+                      {p.name.replace(/_/g, ' ')} — {p.confidence}% confidence
+                    </div>
+                  ))}
+                </div>
+                {intel.attack_patterns[0]?.matched_signals?.length > 0 && (
+                  <ul style={{ marginTop: '1rem', paddingLeft: '1.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                    {intel.attack_patterns[0].matched_signals.map((s, i) => <li key={i}>{s}</li>)}
+                  </ul>
+                )}
               </div>
-            ))}
-          </div>
-          {intel.attack_patterns[0]?.matched_signals?.length > 0 && (
-            <ul style={{ marginTop: '1rem', paddingLeft: '1.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-              {intel.attack_patterns[0].matched_signals.map((s, i) => <li key={i}>{s}</li>)}
-            </ul>
-          )}
-        </div>
-      )}
+            )}
 
-      {/* CAMPAIGN ALERT */}
-      {intel.campaign?.campaign_detected && (
-        <div style={{
-          padding: '1.5rem 2rem',
-          borderRadius: '12px',
-          backgroundColor: 'rgba(245, 158, 11, 0.1)',
-          border: '2px solid var(--risk-suspicious)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.5rem'
-        }}>
-          <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--risk-suspicious)' }}>
-            📡 Campaign Detected: {intel.campaign.campaign_id}
-          </div>
-          <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-            Confidence: {intel.campaign.confidence}% · Type: {intel.campaign.campaign_type?.replace(/_/g, ' ')} · Related: {intel.campaign.related_messages} emails
-          </div>
-          {intel.campaign.shared_indicators?.length > 0 && (
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-              {intel.campaign.shared_indicators.map((ind, i) => (
-                <span key={i} style={{
-                  padding: '0.2rem 0.6rem',
-                  borderRadius: '9999px',
-                  backgroundColor: 'rgba(245, 158, 11, 0.2)',
-                  color: 'var(--risk-suspicious)',
-                  fontSize: '0.75rem',
-                  fontFamily: 'monospace'
-                }}>{ind}</span>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* RELATED INTELLIGENCE */}
-      {intel.related_messages && intel.related_messages.length > 0 && (
-        <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
-          <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>🔗 Related Intelligence</h2>
-          <div style={{ color: 'var(--text-muted)', marginBottom: '1rem', fontSize: '0.9rem' }}>
-            {intel.related_messages.length} related email(s) detected via shared infrastructure:
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {intel.related_messages.slice(0, 5).map((rel, i) => (
-              <div key={i} style={{
-                padding: '1rem',
-                borderRadius: '8px',
-                backgroundColor: 'rgba(255,255,255,0.04)',
-                border: '1px solid var(--border-color)',
+            {/* CAMPAIGN ALERT */}
+            {intel.campaign?.campaign_detected && (
+              <div style={{
+                padding: '1.5rem 2rem',
+                borderRadius: '12px',
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                border: '2px solid var(--risk-suspicious)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '0.4rem'
+                gap: '0.5rem'
               }}>
-                <div style={{ fontWeight: 'bold', fontSize: '0.85rem', fontFamily: 'monospace' }}>
-                  {rel.relationship_type?.replace(/_/g, ' ') || 'RELATED'} — {rel.message_id}
+                <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--risk-suspicious)' }}>
+                  📡 Campaign Detected: {intel.campaign.campaign_id}
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                  {rel.shared_indicators?.slice(0, 3).map((ind, j) => (
-                    <span key={j} style={{
-                      padding: '0.15rem 0.5rem',
-                      borderRadius: '4px',
-                      backgroundColor: 'rgba(6,182,212,0.1)',
-                      color: 'rgb(103,232,249)',
-                      fontSize: '0.75rem',
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                  Confidence: {intel.campaign.confidence}% · Type: {intel.campaign.campaign_type?.replace(/_/g, ' ')} · Related: {intel.campaign.related_messages} emails
+                </div>
+                {intel.campaign.shared_indicators?.length > 0 && (
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                    {intel.campaign.shared_indicators.map((ind, i) => (
+                      <span key={i} style={{
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: '9999px',
+                        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                        color: 'var(--risk-suspicious)',
+                        fontSize: '0.75rem',
+                        fontFamily: 'monospace'
+                      }}>{ind}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* RELATED INTELLIGENCE */}
+            {intel.related_messages && intel.related_messages.length > 0 && (
+              <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
+                <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>🔗 Related Intelligence</h2>
+                <div style={{ color: 'var(--text-muted)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                  {intel.related_messages.length} related email(s) detected via shared infrastructure:
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {intel.related_messages.slice(0, 5).map((rel, i) => (
+                    <div key={i} style={{
+                      padding: '1rem',
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(255,255,255,0.04)',
+                      border: '1px solid var(--border-color)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.4rem'
+                    }}>
+                      <div style={{ fontWeight: 'bold', fontSize: '0.85rem', fontFamily: 'monospace' }}>
+                        {rel.relationship_type?.replace(/_/g, ' ') || 'RELATED'} — {rel.message_id}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                        {rel.shared_indicators?.slice(0, 3).map((ind, j) => (
+                          <span key={j} style={{
+                            padding: '0.15rem 0.5rem',
+                            borderRadius: '4px',
+                            backgroundColor: 'rgba(6,182,212,0.1)',
+                            color: 'rgb(103,232,249)',
+                            fontSize: '0.75rem',
+                            fontFamily: 'monospace'
+                          }}>{ind.type}: {ind.value}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* IOC PANEL */}
+            {intel.iocs && intel.iocs.length > 0 && (
+              <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
+                <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>🔎 Indicators of Interest</h2>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                    <thead>
+                      <tr style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--border-color)' }}>
+                        {['Type', 'Value', 'Source', 'Confidence'].map(h => (
+                          <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: '600' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {intel.iocs.slice(0, 20).map((ioc, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          <td style={{ padding: '0.5rem 0.75rem' }}>
+                            <span style={{
+                              padding: '0.15rem 0.5rem',
+                              borderRadius: '4px',
+                              backgroundColor: 'rgba(6,182,212,0.1)',
+                              color: 'rgb(103,232,249)',
+                              fontSize: '0.7rem',
+                              fontWeight: 'bold'
+                            }}>{ioc.type}</span>
+                          </td>
+                          <td style={{ padding: '0.5rem 0.75rem', fontFamily: 'monospace', wordBreak: 'break-all', maxWidth: '300px' }}>{ioc.normalized || ioc.value}</td>
+                          <td style={{ padding: '0.5rem 0.75rem', color: 'var(--text-muted)' }}>{ioc.source}</td>
+                          <td style={{ padding: '0.5rem 0.75rem' }}>{Math.round((ioc.confidence || 0) * 100)}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* FIRST-SEEN FLAGS */}
+            {intel.first_seen && Object.keys(intel.first_seen).length > 0 && (
+              <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
+                <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>🆕 First-Seen Indicators</h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                  These indicators have not been observed before. This means UNKNOWN / LOW HISTORICAL CONFIDENCE — not automatically malicious.
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {Object.entries(intel.first_seen).map(([val, info], i) => (
+                    <span key={i} style={{
+                      padding: '0.3rem 0.75rem',
+                      borderRadius: '9999px',
+                      backgroundColor: 'rgba(113,113,122,0.15)',
+                      border: '1px solid rgba(113,113,122,0.4)',
+                      color: 'var(--text-muted)',
+                      fontSize: '0.78rem',
                       fontFamily: 'monospace'
-                    }}>{ind.type}: {ind.value}</span>
+                    }}>{info.type}: {val}</span>
                   ))}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            )}
 
-      {/* IOC PANEL */}
-      {intel.iocs && intel.iocs.length > 0 && (
-        <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
-          <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>🔎 Indicators of Interest</h2>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-              <thead>
-                <tr style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--border-color)' }}>
-                  {['Type', 'Value', 'Source', 'Confidence'].map(h => (
-                    <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: '600' }}>{h}</th>
+            {/* TRUST SCORES */}
+            {intel.trust_scores && Object.keys(intel.trust_scores).length > 0 && (
+              <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
+                <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>📊 Evidence Trust Scores</h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '1rem' }}>Evidence signals only — do not directly determine verdict.</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
+                  {Object.entries(intel.trust_scores).map(([key, val]) => {
+                    const numericVal = Number(val) || 0;
+                    const color = numericVal >= 70 ? 'var(--risk-safe)' : numericVal >= 40 ? 'var(--risk-suspicious)' : 'var(--risk-phishing)';
+                    return (
+                      <div key={key} style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
+                          {key.replace(/_/g, ' ').toUpperCase()}
+                        </div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color }}>{numericVal}</div>
+                        <div style={{ width: '100%', height: '4px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '0.3rem' }}>
+                          <div style={{ width: `${Math.min(100, Math.max(0, numericVal))}%`, height: '100%', backgroundColor: color, borderRadius: '2px', transition: 'width 0.6s' }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* THREAT TIMELINE */}
+            {intel.timeline && intel.timeline.length > 0 && (
+              <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
+                <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>🕐 Threat Intelligence Timeline</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {intel.timeline.map((ev, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                      <span style={{ color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: '0.82rem', minWidth: '70px' }}>{ev.time}</span>
+                      <span style={{ color: 'var(--text-main)', fontSize: '0.85rem' }}>{ev.event}</span>
+                    </div>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {intel.iocs.slice(0, 20).map((ioc, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '0.5rem 0.75rem' }}>
-                      <span style={{
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        backgroundColor: 'rgba(6,182,212,0.1)',
-                        color: 'rgb(103,232,249)',
-                        fontSize: '0.7rem',
-                        fontWeight: 'bold'
-                      }}>{ioc.type}</span>
-                    </td>
-                    <td style={{ padding: '0.5rem 0.75rem', fontFamily: 'monospace', wordBreak: 'break-all', maxWidth: '300px' }}>{ioc.normalized || ioc.value}</td>
-                    <td style={{ padding: '0.5rem 0.75rem', color: 'var(--text-muted)' }}>{ioc.source}</td>
-                    <td style={{ padding: '0.5rem 0.75rem' }}>{Math.round((ioc.confidence || 0) * 100)}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+                </div>
+              </div>
+            )}
 
-      {/* FIRST-SEEN FLAGS */}
-      {intel.first_seen && Object.keys(intel.first_seen).length > 0 && (
-        <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
-          <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>🆕 First-Seen Indicators</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
-            These indicators have not been observed before. This means UNKNOWN / LOW HISTORICAL CONFIDENCE — not automatically malicious.
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {Object.entries(intel.first_seen).map(([val, info], i) => (
-              <span key={i} style={{
-                padding: '0.3rem 0.75rem',
-                borderRadius: '9999px',
-                backgroundColor: 'rgba(113,113,122,0.15)',
-                border: '1px solid rgba(113,113,122,0.4)',
+            {/* RAW EVIDENCE */}
+            <details className="glass" style={{ padding: '2rem', borderRadius: '12px', cursor: 'pointer' }}>
+              <summary style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>View Raw Evidence</summary>
+              <div style={{
+                marginTop: '1rem',
                 color: 'var(--text-muted)',
-                fontSize: '0.78rem',
-                fontFamily: 'monospace'
-              }}>{info.type}: {val}</span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* TRUST SCORES */}
-      {intel.trust_scores && Object.keys(intel.trust_scores).length > 0 && (
-        <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
-          <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>📊 Evidence Trust Scores</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '1rem' }}>Evidence signals only — do not directly determine verdict.</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
-            {Object.entries(intel.trust_scores).map(([key, val]) => {
-              const color = val >= 70 ? 'var(--risk-safe)' : val >= 40 ? 'var(--risk-suspicious)' : 'var(--risk-phishing)';
-              return (
-                <div key={key} style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
-                    {key.replace(/_/g, ' ').toUpperCase()}
-                  </div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color }}>{val}</div>
-                  <div style={{ width: '100%', height: '4px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '0.3rem' }}>
-                    <div style={{ width: `${val}%`, height: '100%', backgroundColor: color, borderRadius: '2px', transition: 'width 0.6s' }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* THREAT TIMELINE */}
-      {intel.timeline && intel.timeline.length > 0 && (
-        <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
-          <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>🕐 Threat Intelligence Timeline</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {intel.timeline.map((ev, i) => (
-              <div key={i} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                <span style={{ color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: '0.82rem', minWidth: '70px' }}>{ev.time}</span>
-                <span style={{ color: 'var(--text-main)', fontSize: '0.85rem' }}>{ev.event}</span>
+                fontFamily: 'monospace',
+                whiteSpace: 'pre-wrap',
+                backgroundColor: 'rgba(0,0,0,0.3)',
+                padding: '1.5rem',
+                borderRadius: '8px',
+                maxHeight: '500px',
+                overflowY: 'auto',
+                fontSize: '0.8rem',
+                cursor: 'text'
+              }}>
+                {JSON.stringify(analysis, null, 2)}
               </div>
-            ))}
+            </details>
+
           </div>
-        </div>
-      )}
-
-      {/* ANALYST FEEDBACK */}
-      <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
-        <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>🧑‍💻 Analyst Feedback</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
-          The automated verdict is preserved. Your feedback is stored separately for audit purposes.
-        </p>
-        {feedbackSubmitted ? (
-          <div style={{ color: 'var(--risk-safe)', fontWeight: 'bold' }}>✅ Feedback submitted. Automated verdict unchanged.</div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: '600px' }}>
-            <select
-              value={feedbackVerdict}
-              onChange={e => setFeedbackVerdict(e.target.value)}
-              style={{
-                padding: '0.6rem',
-                borderRadius: '8px',
-                backgroundColor: 'var(--tm-surface)',
-                color: 'var(--tm-text)',
-                border: '1px solid var(--tm-border)',
-                fontSize: '0.9rem'
-              }}
-            >
-              <option value="">Select verdict...</option>
-              <option value="TRUE_POSITIVE">TRUE POSITIVE — Correctly flagged as malicious</option>
-              <option value="FALSE_POSITIVE">FALSE POSITIVE — Incorrectly flagged (actually safe)</option>
-              <option value="TRUE_NEGATIVE">TRUE NEGATIVE — Correctly identified as safe</option>
-              <option value="FALSE_NEGATIVE">FALSE NEGATIVE — Missed a malicious email</option>
-              <option value="UNKNOWN">UNKNOWN — Cannot determine</option>
-            </select>
-            <textarea
-              value={feedbackComment}
-              onChange={e => setFeedbackComment(e.target.value)}
-              placeholder="Optional analyst comment..."
-              rows={3}
-              style={{
-                padding: '0.6rem',
-                borderRadius: '8px',
-                backgroundColor: 'var(--tm-surface)',
-                color: 'var(--tm-text)',
-                border: '1px solid var(--tm-border)',
-                fontSize: '0.85rem',
-                resize: 'vertical'
-              }}
-            />
-            <button
-              disabled={!feedbackVerdict}
-              onClick={async () => {
-                try {
-                  await submitFeedback(id, feedbackVerdict, decision.verdict, feedbackComment);
-                  setFeedbackSubmitted(true);
-                  notify.success("✅ Feedback submitted");
-                } catch (err) {
-                  notify.error("❌ Failed to submit feedback");
-                }
-              }}
-              style={{
-                padding: '0.65rem 1.5rem',
-                borderRadius: '8px',
-                backgroundColor: feedbackVerdict ? 'rgba(6,182,212,0.2)' : 'rgba(255,255,255,0.05)',
-                color: feedbackVerdict ? 'rgb(103,232,249)' : 'var(--text-muted)',
-                border: `1px solid ${feedbackVerdict ? 'rgba(6,182,212,0.4)' : 'var(--border-color)'}`,
-                cursor: feedbackVerdict ? 'pointer' : 'not-allowed',
-                fontWeight: 'bold',
-                fontSize: '0.9rem',
-                alignSelf: 'flex-start',
-                transition: 'all 0.2s'
-              }}
-            >
-              Submit Feedback
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* RAW EVIDENCE */}
-      <details className="glass" style={{ padding: '2rem', borderRadius: '12px', cursor: 'pointer' }}>
-        <summary style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>View Raw Evidence</summary>
-        <div style={{ 
-            marginTop: '1rem',
-            color: 'var(--text-muted)', 
-            fontFamily: 'monospace', 
-            whiteSpace: 'pre-wrap', 
-            backgroundColor: 'rgba(0,0,0,0.3)', 
-            padding: '1.5rem', 
-            borderRadius: '8px',
-            maxHeight: '500px',
-            overflowY: 'auto',
-            fontSize: '0.8rem',
-            cursor: 'text'
-          }}>
-          {JSON.stringify(analysis, null, 2)}
-        </div>
-      </details>
-
-    </div>
-  );
+        );
 }

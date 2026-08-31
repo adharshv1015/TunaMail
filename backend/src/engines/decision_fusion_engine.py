@@ -674,28 +674,9 @@ class DecisionFusionEngine:
             elif risk_score < 40:
                 verdict = "SAFE"
 
-            else:
-                verdict = "SUSPICIOUS"
 
         # -----------------------------------------------------
         # Priority 3:
-        # Numeric score as supporting evidence
-        # -----------------------------------------------------
-
-        elif risk_score >= 80:
-            verdict = "PHISHING"
-
-        elif risk_score >= 60:
-            verdict = "HIGH RISK"
-
-        elif risk_score >= 40:
-            verdict = "SUSPICIOUS"
-
-        elif risk_score < 40:
-            verdict = "SAFE"
-
-        # -----------------------------------------------------
-        # Priority 4:
         # Context / contradiction states
         # -----------------------------------------------------
 
@@ -721,9 +702,43 @@ class DecisionFusionEngine:
 
             if risk_score >= 40:
                 verdict = "SUSPICIOUS"
-            elif risk_score < 40:
+            else:
                 verdict = "SAFE"
 
+        # -----------------------------------------------------
+        # Priority 4:
+        # Numeric score as supporting evidence
+        # -----------------------------------------------------
+
+        elif risk_score >= 80:
+            verdict = "PHISHING"
+
+        elif risk_score >= 60:
+            verdict = "HIGH RISK"
+
+        elif risk_score >= 40:
+            verdict = "SUSPICIOUS"
+
+        elif risk_score < 40:
+
+            if (
+                len(positive) >= 3
+                and confidence >= 90
+                and not has_any_negative
+                and not has_contradiction
+            ):
+                verdict = "VERIFIED LEGITIMATE"
+
+            elif (
+                len(positive) >= 2
+                and confidence >= 70
+                and not has_any_negative
+                and not has_contradiction
+            ):
+                verdict = "LIKELY LEGITIMATE"
+
+            else:
+                verdict = "SAFE"
         # -----------------------------------------------------
         # Priority 5:
         # Low-risk legitimacy

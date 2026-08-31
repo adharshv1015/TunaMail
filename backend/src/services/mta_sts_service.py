@@ -47,7 +47,21 @@ class MTASTSService:
             )
 
         dns_result = self._lookup_dns_policy(domain)
-        https_result = self._fetch_policy(domain)
+
+        # Do not perform the HTTPS policy fetch when MTA-STS
+        # discovery itself is unavailable. There is no published
+        # MTA-STS policy to retrieve in this case, and waiting for
+        # an HTTPS timeout only adds unnecessary latency.
+        if not dns_result.get("available", False):
+            https_result = {
+                "available": False,
+                "url": self.POLICY_URL.format(domain=domain),
+                "status_code": None,
+                "policy": {},
+                "error": "MTA-STS DNS policy record unavailable.",
+            }
+        else:
+            https_result = self._fetch_policy(domain)
 
         policy = https_result.get("policy", {})
 

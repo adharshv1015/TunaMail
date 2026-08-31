@@ -250,7 +250,8 @@
       1786582212.719415,
       1787272174.208192,
       1787287138.414821,
-      1787874872.505167
+      1787874872.505167,
+      1788140883.809864
     ],
     "url_domains": [
       "www.linkedin.com",
@@ -314,7 +315,8 @@
     "timestamps": [
       1786579740.608661,
       1787287311.470262,
-      1787882923.814274
+      1787882923.814274,
+      1788140831.883502
     ],
     "url_domains": [
       "www.linkedin.com",
@@ -400,7 +402,8 @@
   "donotreply@match.indeed.com": {
     "timestamps": [
       1786582252.559401,
-      1787287280.596384
+      1787287280.596384,
+      1788140906.903939
     ],
     "url_domains": [
       "cts.indeed.com",
@@ -478,7 +481,8 @@
       1786937211.485451,
       1786946977.667281,
       1787275953.692111,
-      1787897923.539408
+      1787897923.539408,
+      1788140685.264865
     ],
     "url_domains": [
       "us.list-manage.com",
@@ -503,7 +507,8 @@
     "timestamps": [
       1787287168.443645,
       1787287248.699881,
-      1787874946.261946
+      1787874946.261946,
+      1788140763.44344
     ],
     "url_domains": [
       "dlcdnimgs.asus.com",
@@ -605,6 +610,40 @@
       "openlearning.mit.edu",
       "micromasters.mit.edu",
       "learn.mit.edu"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "info@naukri.com": {
+    "timestamps": [
+      1788134916.475816
+    ],
+    "url_domains": [
+      "fonts.gstatic.com",
+      "fonts.googleapis.com",
+      "logs.naukri.com",
+      "tr.naukri.com",
+      "static.naukimg.com",
+      "www.ieplads.com",
+      "img.naukimg.com"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "contentnc@naukri.com": {
+    "timestamps": [
+      1788140795.92196
+    ],
+    "url_domains": [
+      "fonts.googleapis.com",
+      "fonts.gstatic.com",
+      "logs.naukri.com",
+      "tr.naukri.com",
+      "www.ieplads.com",
+      "www.naukri.com",
+      "www.w3.org"
     ],
     "auth_summary": [
       "SPF:pass DKIM:pass DMARC:pass"

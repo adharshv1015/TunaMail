@@ -3,23 +3,23 @@ import SectionHeader from "../common/SectionHeader";
 
 /* ─────────── helpers ─────────── */
 const VERDICT_COLORS = {
-  "PHISHING":           "text-red-500 dark:text-red-400",
-  "HIGH RISK":          "text-orange-500 dark:text-orange-400",
-  "SUSPICIOUS":         "text-amber-500 dark:text-amber-400",
-  "UNKNOWN":            "text-yellow-500 dark:text-yellow-400",
-  "LIKELY LEGITIMATE":  "text-teal-500 dark:text-teal-400",
-  "VERIFIED LEGITIMATE":"text-emerald-500 dark:text-emerald-400",
+  "PHISHING": "text-red-500 dark:text-red-400",
+  "HIGH RISK": "text-orange-500 dark:text-orange-400",
+  "SUSPICIOUS": "text-amber-500 dark:text-amber-400",
+  "UNKNOWN": "text-yellow-500 dark:text-yellow-400",
+  "LIKELY LEGITIMATE": "text-teal-500 dark:text-teal-400",
+  "VERIFIED LEGITIMATE": "text-emerald-500 dark:text-emerald-400",
 };
 
 const IOC_TYPE_COLORS = {
-  "URL":          "bg-indigo-500/10 text-indigo-500 dark:text-indigo-400",
-  "DOMAIN":       "bg-blue-500/10 text-blue-500 dark:text-blue-400",
-  "IP_ADDRESS":   "bg-violet-500/10 text-violet-500 dark:text-violet-400",
-  "HASH_SHA256":  "bg-orange-500/10 text-orange-500 dark:text-orange-400",
-  "HASH_SHA1":    "bg-orange-500/10 text-orange-500 dark:text-orange-400",
-  "HASH_MD5":     "bg-amber-500/10 text-amber-500 dark:text-amber-400",
-  "EMAIL_ADDRESS":"bg-cyan-500/10 text-cyan-500 dark:text-cyan-400",
-  "ATTACHMENT_NAME":"bg-slate-500/10 text-slate-500 dark:text-slate-400",
+  "URL": "bg-indigo-500/10 text-indigo-500 dark:text-indigo-400",
+  "DOMAIN": "bg-blue-500/10 text-blue-500 dark:text-blue-400",
+  "IP_ADDRESS": "bg-violet-500/10 text-violet-500 dark:text-violet-400",
+  "HASH_SHA256": "bg-orange-500/10 text-orange-500 dark:text-orange-400",
+  "HASH_SHA1": "bg-orange-500/10 text-orange-500 dark:text-orange-400",
+  "HASH_MD5": "bg-amber-500/10 text-amber-500 dark:text-amber-400",
+  "EMAIL_ADDRESS": "bg-cyan-500/10 text-cyan-500 dark:text-cyan-400",
+  "ATTACHMENT_NAME": "bg-slate-500/10 text-slate-500 dark:text-slate-400",
 };
 
 const Tag = ({ label, colorClass = "bg-indigo-500/10 text-indigo-400" }) => (
@@ -256,15 +256,15 @@ function IntelligenceCard({ intelligence, messageId, automatedVerdict }) {
 
   const hasPatterns = intel.attack_patterns?.length > 0;
   const hasCampaign = intel.campaign?.campaign_detected;
-  const hasRelated  = intel.related_messages?.length > 0;
-  const hasIOCs     = intel.iocs?.length > 0;
+  const hasRelated = intel.related_messages?.length > 0;
+  const hasIOCs = intel.iocs?.length > 0;
 
   const tabs = [
-    { key: "overview",  label: "Overview",   badge: (hasCampaign || hasPatterns) ? "!" : null },
-    { key: "iocs",      label: "IOCs",        badge: intel.iocs?.length || null },
-    { key: "related",   label: "Related",     badge: intel.related_messages?.length || null },
-    { key: "trust",     label: "Trust",       badge: null },
-    { key: "timeline",  label: "Timeline",    badge: null },
+    { key: "overview", label: "Overview", badge: (hasCampaign || hasPatterns) ? "!" : null },
+    { key: "iocs", label: "IOCs", badge: intel.iocs?.length || null },
+    { key: "related", label: "Related", badge: intel.related_messages?.length || null },
+    { key: "trust", label: "Trust", badge: null },
+    { key: "timeline", label: "Timeline", badge: null },
   ];
 
   return (
@@ -272,7 +272,7 @@ function IntelligenceCard({ intelligence, messageId, automatedVerdict }) {
       <SectionHeader
         icon="🛰️"
         title="Stage 5 Intelligence"
-        subtitle="IOC correlation, campaign detection, attack patterns & analyst feedback"
+        subtitle="IOC correlation, campaign detection & attack patterns"
       />
 
       {/* Tab bar */}
