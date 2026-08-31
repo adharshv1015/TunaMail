@@ -219,7 +219,25 @@ def process_single_message(connector, msg_id, is_batch=False):
 
         # URL processing
         combined_text_for_urls = (parsed.get("body", "") or "") + "\n" + (parsed.get("html_body", "") or "")
-        url_analysis = safe_analyze("URLAnalyzer", msg_id, analyzers["url"].analyze, tracker, combined_text_for_urls, sender_headers=parsed.get("headers", {}), auth_results=auth_analysis)
+        url_start = time.perf_counter()
+
+        url_analysis = safe_analyze(
+            "URLAnalyzer",
+            msg_id,
+            analyzers["url"].analyze,
+            tracker,
+            combined_text_for_urls,
+            sender_headers=parsed.get("headers", {}),
+            auth_results=auth_analysis
+        )
+
+        print(
+            "URL_DIAG:",
+            "body_chars=", len(combined_text_for_urls),
+            "urls=", len(url_analysis.get("analysis", [])),
+            "ms=", round((time.perf_counter() - url_start) * 1000, 2),
+            flush=True,
+        )
 
         if "analysis" in url_analysis and len(url_analysis["analysis"]) > MAX_URLS_PER_EMAIL:
             original_url_count = len(url_analysis["analysis"])

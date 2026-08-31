@@ -30,10 +30,14 @@ const EvidenceCard = ({ item }) => {
   );
 };
 
-const AnalystExplanation = ({ messageId, decision, sender }) => {
+const AnalystExplanation = ({ messageId, decision, explanation, sender }) => {
   const [expanded, setExpanded] = useState(false);
 
-  const explanation = decision?.explanation || {};
+  const exp = explanation || decision?.explanation || {};
+  const negEv = exp.groups?.NEGATIVE_EVIDENCE || exp.negative_evidence || [];
+  const posEv = exp.groups?.POSITIVE_EVIDENCE || exp.positive_evidence || [];
+  const limitations = exp.groups?.CONTEXT_LIMITATIONS || exp.limitations || [];
+  const confidenceFactors = exp.confidence_explanation ? [exp.confidence_explanation] : (exp.confidence_factors || []);
 
   if (!decision) return null;
 
@@ -63,23 +67,23 @@ const AnalystExplanation = ({ messageId, decision, sender }) => {
         <div className="p-4">
           <div className="mb-4">
             <h4 className="font-semibold text-slate-800 dark:text-slate-200 uppercase text-xs tracking-wider mb-2">Primary Reason</h4>
-            <p className="text-sm text-slate-700 dark:text-slate-300">{explanation.primary_reason}</p>
+            <p className="text-sm text-slate-700 dark:text-slate-300">{exp.primary_reason}</p>
           </div>
 
-          {explanation.limitations?.length > 0 && (
+          {limitations.length > 0 && (
             <div className="mb-4">
               <h4 className="font-semibold text-amber-600 uppercase text-xs tracking-wider mb-2">Limitations & Contradictions</h4>
               <ul className="list-disc pl-4 text-sm text-slate-700 dark:text-slate-300">
-                {explanation.limitations.map((lim, i) => <li key={i}>{lim}</li>)}
+                {limitations.map((lim, i) => <li key={i}>{lim}</li>)}
               </ul>
             </div>
           )}
 
-          {explanation.confidence_factors?.length > 0 && (
+          {confidenceFactors.length > 0 && (
             <div className="mb-4">
               <h4 className="font-semibold text-slate-800 dark:text-slate-200 uppercase text-xs tracking-wider mb-2">Confidence Factors</h4>
               <ul className="list-disc pl-4 text-sm text-slate-700 dark:text-slate-300">
-                {explanation.confidence_factors.map((cf, i) => <li key={i}>{cf}</li>)}
+                {confidenceFactors.map((cf, i) => <li key={i}>{cf}</li>)}
               </ul>
             </div>
           )}
@@ -87,24 +91,24 @@ const AnalystExplanation = ({ messageId, decision, sender }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
             <div>
               <h4 className="font-semibold text-slate-800 dark:text-slate-200 uppercase text-xs tracking-wider mb-2">
-                Negative Security Evidence ({explanation.negative_evidence?.length || 0})
+                Negative Security Evidence ({negEv.length})
               </h4>
-              {explanation.negative_evidence?.map((item, i) => (
+              {negEv.map((item, i) => (
                 <EvidenceCard key={i} item={item} />
               ))}
-              {(!explanation.negative_evidence || explanation.negative_evidence.length === 0) && (
+              {negEv.length === 0 && (
                 <div className="text-sm text-slate-500 italic p-2">No negative evidence.</div>
               )}
             </div>
 
             <div>
               <h4 className="font-semibold text-slate-800 dark:text-slate-200 uppercase text-xs tracking-wider mb-2">
-                Positive Security Evidence ({explanation.positive_evidence?.length || 0})
+                Positive Security Evidence ({posEv.length})
               </h4>
-              {explanation.positive_evidence?.map((item, i) => (
+              {posEv.map((item, i) => (
                 <EvidenceCard key={i} item={item} />
               ))}
-              {(!explanation.positive_evidence || explanation.positive_evidence.length === 0) && (
+              {posEv.length === 0 && (
                 <div className="text-sm text-slate-500 italic p-2">No positive evidence.</div>
               )}
             </div>

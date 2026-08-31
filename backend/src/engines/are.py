@@ -1490,6 +1490,20 @@ class AnalyticalReasoningEngine:
                     f"{url.get('domain', '')}"
                 )
 
+        # -----------------------------------------------------
+        # Aggregate Contradictory URL Evidence
+        # -----------------------------------------------------
+        
+        has_domain_mismatch = any(e.get("type") == "DOMAIN_MISMATCH" for e in structured_evidence)
+        if has_domain_mismatch:
+            structured_evidence = [e for e in structured_evidence if e.get("type") != "ALIGNED_DOMAIN"]
+            evidence["positive"] = [s for s in evidence.get("positive", []) if "URL domain is aligned" not in str(s)]
+            
+        has_tls_violation = any(e.get("type") == "TLS_POLICY_VIOLATION" for e in structured_evidence)
+        if has_tls_violation:
+            structured_evidence = [e for e in structured_evidence if e.get("type") != "VALID_TLS"]
+            evidence["positive"] = [s for s in evidence.get("positive", []) if "TLS certificate validated" not in str(s)]
+
         # =====================================================
         # 4. WHOIS
         # =====================================================

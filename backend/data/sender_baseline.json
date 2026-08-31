@@ -157,9 +157,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 6,
+    "messages_analyzed": 7,
     "first_seen": "2026-08-13T05:38:12.860920",
-    "last_seen": "2026-08-28T11:49:33.348963"
+    "last_seen": "2026-08-31T09:25:08.873540"
   },
   "sbi@communications.sbi.co.in": {
     "normal_domains": [
@@ -289,9 +289,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 4,
+    "messages_analyzed": 5,
     "first_seen": "2026-08-17T08:56:51.282865",
-    "last_seen": "2026-08-17T11:39:37.555630"
+    "last_seen": "2026-08-31T09:23:34.408406"
   },
   "hello@ollama.com": {
     "normal_domains": [
@@ -300,9 +300,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 1,
+    "messages_analyzed": 2,
     "first_seen": "2026-08-17T11:40:27.748509",
-    "last_seen": "2026-08-17T11:40:27.748522"
+    "last_seen": "2026-08-31T09:48:05.086196"
   },
   "adharsh8055@gmail.com": {
     "normal_domains": [

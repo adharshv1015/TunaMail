@@ -160,7 +160,7 @@ function EmailDetail({ messageId, onBack, resultSet = [], currentIndex = -1, onN
       <TrustAnalysis trust={trust} />
       <SecurityReasoning reasoning={reasoning} ai={analysis.ai} explanation={analysis.explanation} />
       <FinalDecision decision={decision} />
-      <AnalystExplanation messageId={message.id} decision={decision} sender={message.sender} />
+      <AnalystExplanation messageId={message.id} decision={decision} explanation={analysis.explanation || decision.explanation} sender={message.sender} />
       <IntelligenceCard
         intelligence={intelligence}
         messageId={message.id}

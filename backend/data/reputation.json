@@ -141,8 +141,8 @@
   },
   "jobalerts-noreply@linkedin.com": {
     "sender": "jobalerts-noreply@linkedin.com",
-    "messages_seen": 6,
-    "legitimate_count": 1,
+    "messages_seen": 8,
+    "legitimate_count": 3,
     "suspicious_count": 2,
     "phishing_count": 3,
     "reputation": "HIGH_RISK",
@@ -152,7 +152,9 @@
       "1a022bd0a86a8fcd",
       "1a0224f2787787f8",
       "1a0465bb4028ddaf",
-      "1a050a86b13ea4ba"
+      "1a050a86b13ea4ba",
+      "1a04c5dc4d41e201",
+      "1a04b820b1387f6b"
     ]
   },
   "naukrialerts@naukri.com": {
@@ -215,14 +217,15 @@
   },
   "hello@ollama.com": {
     "sender": "hello@ollama.com",
-    "messages_seen": 2,
+    "messages_seen": 3,
     "legitimate_count": 1,
-    "suspicious_count": 0,
+    "suspicious_count": 1,
     "phishing_count": 1,
     "reputation": "NEW",
     "seen_message_ids": [
       "19ff4e7789345c1d",
-      "1a00a7427c329e8c"
+      "1a00a7427c329e8c",
+      "1a04b977c2f04e4d"
     ]
   },
   "help@acct.epicgames.com": {
@@ -333,7 +336,7 @@
     "legitimate_count": 0,
     "suspicious_count": 4,
     "phishing_count": 1,
-    "reputation": "HIGH_RISK",
+    "reputation": "SUSPICIOUS",
     "seen_message_ids": [
       "1a00e787cda6aaf2",
       "1a004c0d36000806",
@@ -464,6 +467,28 @@
     "reputation": "UNKNOWN",
     "seen_message_ids": [
       "1a052d5e1f3bb67a"
+    ]
+  },
+  "msa@communication.microsoft.com": {
+    "sender": "msa@communication.microsoft.com",
+    "messages_seen": 1,
+    "legitimate_count": 1,
+    "suspicious_count": 0,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN",
+    "seen_message_ids": [
+      "1a048e68ab6709c4"
+    ]
+  },
+  "fortnite@email.epicgames.com": {
+    "sender": "fortnite@email.epicgames.com",
+    "messages_seen": 1,
+    "legitimate_count": 1,
+    "suspicious_count": 0,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN",
+    "seen_message_ids": [
+      "1a04a5742c23788f"
     ]
   }
 }

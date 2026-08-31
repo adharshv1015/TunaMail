@@ -251,7 +251,9 @@
       1787272174.208192,
       1787287138.414821,
       1787874872.505167,
-      1788140883.809864
+      1788140883.809864,
+      1788148509.223363,
+      1788150366.866006
     ],
     "url_domains": [
       "www.linkedin.com",
@@ -351,7 +353,8 @@
   "hello@ollama.com": {
     "timestamps": [
       1786579764.758113,
-      1786947027.897662
+      1786947027.897662,
+      1788149885.221687
     ],
     "url_domains": [
       "c.vialoops.com",
@@ -643,6 +646,34 @@
       "tr.naukri.com",
       "www.ieplads.com",
       "www.naukri.com",
+      "www.w3.org"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "msa@communication.microsoft.com": {
+    "timestamps": [
+      1788149981.59127
+    ],
+    "url_domains": [
+      "go.microsoft.com",
+      "iriscmsproddatastorage.azureedge.net",
+      "www.w3.org"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "fortnite@email.epicgames.com": {
+    "timestamps": [
+      1788150463.252306
+    ],
+    "url_domains": [
+      "client-data.knak.io",
+      "e.email.epicgames.com",
+      "cdn.app.zetaglobal.net",
+      "images.email.epicgames.com",
       "www.w3.org"
     ],
     "auth_summary": [

@@ -277,6 +277,17 @@ class URLAnalyzer:
                 or []
             )
 
+        # -----------------------------------------------------
+        # Aggregate Contradictory URL Evidence
+        # -----------------------------------------------------
+        has_domain_mismatch = any(e.get("type") == "DOMAIN_MISMATCH" for e in structured_evidence)
+        if has_domain_mismatch:
+            structured_evidence = [e for e in structured_evidence if e.get("type") != "URL_ALIGNMENT"]
+            
+        has_tls_violation = any(e.get("type") == "TLS_POLICY_VIOLATION" for e in structured_evidence)
+        if has_tls_violation:
+            structured_evidence = [e for e in structured_evidence if e.get("type") != "VALID_TLS"]
+
         # Link-only should remain a context state.
         # It must not be converted into SAFE simply because
         # the URL itself has no obvious lexical indicators.
@@ -2028,7 +2039,6 @@ class URLAnalyzer:
                             confidence=0.55,
                         )
                     )
-        return evidence
         # ----------------------------------------------------
         # TLS
         # ----------------------------------------------------

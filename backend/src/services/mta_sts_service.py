@@ -30,7 +30,7 @@ class MTASTSService:
         "https://mta-sts.{domain}/.well-known/mta-sts.txt"
     )
 
-    TIMEOUT = 5
+    TIMEOUT = 1.0
 
     VALID_MODES = {
         "enforce",
@@ -145,10 +145,17 @@ class MTASTSService:
         name = f"{self.DNS_PREFIX}.{domain}"
 
         try:
-            answers = dns.resolver.resolve(
+            resolver = dns.resolver.Resolver(configure=False)
+            resolver.nameservers = [
+                "8.8.8.8",
+                "8.8.4.4",
+            ]
+            resolver.timeout = 0.5
+            resolver.lifetime = self.TIMEOUT
+
+            answers = resolver.resolve(
                 name,
                 "TXT",
-                lifetime=self.TIMEOUT,
             )
 
             records = []
