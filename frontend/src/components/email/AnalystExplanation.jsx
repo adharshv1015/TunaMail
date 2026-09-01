@@ -14,18 +14,18 @@ const EvidenceCard = ({ item }) => {
   return (
     <div className={`p-3 rounded-lg border text-sm mb-2 ${colorClass}`}>
       <div className="flex justify-between items-center mb-1">
-        <span className="font-bold">[{item.severity}] {item.type.replace(/_/g, ' ').toUpperCase()}</span>
+        <span className="font-bold">[{item?.severity || 'INFO'}] {item?.type ? String(item.type).replace(/_/g, ' ').toUpperCase() : 'EVIDENCE'}</span>
         <span className="text-xs opacity-75">
           Confidence: {Math.round(
-            Number(item.confidence) <= 1
-              ? Number(item.confidence) * 100
-              : Number(item.confidence)
+            Number(item?.confidence || 0) <= 1
+              ? Number(item?.confidence || 0) * 100
+              : Number(item?.confidence || 0)
           )}%
         </span>
       </div>
-      <div className="mb-1"><span className="font-semibold">Source:</span> {item.source}</div>
-      {item.observation && item.observation !== item.explanation && <div className="mb-1"><span className="font-semibold">Observation:</span> {item.observation}</div>}
-      {item.explanation && <div><span className="font-semibold">Explanation:</span> {item.explanation}</div>}
+      <div className="mb-1"><span className="font-semibold">Source:</span> {item?.source || 'Unknown'}</div>
+      {item?.observation && item.observation !== item.explanation && <div className="mb-1"><span className="font-semibold">Observation:</span> {String(item.observation)}</div>}
+      {item?.explanation && <div><span className="font-semibold">Explanation:</span> {String(item.explanation)}</div>}
     </div>
   );
 };
@@ -38,6 +38,17 @@ const AnalystExplanation = ({ messageId, decision, explanation, sender }) => {
   const posEv = exp.groups?.POSITIVE_EVIDENCE || exp.positive_evidence || [];
   const limitations = exp.groups?.CONTEXT_LIMITATIONS || exp.limitations || [];
   const confidenceFactors = exp.confidence_explanation ? [exp.confidence_explanation] : (exp.confidence_factors || []);
+
+  const renderListItem = (item) => {
+    if (typeof item === 'string') return item;
+    if (!item) return '';
+    return (
+      <span>
+        {item.title && <strong className="mr-1">{item.title}:</strong>}
+        {item.explanation || item.observation || item.type || JSON.stringify(item)}
+      </span>
+    );
+  };
 
   if (!decision) return null;
 
@@ -74,7 +85,7 @@ const AnalystExplanation = ({ messageId, decision, explanation, sender }) => {
             <div className="mb-4">
               <h4 className="font-semibold text-amber-600 uppercase text-xs tracking-wider mb-2">Limitations & Contradictions</h4>
               <ul className="list-disc pl-4 text-sm text-slate-700 dark:text-slate-300">
-                {limitations.map((lim, i) => <li key={i}>{lim}</li>)}
+                {limitations.map((lim, i) => <li key={i}>{renderListItem(lim)}</li>)}
               </ul>
             </div>
           )}
@@ -83,7 +94,7 @@ const AnalystExplanation = ({ messageId, decision, explanation, sender }) => {
             <div className="mb-4">
               <h4 className="font-semibold text-slate-800 dark:text-slate-200 uppercase text-xs tracking-wider mb-2">Confidence Factors</h4>
               <ul className="list-disc pl-4 text-sm text-slate-700 dark:text-slate-300">
-                {confidenceFactors.map((cf, i) => <li key={i}>{cf}</li>)}
+                {confidenceFactors.map((cf, i) => <li key={i}>{renderListItem(cf)}</li>)}
               </ul>
             </div>
           )}

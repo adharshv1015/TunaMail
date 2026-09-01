@@ -80,14 +80,14 @@ function App() {
 
   if (isInitializing) {
     return (
-      <div className="flex h-screen w-full flex-col bg-[var(--tm-bg)] text-[var(--tm-text)] items-center justify-center">
+      <div className="flex h-screen w-full flex-col bg-[var(--tm-bg)] bg-[image:var(--tm-bg-gradient)] text-[var(--tm-text)] items-center justify-center">
         <div className="text-xl font-medium animate-[pulse_0.8s_ease-in-out_infinite]">Initializing Security Session...</div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen w-full flex-col bg-[var(--tm-bg)] text-[var(--tm-text)] overflow-hidden font-sans transition-colors duration-200">
+    <div className="flex h-screen w-full flex-col bg-[var(--tm-bg)] bg-[image:var(--tm-bg-gradient)] text-[var(--tm-text)] overflow-hidden font-sans transition-colors duration-200">
       <Topbar
         isConnected={isConnected}
         theme={theme}
@@ -98,7 +98,7 @@ function App() {
 
       <main className="flex flex-1 overflow-hidden relative">
         {/* LEFT SIDEBAR (Inbox) */}
-        <div className={`w-full lg:w-[350px] xl:w-[390px] shrink-0 border-r border-[var(--tm-border)] bg-[var(--tm-surface-secondary)] flex flex-col z-10 absolute lg:relative h-full transition-all duration-300 ${selectedMessageId ? "hidden lg:flex" : "flex"}`}>
+        <div className={`w-full lg:w-[350px] xl:w-[390px] shrink-0 border-r border-[var(--tm-border)] bg-gradient-to-b from-[#f8fafc] to-[#e0e7ff] dark:bg-none dark:bg-[var(--tm-surface-secondary)] flex flex-col z-10 absolute lg:relative h-full transition-all duration-300 ${selectedMessageId ? "hidden lg:flex" : "flex"}`}>
           <Inbox
             selectedMessageId={selectedMessageId}
             onSelectMessage={handleSelectMessage}
@@ -110,9 +110,10 @@ function App() {
         </div>
 
         {/* RIGHT ANALYSIS AREA (EmailDetail) */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar relative bg-[var(--tm-bg)] transition-colors duration-200">
+        <div className="flex-1 overflow-y-auto custom-scrollbar relative bg-transparent transition-colors duration-200">
           <EmailDetail
             messageId={selectedMessageId}
+            messageMeta={inboxResultSet.find(m => m.id === selectedMessageId)}
             onBack={() => setSelectedMessageId(null)}
             resultSet={inboxResultSet}
             currentIndex={inboxResultSet.findIndex(m => m.id === selectedMessageId)}

@@ -1,6 +1,58 @@
-.env
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
-.venv/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+.venv
+venv/
+ENV/
+env/
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Pytest / Coverage
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.tox/
+.nox/
+
+# Logs
+*.log
+logs/
+
+# Data and SQLite
+*.sqlite3
+*.db
+data/*.db
+data/*.json
+data/*.sqlite3
+intelligence/*.db
+intelligence/*.json
+!data/seed_*.json
+
+# File Uploads / Outputs
 uploads/
 reports/
+test_certs/
+*.eml
+*.txt
+*.json
+!client_secret.json
+!openapi_test.json
+
+# Test & Scratch Scripts
+stage16_test.py
+test_*.py
+inspection_timing.py
+phishing_test.eml
+private_ip_test.eml
+output.json
+output2.json

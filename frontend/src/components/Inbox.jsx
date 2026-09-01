@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo, useRef, useCallback } from "react"
 import { getMessages } from "../api/api";
 import InboxHeader from "./inbox/InboxHeader";
 import InboxSearch from "./inbox/InboxSearch";
+import InboxTabs from "./inbox/InboxTabs";
 import EmailList from "./inbox/EmailList";
 
 function Inbox({ selectedMessageId, onSelectMessage, onAuthError, isConnected, onRegisterAnalyzedCallback }) {
@@ -23,6 +24,7 @@ function Inbox({ selectedMessageId, onSelectMessage, onAuthError, isConnected, o
     sender: "", subject: "", keyword: "", domain: "", after: "", before: "",
   });
   const [isServerSearch, setIsServerSearch] = useState(false);
+  const [activeCategory, setActiveCategory] = useState("primary");
 
   // Pagination token history:
   // [{ page: 1, tokenUsed: null, nextToken: "A" }, ...]
@@ -46,6 +48,7 @@ function Inbox({ selectedMessageId, onSelectMessage, onAuthError, isConnected, o
       useServerSearch = false,
       limit = fetchLimit,
       period = fetchPeriod,
+      category = activeCategory,
     } = options;
 
     // Cancel any in-flight request
@@ -71,10 +74,20 @@ function Inbox({ selectedMessageId, onSelectMessage, onAuthError, isConnected, o
       if (useServerSearch) {
         if (fields.sender)  params.sender  = fields.sender;
         if (fields.subject) params.subject = fields.subject;
-        if (fields.keyword) params.keyword = fields.keyword;
         if (fields.domain)  params.domain  = fields.domain;
         if (fields.after)   params.after   = fields.after;
         if (fields.before)  params.before  = fields.before;
+      }
+      
+      let finalKeyword = "";
+      if (useServerSearch && fields.keyword) {
+        finalKeyword = fields.keyword;
+      }
+      if (category) {
+        finalKeyword = finalKeyword ? `${finalKeyword} category:${category}` : `category:${category}`;
+      }
+      if (finalKeyword) {
+        params.keyword = finalKeyword;
       }
 
       const data = await getMessages(params);
@@ -110,7 +123,7 @@ function Inbox({ selectedMessageId, onSelectMessage, onAuthError, isConnected, o
       }
     }
   // Only stable refs / primitive fetch controls as deps — search fields passed explicitly
-  }, [fetchLimit, fetchPeriod, onAuthError, pageTokenHistory.length]);
+  }, [fetchLimit, fetchPeriod, activeCategory, onAuthError, pageTokenHistory.length]);
 
   // Initial load and re-fetch when fetch controls change
   useEffect(() => {
@@ -121,9 +134,9 @@ function Inbox({ selectedMessageId, onSelectMessage, onAuthError, isConnected, o
     }
     setPageTokenHistory([]);
     setCurrentPageIndex(0);
-    fetchPage(null, { isNewSearch: true, useServerSearch: false });
+    fetchPage(null, { isNewSearch: true, useServerSearch: isServerSearch });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConnected, fetchLimit, fetchPeriod]);
+  }, [isConnected, fetchLimit, fetchPeriod, activeCategory]);
 
   // ----------------------------------------------------------------
   // Server Search — passes search fields DIRECTLY to avoid stale state
@@ -255,6 +268,11 @@ function Inbox({ selectedMessageId, onSelectMessage, onAuthError, isConnected, o
         onRunServerSearch={runServerSearch}
         onClearServerSearch={clearServerSearch}
         onRefresh={handleRefresh}
+      />
+      
+      <InboxTabs 
+        activeCategory={activeCategory} 
+        setActiveCategory={setActiveCategory} 
       />
 
       <EmailList

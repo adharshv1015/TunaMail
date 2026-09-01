@@ -1895,6 +1895,16 @@ class AnalyticalReasoningEngine:
                         "explanation": text,
                         "confidence": 0.98,
                     })
+                    
+            for struct_item in (
+                attachment_analysis.get(
+                    "structured_evidence",
+                    []
+                )
+                or []
+            ):
+                normalized = self._structured_evidence(struct_item)
+                structured_evidence.append(normalized)
 
         # =====================================================
         # 7. LINK-ONLY / LIMITED CONTEXT + PAGE INTELLIGENCE
