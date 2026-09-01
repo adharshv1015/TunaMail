@@ -49,7 +49,7 @@ function AttachmentAnalysis({ attachmentData, rawAttachments }) {
         </div>
       )}
 
-      {data.evidence?.length > 0 && (
+      {data.evidence?.length > 0 ? (
         <div className="mt-5 rounded-[12px] border border-orange-500/30 bg-orange-500/10 p-5">
           <h3 className="text-[12px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400">Attachment Evidence</h3>
           <div className="mt-3 space-y-2">
@@ -61,7 +61,15 @@ function AttachmentAnalysis({ attachmentData, rawAttachments }) {
             ))}
           </div>
         </div>
-      )}
+      ) : files.length > 0 ? (
+        <div className="mt-5 rounded-[12px] border border-green-500/30 bg-green-500/10 p-5">
+          <h3 className="text-[12px] font-bold uppercase tracking-wider text-green-600 dark:text-green-400">Analysis Result</h3>
+          <div className="mt-3 flex gap-2 text-[13px] font-medium text-[var(--tm-text)]">
+            <span className="shrink-0 text-green-500">✓</span>
+            <span>Attachments were analyzed successfully. No suspicious file extensions, executable behaviors, or high-risk indicators were detected.</span>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

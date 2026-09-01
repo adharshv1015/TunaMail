@@ -570,37 +570,237 @@ function URLIntelligence({ urlAnalysis, urlPageIntelligence }) {
       {urlPageIntelligence && Object.keys(urlPageIntelligence).length > 0 && (
         <div className="mt-6 border-t border-[var(--tm-border)]/50 pt-4">
           <div className="text-[13px] font-bold text-[var(--tm-text)] uppercase tracking-wider mb-4 flex items-center gap-2">
-            <span className="text-[var(--tm-accent)]">👁</span> Deep Page Inspection (Worker Results)
+            <span className="text-[var(--tm-accent)]">👁</span>
+            Deep Page Inspection (Worker Results)
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {Object.entries(urlPageIntelligence).map(([url, pageData], i) => (
-              <div key={i} className="flex flex-col gap-2 rounded-lg border border-[var(--tm-border)] bg-[var(--tm-surface-secondary)] p-4">
-                <div className="text-[12px] font-mono text-[var(--tm-accent)] break-all border-b border-[var(--tm-border)]/50 pb-2 mb-2">
+              <div
+                key={i}
+                className="flex flex-col gap-3 rounded-lg border border-[var(--tm-border)] bg-[var(--tm-surface-secondary)] p-4"
+              >
+                {/* URL */}
+                <div className="text-[12px] font-mono text-[var(--tm-accent)] break-all border-b border-[var(--tm-border)]/50 pb-2">
                   {url}
                 </div>
 
-                {pageData.security?.error ? (
-                  <div className="text-[12px] font-bold text-red-500">
-                    Fetch Blocked/Failed: {pageData.security.error}
+                {/* Security */}
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-[var(--tm-text-secondary)] uppercase">
+                    Security
+                  </span>
+
+                  {pageData.security?.blocked ? (
+                    <span className="text-[10px] font-bold text-red-500">
+                      BLOCKED
+                    </span>
+                  ) : pageData.security?.error ? (
+                    <span className="text-[10px] font-bold text-orange-500">
+                      ERROR
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-emerald-500">
+                      ALLOWED
+                    </span>
+                  )}
+                </div>
+
+                {pageData.security?.error && (
+                  <div className="text-[11px] text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg p-2">
+                    {pageData.security.error}
                   </div>
-                ) : (
+                )}
+
+                {/* DNS */}
+                <div className="rounded-lg border border-[var(--tm-border)]/50 p-3">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--tm-text-secondary)] mb-2">
+                    DNS
+                  </div>
+
+                  {pageData.dns ? (
+                    <>
+                      <div className="text-[11px] mb-1">
+                        Status:{" "}
+                        <span
+                          className={
+                            pageData.dns.resolved
+                              ? "text-emerald-500 font-bold"
+                              : "text-red-500 font-bold"
+                          }
+                        >
+                          {pageData.dns.resolved ? "RESOLVED" : "FAILED"}
+                        </span>
+                      </div>
+
+                      {pageData.dns.validated_ips?.length > 0 && (
+                        <div className="text-[10px] font-mono text-[var(--tm-text-muted)] break-all">
+                          IPs: {pageData.dns.validated_ips.join(", ")}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-[11px] text-[var(--tm-text-muted)]">
+                      Not available
+                    </span>
+                  )}
+                </div>
+
+                {/* TLS */}
+                <div className="rounded-lg border border-[var(--tm-border)]/50 p-3">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--tm-text-secondary)] mb-2">
+                    TLS
+                  </div>
+
+                  {pageData.tls ? (
+                    <>
+                      <div className="text-[11px]">
+                        Status:{" "}
+                        <span
+                          className={
+                            pageData.tls.certificate_valid
+                              ? "text-emerald-500 font-bold"
+                              : "text-red-500 font-bold"
+                          }
+                        >
+                          {pageData.tls.certificate_valid
+                            ? "VALID"
+                            : "INVALID"}
+                        </span>
+                      </div>
+
+                      {pageData.tls.issuer && (
+                        <div className="text-[10px] text-[var(--tm-text-muted)] mt-1">
+                          Issuer: {pageData.tls.issuer}
+                        </div>
+                      )}
+
+                      {pageData.tls.tls_version && (
+                        <div className="text-[10px] text-[var(--tm-text-muted)]">
+                          Version: {pageData.tls.tls_version}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-[11px] text-[var(--tm-text-muted)]">
+                      Not available
+                    </span>
+                  )}
+                </div>
+
+                {/* HTTP */}
+                <div className="rounded-lg border border-[var(--tm-border)]/50 p-3">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--tm-text-secondary)] mb-2">
+                    HTTP
+                  </div>
+
+                  {pageData.http ? (
+                    <>
+                      <div className="text-[11px]">
+                        Status Code:{" "}
+                        <span className="font-bold text-[var(--tm-text)]">
+                          {pageData.http.status_code ?? "N/A"}
+                        </span>
+                      </div>
+
+                      {pageData.http.final_url && (
+                        <div className="text-[10px] text-[var(--tm-text-muted)] break-all mt-1">
+                          Final URL: {pageData.http.final_url}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-[11px] text-[var(--tm-text-muted)]">
+                      Not available
+                    </span>
+                  )}
+                </div>
+
+                {/* Domain */}
+                {pageData.registered_domain && (
+                  <div className="text-[11px]">
+                    <span className="font-bold text-[var(--tm-text-secondary)]">
+                      Registered Domain:
+                    </span>{" "}
+                    <span className="font-mono text-[var(--tm-text)]">
+                      {pageData.registered_domain}
+                    </span>
+                  </div>
+                )}
+
+                {/* Page Content */}
+                {!pageData.security?.error && (
                   <>
                     <div className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-[12px]">
-                      <span className="text-[var(--tm-text-secondary)] font-bold">Title:</span>
-                      <span className="text-[var(--tm-text)]">{pageData.title || <span className="italic text-gray-500">None</span>}</span>
+                      <span className="text-[var(--tm-text-secondary)] font-bold">
+                        Title:
+                      </span>
+                      <span className="text-[var(--tm-text)]">
+                        {pageData.title || (
+                          <span className="italic text-gray-500">None</span>
+                        )}
+                      </span>
 
-                      <span className="text-[var(--tm-text-secondary)] font-bold">Word Count:</span>
-                      <span className="text-[var(--tm-text)]">{pageData.word_count || 0}</span>
+                      <span className="text-[var(--tm-text-secondary)] font-bold">
+                        Word Count:
+                      </span>
+                      <span className="text-[var(--tm-text)]">
+                        {pageData.word_count || 0}
+                      </span>
 
-                      <span className="text-[var(--tm-text-secondary)] font-bold">Forms:</span>
-                      <span className={`font-bold ${(pageData.forms?.password_fields > 0 || pageData.forms?.email_fields > 0) ? "text-orange-500" : "text-[var(--tm-text)]"}`}>
-                        {pageData.forms?.password_fields > 0 && <span>Password ({pageData.forms.password_fields}) </span>}
-                        {pageData.forms?.email_fields > 0 && <span>Email/Login ({pageData.forms.email_fields}) </span>}
-                        {pageData.forms?.password_fields === 0 && pageData.forms?.email_fields === 0 && <span>None</span>}
+                      <span className="text-[var(--tm-text-secondary)] font-bold">
+                        Forms:
+                      </span>
+                      <span
+                        className={`font-bold ${pageData.forms?.password_fields > 0 ||
+                          pageData.forms?.email_fields > 0
+                          ? "text-orange-500"
+                          : "text-[var(--tm-text)]"
+                          }`}
+                      >
+                        {pageData.forms?.password_fields > 0 &&
+                          `Password (${pageData.forms.password_fields}) `}
+
+                        {pageData.forms?.email_fields > 0 &&
+                          `Email/Login (${pageData.forms.email_fields}) `}
+
+                        {pageData.forms?.password_fields === 0 &&
+                          pageData.forms?.email_fields === 0 &&
+                          "None"}
                       </span>
                     </div>
+
+                    {/* Structured Evidence */}
+                    {pageData.structured_evidence?.length > 0 && (
+                      <div className="rounded-lg border border-[var(--tm-border)]/50 p-3">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--tm-text-secondary)] mb-2">
+                          Evidence
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          {pageData.structured_evidence.map((evidence, index) => (
+                            <div
+                              key={index}
+                              className="text-[11px] rounded-md bg-[var(--tm-surface)] p-2"
+                            >
+                              <div className="font-bold text-[var(--tm-text)]">
+                                {evidence.type || "UNKNOWN"}
+                              </div>
+
+                              {evidence.explanation && (
+                                <div className="text-[var(--tm-text-muted)] mt-0.5">
+                                  {evidence.explanation}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Visible Text */}
                     {pageData.visible_text && (
-                      <div className="mt-2 text-[11px] text-[var(--tm-text-muted)] italic line-clamp-3 bg-[var(--tm-surface)] p-2 rounded">
+                      <div className="text-[11px] text-[var(--tm-text-muted)] italic line-clamp-3 bg-[var(--tm-surface)] p-2 rounded">
                         "{pageData.visible_text}"
                       </div>
                     )}

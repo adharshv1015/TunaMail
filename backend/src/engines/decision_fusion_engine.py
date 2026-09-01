@@ -691,6 +691,18 @@ class DecisionFusionEngine:
                 confidence,
                 40,
             )
+            
+            has_all_attachments_deep_scanned = any(
+                item.get("type") == "ALL_ATTACHMENTS_DEEP_SCAN_COMPLETED" 
+                for item in structured_evidence
+            )
+            
+            if (
+                risk_score == 0 
+                and not has_any_negative 
+                and has_all_attachments_deep_scanned
+            ):
+                verdict = "SAFE"
 
         elif has_contradiction:
 
