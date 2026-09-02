@@ -157,9 +157,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 7,
+    "messages_analyzed": 8,
     "first_seen": "2026-08-13T05:38:12.860920",
-    "last_seen": "2026-08-31T09:25:08.873540"
+    "last_seen": "2026-09-02T04:13:08.001337"
   },
   "sbi@communications.sbi.co.in": {
     "normal_domains": [

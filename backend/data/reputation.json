@@ -141,8 +141,8 @@
   },
   "jobalerts-noreply@linkedin.com": {
     "sender": "jobalerts-noreply@linkedin.com",
-    "messages_seen": 8,
-    "legitimate_count": 3,
+    "messages_seen": 9,
+    "legitimate_count": 4,
     "suspicious_count": 2,
     "phishing_count": 3,
     "reputation": "HIGH_RISK",
@@ -154,7 +154,8 @@
       "1a0465bb4028ddaf",
       "1a050a86b13ea4ba",
       "1a04c5dc4d41e201",
-      "1a04b820b1387f6b"
+      "1a04b820b1387f6b",
+      "1a0601b77b8434c4"
     ]
   },
   "naukrialerts@naukri.com": {
