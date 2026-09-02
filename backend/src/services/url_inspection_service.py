@@ -587,6 +587,39 @@ def _check_tls(
         if ip_value not in candidates:
             candidates.append(ip_value)
 
+    # --------------------------------------------------------
+    # Prefer IPv4 when both address families are available.
+    #
+    # Some environments have validated IPv6 DNS records but
+    # no usable IPv6 network route. Trying those addresses
+    # first can introduce several seconds of avoidable timeout
+    # latency.
+    #
+    # IPv6 is retained as a fallback for environments where
+    # IPv4 is unavailable.
+    # --------------------------------------------------------
+
+    try:
+        ipv4_candidates = [
+            ip_value
+            for ip_value in candidates
+            if ipaddress.ip_address(ip_value).version == 4
+        ]
+
+        ipv6_candidates = [
+            ip_value
+            for ip_value in candidates
+            if ipaddress.ip_address(ip_value).version == 6
+        ]
+
+        candidates = (
+            ipv4_candidates
+            + ipv6_candidates
+        )
+
+    except ValueError:
+        pass
+
     if not candidates:
         result.update(
             {
@@ -626,298 +659,23 @@ def _check_tls(
     last_error = None
 
     # --------------------------------------------------------
-    # TLS connection
+    # TLS inspection
+    #
+    # Primary path:
+    #   Perform ONE verified TLS connection.
+    #
+    # Only when certificate verification fails do we perform
+    # a secondary unverified connection to classify the exact
+    # certificate condition.
+    #
+    # This avoids two TLS handshakes for normal valid HTTPS
+    # destinations.
     # --------------------------------------------------------
 
     for ip_value in candidates:
 
         # ====================================================
-        # Phase 1:
-        # Obtain the peer certificate without verification.
-        #
-        # This is ONLY used to classify the certificate.
-        # Network access is still restricted to validated public IPs.
-        # ====================================================
-
-        try:
-
-            probe_context = ssl._create_unverified_context()
-
-            with socket.create_connection(
-                (
-                    ip_value,
-                    port,
-                ),
-                timeout=5,
-            ) as probe_sock:
-
-                with probe_context.wrap_socket(
-                    probe_sock,
-                    server_hostname=hostname,
-                ) as probe_ssock:
-
-                    cert_der = (
-                        probe_ssock.getpeercert(
-                            binary_form=True
-                        )
-                    )
-
-                    cert = {}
-
-                    if cert_der:
-
-                        result[
-                            "certificate_present"
-                        ] = True
-
-                        try:
-                            cert_pem = (
-                                ssl.DER_cert_to_PEM_cert(
-                                    cert_der
-                                )
-                            )
-
-                            import tempfile
-
-                            with tempfile.NamedTemporaryFile(
-                                mode="w",
-                                suffix=".pem",
-                                delete=True,
-                                encoding="ascii",
-                            ) as cert_file:
-
-                                cert_file.write(
-                                    cert_pem
-                                )
-
-                                cert_file.flush()
-
-                                cert = (
-                                    ssl._ssl._test_decode_cert(
-                                        cert_file.name
-                                    )
-                                )
-
-                        except Exception:
-                            cert = {}
-
-                    # ------------------------------------------------
-                    # Certificate metadata
-                    # ------------------------------------------------
-
-                    if cert:
-
-                        metadata = (
-                            _extract_certificate_metadata(
-                                cert
-                            )
-                        )
-
-                        result.update(
-                            {
-                                "issuer": metadata.get(
-                                    "issuer"
-                                ),
-                                "subject": metadata.get(
-                                    "subject"
-                                ),
-                            }
-                        )
-
-                    # ------------------------------------------------
-                    # Expiry classification
-                    # ------------------------------------------------
-
-                    if cert:
-
-                        not_before = cert.get(
-                            "notBefore"
-                        )
-
-                        not_after = cert.get(
-                            "notAfter"
-                        )
-
-                        now = time.time()
-
-                        try:
-
-                            if not_before:
-
-                                not_before_ts = (
-                                    ssl.cert_time_to_seconds(
-                                        not_before
-                                    )
-                                )
-
-                                if now < not_before_ts:
-
-                                    result.update(
-                                        {
-                                            "certificate_valid": False,
-                                            "expired": True,
-                                            "hostname_match": None,
-                                            "chain_trusted": False,
-                                            "inspection_status": (
-                                                "POLICY_VIOLATION"
-                                            ),
-                                            "violation": (
-                                                "EXPIRED_CERTIFICATE"
-                                            ),
-                                            "severity": "MEDIUM",
-                                            "error_detail": (
-                                                "Certificate is not yet valid."
-                                            ),
-                                        }
-                                    )
-
-                                    return result
-
-                            if not_after:
-
-                                not_after_ts = (
-                                    ssl.cert_time_to_seconds(
-                                        not_after
-                                    )
-                                )
-
-                                if now > not_after_ts:
-
-                                    result.update(
-                                        {
-                                            "certificate_valid": False,
-                                            "expired": True,
-                                            "hostname_match": None,
-                                            "chain_trusted": False,
-                                            "inspection_status": (
-                                                "POLICY_VIOLATION"
-                                            ),
-                                            "violation": (
-                                                "EXPIRED_CERTIFICATE"
-                                            ),
-                                            "severity": "MEDIUM",
-                                            "error_detail": (
-                                                "Certificate has expired."
-                                            ),
-                                        }
-                                    )
-
-                                    return result
-
-                        except Exception:
-                            pass
-
-                    # ------------------------------------------------
-                    # Hostname classification
-                    # ------------------------------------------------
-
-                    if cert:
-
-                        try:
-
-                            ssl.match_hostname(
-                                cert,
-                                hostname,
-                            )
-
-                            result[
-                                "hostname_match"
-                            ] = True
-
-                        except (
-                            ssl.CertificateError,
-                        ):
-
-                            result.update(
-                                {
-                                    "certificate_valid": False,
-                                    "hostname_match": False,
-                                    "chain_trusted": None,
-                                    "inspection_status": (
-                                        "POLICY_VIOLATION"
-                                    ),
-                                    "violation": (
-                                        "HOSTNAME_MISMATCH"
-                                    ),
-                                    "severity": "HIGH",
-                                    "error_detail": (
-                                        "Hostname does not match "
-                                        "the certificate."
-                                    ),
-                                }
-                            )
-
-                            return result
-
-                    # ------------------------------------------------
-                    # Self-signed classification
-                    # ------------------------------------------------
-
-                    if cert:
-
-                        issuer = cert.get(
-                            "issuer"
-                        )
-
-                        subject = cert.get(
-                            "subject"
-                        )
-
-                        if (
-                            issuer
-                            and subject
-                            and issuer == subject
-                        ):
-
-                            result.update(
-                                {
-                                    "certificate_valid": False,
-                                    "self_signed": True,
-                                    "hostname_match": (
-                                        result.get(
-                                            "hostname_match"
-                                        )
-                                        if result.get(
-                                            "hostname_match"
-                                        )
-                                        is not None
-                                        else True
-                                    ),
-                                    "chain_trusted": False,
-                                    "inspection_status": (
-                                        "POLICY_VIOLATION"
-                                    ),
-                                    "violation": (
-                                        "SELF_SIGNED_CERTIFICATE"
-                                    ),
-                                    "severity": "MEDIUM",
-                                    "error_detail": (
-                                        "Certificate is self-signed."
-                                    ),
-                                }
-                            )
-
-                            return result
-
-        except (
-            socket.timeout,
-            ConnectionRefusedError,
-            OSError,
-        ) as exc:
-
-            last_error = exc
-
-        except ssl.SSLError as exc:
-
-            last_error = exc
-
-        except Exception as exc:
-
-            last_error = exc
-
-        # ====================================================
-        # Phase 2:
-        # Perform normal verified TLS validation.
+        # Primary: verified TLS connection
         # ====================================================
 
         try:
@@ -927,7 +685,7 @@ def _check_tls(
                     ip_value,
                     port,
                 ),
-                timeout=5,
+                timeout=2,
             ) as sock:
 
                 with context.wrap_socket(
@@ -979,14 +737,316 @@ def _check_tls(
                     return result
 
         # ----------------------------------------------------
-        # Certificate validation failures
+        # Certificate verification failure
+        #
+        # The verified connection has already established that
+        # the certificate cannot be trusted.
+        #
+        # Only now do we perform an unverified connection to
+        # determine whether the reason is:
+        #
+        # - expired
+        # - hostname mismatch
+        # - self-signed
+        # - untrusted issuer
+        # - another certificate condition
         # ----------------------------------------------------
 
         except ssl.SSLCertVerificationError as exc:
 
+            last_error = exc
+
             normalized = _normalize_tls_error(
                 exc
             )
+
+            # -----------------------------------------------
+            # Secondary classification connection
+            # -----------------------------------------------
+
+            try:
+
+                probe_context = (
+                    ssl._create_unverified_context()
+                )
+
+                with socket.create_connection(
+                    (
+                        ip_value,
+                        port,
+                    ),
+                    timeout=2,
+                ) as probe_sock:
+
+                    with probe_context.wrap_socket(
+                        probe_sock,
+                        server_hostname=hostname,
+                    ) as probe_ssock:
+
+                        cert_der = (
+                            probe_ssock.getpeercert(
+                                binary_form=True
+                            )
+                        )
+
+                        cert = {}
+
+                        if cert_der:
+
+                            result[
+                                "certificate_present"
+                            ] = True
+
+                            try:
+
+                                cert_pem = (
+                                    ssl.DER_cert_to_PEM_cert(
+                                        cert_der
+                                    )
+                                )
+
+                                import tempfile
+
+                                with tempfile.NamedTemporaryFile(
+                                    mode="w",
+                                    suffix=".pem",
+                                    delete=True,
+                                    encoding="ascii",
+                                ) as cert_file:
+
+                                    cert_file.write(
+                                        cert_pem
+                                    )
+
+                                    cert_file.flush()
+
+                                    cert = (
+                                        ssl._ssl._test_decode_cert(
+                                            cert_file.name
+                                        )
+                                    )
+
+                            except Exception:
+
+                                cert = {}
+
+                        # -----------------------------------
+                        # Certificate metadata
+                        # -----------------------------------
+
+                        if cert:
+
+                            metadata = (
+                                _extract_certificate_metadata(
+                                    cert
+                                )
+                            )
+
+                            result.update(
+                                {
+                                    "issuer": metadata.get(
+                                        "issuer"
+                                    ),
+                                    "subject": metadata.get(
+                                        "subject"
+                                    ),
+                                }
+                            )
+
+                        # -----------------------------------
+                        # Expiry classification
+                        # -----------------------------------
+
+                        if cert:
+
+                            not_before = cert.get(
+                                "notBefore"
+                            )
+
+                            not_after = cert.get(
+                                "notAfter"
+                            )
+
+                            now = time.time()
+
+                            try:
+
+                                if not_before:
+
+                                    not_before_ts = (
+                                        ssl.cert_time_to_seconds(
+                                            not_before
+                                        )
+                                    )
+
+                                    if now < not_before_ts:
+
+                                        result.update(
+                                            {
+                                                "certificate_valid": False,
+                                                "expired": True,
+                                                "hostname_match": None,
+                                                "chain_trusted": False,
+                                                "inspection_status": (
+                                                    "POLICY_VIOLATION"
+                                                ),
+                                                "violation": (
+                                                    "EXPIRED_CERTIFICATE"
+                                                ),
+                                                "severity": "MEDIUM",
+                                                "error_detail": (
+                                                    "Certificate is not yet valid."
+                                                ),
+                                            }
+                                        )
+
+                                        return result
+
+                                if not_after:
+
+                                    not_after_ts = (
+                                        ssl.cert_time_to_seconds(
+                                            not_after
+                                        )
+                                    )
+
+                                    if now > not_after_ts:
+
+                                        result.update(
+                                            {
+                                                "certificate_valid": False,
+                                                "expired": True,
+                                                "hostname_match": None,
+                                                "chain_trusted": False,
+                                                "inspection_status": (
+                                                    "POLICY_VIOLATION"
+                                                ),
+                                                "violation": (
+                                                    "EXPIRED_CERTIFICATE"
+                                                ),
+                                                "severity": "MEDIUM",
+                                                "error_detail": (
+                                                    "Certificate has expired."
+                                                ),
+                                            }
+                                        )
+
+                                        return result
+
+                            except Exception:
+                                pass
+
+                        # -----------------------------------
+                        # Hostname classification
+                        # -----------------------------------
+
+                        if cert:
+
+                            try:
+
+                                ssl.match_hostname(
+                                    cert,
+                                    hostname,
+                                )
+
+                                result[
+                                    "hostname_match"
+                                ] = True
+
+                            except ssl.CertificateError:
+
+                                result.update(
+                                    {
+                                        "certificate_valid": False,
+                                        "hostname_match": False,
+                                        "chain_trusted": None,
+                                        "inspection_status": (
+                                            "POLICY_VIOLATION"
+                                        ),
+                                        "violation": (
+                                            "HOSTNAME_MISMATCH"
+                                        ),
+                                        "severity": "HIGH",
+                                        "error_detail": (
+                                            "Hostname does not match "
+                                            "the certificate."
+                                        ),
+                                    }
+                                )
+
+                                return result
+
+                        # -----------------------------------
+                        # Self-signed classification
+                        # -----------------------------------
+
+                        if cert:
+
+                            issuer = cert.get(
+                                "issuer"
+                            )
+
+                            subject = cert.get(
+                                "subject"
+                            )
+
+                            if (
+                                issuer
+                                and subject
+                                and issuer == subject
+                            ):
+
+                                result.update(
+                                    {
+                                        "certificate_valid": False,
+                                        "self_signed": True,
+                                        "hostname_match": (
+                                            result.get(
+                                                "hostname_match"
+                                            )
+                                            if result.get(
+                                                "hostname_match"
+                                            ) is not None
+                                            else True
+                                        ),
+                                        "chain_trusted": False,
+                                        "inspection_status": (
+                                            "POLICY_VIOLATION"
+                                        ),
+                                        "violation": (
+                                            "SELF_SIGNED_CERTIFICATE"
+                                        ),
+                                        "severity": "MEDIUM",
+                                        "error_detail": (
+                                            "Certificate is self-signed."
+                                        ),
+                                    }
+                                )
+
+                                return result
+
+            except (
+                socket.timeout,
+                ConnectionRefusedError,
+                OSError,
+            ) as probe_exc:
+
+                last_error = probe_exc
+
+            except ssl.SSLError as probe_exc:
+
+                last_error = probe_exc
+
+            except Exception as probe_exc:
+
+                last_error = probe_exc
+
+            # -----------------------------------------------
+            # The verified connection already established that
+            # certificate validation failed. Preserve the
+            # normalized certificate violation when detailed
+            # classification was unavailable.
+            # -----------------------------------------------
 
             result.update(
                 {
@@ -998,11 +1058,14 @@ def _check_tls(
             )
 
             return result
+
         # ----------------------------------------------------
         # Explicit hostname mismatch
         # ----------------------------------------------------
 
-        except ssl.CertificateError:
+        except ssl.CertificateError as exc:
+
+            last_error = exc
 
             result.update(
                 {
@@ -1014,7 +1077,8 @@ def _check_tls(
                     "violation": "HOSTNAME_MISMATCH",
                     "severity": "HIGH",
                     "error_detail": (
-                        "Hostname does not match the certificate."
+                        "Hostname does not match "
+                        "the certificate."
                     ),
                 }
             )
@@ -1065,20 +1129,36 @@ def _check_tls(
 
             return result
 
+        # ----------------------------------------------------
+        # Connection timeout
+        # ----------------------------------------------------
+
         except socket.timeout as exc:
 
             last_error = exc
             continue
+
+        # ----------------------------------------------------
+        # Connection refused
+        # ----------------------------------------------------
 
         except ConnectionRefusedError as exc:
 
             last_error = exc
             continue
 
+        # ----------------------------------------------------
+        # Other socket errors
+        # ----------------------------------------------------
+
         except OSError as exc:
 
             last_error = exc
             continue
+
+        # ----------------------------------------------------
+        # Unexpected errors
+        # ----------------------------------------------------
 
         except Exception as exc:
 
@@ -1172,7 +1252,7 @@ class URLInspectionService:
 
     MAX_URLS_PER_EMAIL = 50
     MAX_CONCURRENT_INSPECTIONS = 3
-    INSPECTION_TIMEOUT = 10
+    INSPECTION_TIMEOUT = 25
     WORKER_IDLE_SLEEP = 0.10
     SOCKET_TIMEOUT = 5
 
@@ -2176,18 +2256,153 @@ class URLInspectionService:
 
             try:
 
-                result = URLWorker.inspect(
+                # ------------------------------------------------
+                # Page intelligence
+                # ------------------------------------------------
+
+                page_result = URLWorker.inspect(
                     job.url
                 )
 
-                if result is None:
-                    result = {
+                if page_result is None:
+                    page_result = {
                         "security": {
                             "error": (
                                 "Worker returned no result."
                             )
                         }
                     }
+
+                # ------------------------------------------------
+                # Authoritative DNS/TLS inspection
+                #
+                # URLWorker intentionally does not call
+                # URLInspectionService.inspect().
+                #
+                # inspect() is an INSTANCE method, so create
+                # the service instance here.
+                # ------------------------------------------------
+
+                service = URLInspectionService()
+
+                service_result = service.inspect(
+                    job.url
+                )
+
+                if not isinstance(
+                    service_result,
+                    dict,
+                ):
+                    service_result = {
+                        "security": {
+                            "error": (
+                                "Service inspection returned "
+                                "an invalid result."
+                            )
+                        }
+                    }
+
+                # ------------------------------------------------
+                # Start with page intelligence.
+                # ------------------------------------------------
+
+                result = dict(
+                    page_result
+                )
+
+                # ------------------------------------------------
+                # Preserve authoritative security state.
+                # ------------------------------------------------
+
+                service_security = (
+                    service_result.get(
+                        "security",
+                        {},
+                    )
+                    or {}
+                )
+
+                page_security = (
+                    page_result.get(
+                        "security",
+                        {},
+                    )
+                    or {}
+                )
+
+                if service_security.get(
+                    "blocked"
+                ):
+                    result["security"] = (
+                        service_security
+                    )
+
+                elif page_security.get(
+                    "blocked"
+                ):
+                    result["security"] = (
+                        page_security
+                    )
+
+                else:
+                    result["security"] = {
+                        "blocked": False,
+                        "error": (
+                            service_security.get(
+                                "error"
+                            )
+                            or page_security.get(
+                                "error"
+                            )
+                        ),
+                    }
+
+                # ------------------------------------------------
+                # Preserve authoritative inspection fields.
+                #
+                # DNS/TLS/evidence come from URLInspectionService.
+                # HTTP/browser/page intelligence comes from
+                # URLWorker.
+                # ------------------------------------------------
+
+                if "dns" in service_result:
+                    result["dns"] = (
+                        service_result["dns"]
+                    )
+
+                if "tls" in service_result:
+                    result["tls"] = (
+                        service_result["tls"]
+                    )
+
+                if "registered_domain" in service_result:
+                    result["registered_domain"] = (
+                        service_result[
+                            "registered_domain"
+                        ]
+                    )
+
+                if "structured_evidence" in service_result:
+                    result["structured_evidence"] = (
+                        service_result[
+                            "structured_evidence"
+                        ]
+                    )
+
+                # Preserve the authoritative URL/domain too.
+                if "url" in service_result:
+                    result["url"] = (
+                        service_result["url"]
+                    )
+
+                if "domain" in service_result:
+                    result["domain"] = (
+                        service_result["domain"]
+                    )
+
+                # ------------------------------------------------
+                # Determine final job status.
+                # ------------------------------------------------
 
                 security = (
                     result.get(
@@ -2222,7 +2437,6 @@ class URLInspectionService:
                     )
 
                 else:
-
                     url_queue.update_job(
                         job.job_id,
                         "COMPLETED",
@@ -2259,7 +2473,6 @@ class URLInspectionService:
                     logger.exception(
                         "Could not mark URL job as FAILED."
                     )
-
     # ========================================================
     # Batch page inspection
     # ========================================================

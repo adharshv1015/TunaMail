@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import os
 
@@ -27,6 +28,10 @@ from src.utils.json_safe import json_safe
 
 import logging
 import time
+import json
+import queue
+import threading
+
 logger = logging.getLogger(__name__)
 
 # Global singletons for batch processing optimization
@@ -166,22 +171,83 @@ MAX_URLS_PER_EMAIL = int(os.environ.get("MAX_URLS_PER_EMAIL", "50"))
 MAX_EMAIL_ANALYSIS_SECONDS = float(os.environ.get("MAX_EMAIL_ANALYSIS_SECONDS", "15.0"))
 MAX_BODY_BYTES = int(os.environ.get("MAX_BODY_BYTES", str(100 * 1024)))  # 100 KB
 
+def emit_progress(progress_callback, step, progress, detail=None):
+    """
+    Emit a real-time analysis progress event when a callback is provided.
 
+    The existing analysis pipeline remains unchanged when no callback
+    is supplied.
+    """
+    if progress_callback is None:
+        return
 
-def process_single_message(connector, msg_id, is_batch=False):
+    event = {
+        "type": "progress",
+        "step": step,
+        "progress": max(0, min(100, int(progress))),
+    }
+
+    if detail:
+        event["detail"] = detail
+
+    try:
+        progress_callback(event)
+    except Exception as exc:
+        logger.debug(
+            {
+                "event": "progress_callback_error",
+                "error": str(exc),
+            }
+        )
+
+def process_single_message(
+    connector,
+    msg_id,
+    is_batch=False,
+    progress_callback=None,
+):
     # ------------------------------------------------------------------
     # Analysis cache: single-flight lock prevents duplicate pipeline runs
     # ------------------------------------------------------------------
     msg_lock = analysis_cache.get_lock(msg_id)
+    if msg_lock.locked():
+        emit_progress(
+            progress_callback,
+            "Resuming analysis",
+            5,
+            "Waiting for existing analysis process to finish..."
+        )
+    
     with msg_lock:
         tracker = PerformanceTracker(budget_seconds=MAX_EMAIL_ANALYSIS_SECONDS)
         
+        emit_progress(
+            progress_callback,
+            "Fetching email",
+            5,
+            "Retrieving the message from Gmail..."
+        )
+
         with tracker.measure("fetch_message"):
             full_message = connector.get_message(msg_id)
 
         analyzers = get_analyzers()
 
-        parsed = safe_analyze("GmailParser", msg_id, analyzers["parser"].parse_message, tracker, full_message)
+        emit_progress(
+            progress_callback,
+            "Parsing email",
+            10,
+            "Extracting headers, body, links and attachments..."
+        )
+
+        parsed = safe_analyze(
+            "GmailParser",
+            msg_id,
+            analyzers["parser"].parse_message,
+            tracker,
+            full_message
+        )
+
         if parsed.get("analysis_status") == "UNAVAILABLE":
             if is_batch:
                 return None
@@ -190,8 +256,22 @@ def process_single_message(connector, msg_id, is_batch=False):
         # Check analysis cache AFTER parsing (fingerprint needs parsed content)
         fingerprint = get_analysis_fingerprint(parsed)
         cached = analysis_cache.get(msg_id, fingerprint)
+
         if cached is not None:
-            logger.info({"event": "analysis_cache_hit", "message_id": msg_id})
+            logger.info(
+                {
+                    "event": "analysis_cache_hit",
+                    "message_id": msg_id,
+                }
+            )
+
+            emit_progress(
+                progress_callback,
+                "Analysis complete",
+                100,
+                "Loaded existing analysis from cache."
+            )
+
             return cached
 
         # ------------------------------------------------------------------
@@ -213,13 +293,44 @@ def process_single_message(connector, msg_id, is_batch=False):
             parsed["body"] = body
             logger.info({"event": "body_truncated", "message_id": msg_id,
                          "original_bytes": body_bytes, "limit_bytes": MAX_BODY_BYTES})
+        emit_progress(
+            progress_callback,
+            "Analyzing attachments",
+            15,
+            "Checking email attachments..."
+        )
 
-        attachment_analysis = safe_analyze("AttachmentAnalyzer", msg_id, analyzers["attachment"].analyze, tracker, parsed.get("attachments", []))
+        attachment_analysis = safe_analyze(
+            "AttachmentAnalyzer", 
+            msg_id, 
+            lambda atts: analyzers["attachment"].analyze(
+                attachments=atts, 
+                connector=connector, 
+                message_id=msg_id, 
+                progress_callback=progress_callback
+            ), 
+            tracker, 
+            parsed.get("attachments", [])
+        )
+        
+        emit_progress(
+            progress_callback,
+            "Checking authentication",
+            22,
+            "Evaluating SPF, DKIM and DMARC..."
+        )
         auth_analysis = safe_analyze("AuthenticationAnalyzer", msg_id, analyzers["auth"].analyze, tracker, parsed.get("headers", {}))
 
         # URL processing
         combined_text_for_urls = (parsed.get("body", "") or "") + "\n" + (parsed.get("html_body", "") or "")
         url_start = time.perf_counter()
+
+        emit_progress(
+            progress_callback,
+            "Analyzing URLs",
+            32,
+            "Inspecting links, domains, redirects and URL security..."
+        )
 
         url_analysis = safe_analyze(
             "URLAnalyzer",
@@ -248,6 +359,13 @@ def process_single_message(connector, msg_id, is_batch=False):
             logger.info({"event": "urls_truncated", "message_id": msg_id,
                          "original": original_url_count, "limit": MAX_URLS_PER_EMAIL})
 
+        emit_progress(
+            progress_callback,
+            "Investigating domains",
+            45,
+            "Checking domain registration intelligence..."
+        )
+
         whois_analysis = []
         seen_domains = set()
 
@@ -263,7 +381,21 @@ def process_single_message(connector, msg_id, is_batch=False):
             if whois_result:
                 whois_analysis.append(whois_result)
 
+        emit_progress(
+            progress_callback,
+            "Evaluating sender trust",
+            52,
+            "Evaluating sender and domain trust..."
+        )
+
         trust_analysis = safe_analyze("TrustAnalyzer", msg_id, analyzers["trust"].evaluate, tracker, parsed_email=parsed, url_analysis=url_analysis)
+
+        emit_progress(
+            progress_callback,
+            "Analyzing email content",
+            58,
+            "Checking for phishing language, urgency and suspicious requests..."
+        )
 
         content_analysis = safe_analyze("ContentAnalyzer", msg_id, analyzers["content"].analyze, tracker, body=parsed.get("body", ""), sender=parsed.get("from", ""), auth_results=auth_analysis, urls=url_analysis.get("urls", []))
 
@@ -281,6 +413,13 @@ def process_single_message(connector, msg_id, is_batch=False):
         url_page_intelligence = {}
         url_items = url_analysis.get("analysis", [])
         urls_to_inspect = [item.get("url") for item in url_items if item.get("url")][:5]
+
+        emit_progress(
+            progress_callback,
+            "Inspecting linked pages",
+            65,
+            "Analyzing webpage intelligence for detected URLs..."
+        )
 
         if urls_to_inspect and not tracker.is_over_budget():
             from src.services.url_inspection_service import URLInspectionService
@@ -306,6 +445,13 @@ def process_single_message(connector, msg_id, is_batch=False):
 
         existing_analysis["url_page_intelligence"] = url_page_intelligence
 
+        emit_progress(
+            progress_callback,
+            "Running Local AI reasoning",
+            74,
+            "Performing contextual reasoning over the collected evidence..."
+        )
+
         # Timeout check before expensive AI
         if tracker.is_over_budget():
             tracker.record_timeout("LocalAI", reason="Analysis budget exceeded before AI inference")
@@ -320,9 +466,38 @@ def process_single_message(connector, msg_id, is_batch=False):
             ai_analysis = safe_analyze("LocalAI", msg_id, analyze_email_with_ai, tracker, parsed, existing_analysis)
 
         historical_evidence = analyzers["verdict_store"].get_historical_evidence(msg_id, parsed, url_analysis)
+       
+        emit_progress(
+            progress_callback,
+            "Analytical reasoning",
+            82,
+            "Evaluating evidence and determining the security reasoning state..."
+        )
+
         are_result = safe_analyze("AnalyticalReasoningEngine", msg_id, analyzers["are"].evaluate, tracker, auth_analysis, url_analysis, whois_analysis, content_analysis, attachment_analysis, trust_analysis, ai_analysis=ai_analysis, url_page_intelligence=url_page_intelligence, historical_evidence=historical_evidence)
 
+        emit_progress(
+            progress_callback,
+            "Resolving evidence conflicts",
+            87,
+            "Checking consistency between security signals..."
+        )
+
         conflict_result = safe_analyze("EvidenceConflictEngine", msg_id, analyzers["conflict"].evaluate, tracker, parsed, auth_analysis, url_analysis, whois_analysis, content_analysis, attachment_analysis, trust_analysis, ai_analysis, url_page_intelligence)
+
+        emit_progress(
+            progress_callback,
+            "Making final decision",
+            90,
+            "Merging all analyses into final verdict..."
+        )
+
+        emit_progress(
+            progress_callback,
+            "Building final decision",
+            91,
+            "Combining security evidence into the final verdict..."
+        )
 
         decision_result = safe_analyze(
             "DecisionFusionEngine",
@@ -332,7 +507,12 @@ def process_single_message(connector, msg_id, is_batch=False):
             are_result,
             conflict_result,
         )
-
+        emit_progress(
+            progress_callback,
+            "Applying security safeguards",
+            94,
+            "Applying deterministic decision priority and safety guards..."
+        )
         # ------------------------------------------------------------
         # FINAL DETERMINISTIC DECISION GUARD
         # ------------------------------------------------------------
@@ -375,6 +555,14 @@ def process_single_message(connector, msg_id, is_batch=False):
         existing_analysis["reasoning"] = are_result.get("evidence", {})
         existing_analysis["conflict"] = conflict_result
 
+        emit_progress(
+            progress_callback,
+            "Generating explanation",
+            96,
+            "Preparing the analyst-readable security explanation..."
+        )
+
+
         explanation = safe_analyze("ExplanationEngine", msg_id, analyzers["explanation"].generate, tracker, parsed, existing_analysis, decision_result)
 
         # --- Intelligence Pipeline (additive, non-blocking, only if budget allows) ---
@@ -387,6 +575,14 @@ def process_single_message(connector, msg_id, is_batch=False):
                 logger.warning(f"Intelligence pipeline error (non-critical): {_intel_err}")
         else:
             tracker.record_timeout("IntelligencePipeline", reason="Analysis budget exceeded")
+
+
+        emit_progress(
+            progress_callback,
+            "Finalizing analysis",
+            98,
+            "Saving results and preparing the final report..."
+        )   
 
         tracker.complete()
         pipeline_stats = tracker.get_summary()
@@ -428,8 +624,119 @@ def process_single_message(connector, msg_id, is_batch=False):
 
         # Cache the full result for subsequent requests
         analysis_cache.set(msg_id, fingerprint, result)
+
+        emit_progress(
+            progress_callback,
+            "Analysis complete",
+            100,
+            "Security analysis completed successfully."
+        )
+
         return result
 
+
+@router.get("/message/{message_id}/stream")
+def stream_message_analysis(
+    request: Request,
+    message_id: str,
+):
+    """
+    Stream real-time email analysis progress using Server-Sent Events.
+
+    The existing process_single_message() pipeline is reused unchanged.
+    Progress callbacks are pushed into a thread-safe queue and streamed
+    to the frontend as SSE events.
+    """
+
+    session_id = request.session.get("session_id")
+    server_session = session_manager.get_session(session_id)
+
+    if not server_session or not server_session.get("authenticated"):
+        raise HTTPException(
+            status_code=401,
+            detail="Please login first."
+        )
+
+    credentials = server_session.get("credentials")
+
+    if not credentials:
+        raise HTTPException(
+            status_code=401,
+            detail="Credentials missing from session."
+        )
+
+    connector = GmailConnector(credentials)
+    progress_queue = queue.Queue()
+
+    def progress_callback(event):
+        progress_queue.put(event)
+
+    def run_analysis():
+        try:
+            result = process_single_message(
+                connector,
+                message_id,
+                is_batch=False,
+                progress_callback=progress_callback,
+            )
+
+            progress_queue.put({
+                "type": "result",
+                "data": result,
+            })
+
+        except HTTPException as exc:
+            progress_queue.put({
+                "type": "error",
+                "status": exc.status_code,
+                "message": str(exc.detail),
+            })
+
+        except Exception as exc:
+            logger.exception(
+                "Streaming email analysis failed for %s",
+                message_id,
+            )
+
+            progress_queue.put({
+                "type": "error",
+                "status": 500,
+                "message": "Email analysis failed.",
+            })
+
+        finally:
+            progress_queue.put({
+                "type": "done",
+            })
+
+    thread = threading.Thread(
+        target=run_analysis,
+        daemon=True,
+    )
+    thread.start()
+
+    def event_stream():
+        while True:
+
+            try:
+                event = progress_queue.get(timeout=0.5)
+            except queue.Empty:
+                continue
+
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+            if event.get("type") == "done":
+                break
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 @router.get("/messages")
 def list_messages(
@@ -584,4 +891,5 @@ def get_message(
     
     return process_single_message(connector, message_id, is_batch=False)
 
+    
 

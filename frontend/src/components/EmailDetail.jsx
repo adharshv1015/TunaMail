@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getMessage } from "../api/api";
+import { getMessage, streamMessage } from "../api/api";
 import EmailHeaders from "./email/EmailHeaders";
 import ThreatOverview from "./email/ThreatOverview";
 import AuthenticationCard from "./email/AuthenticationCard";
@@ -17,52 +17,107 @@ import IntelligenceCard from "./email/IntelligenceCard";
 import AdaptiveIntelligence from "./email/AdaptiveIntelligence";
 
 import LoadingSkeleton from "./common/LoadingSkeleton";
+import AnalysisProgressScreen from "./email/AnalysisProgressScreen";
 
-function EmailDetail({ messageId, onBack, resultSet = [], currentIndex = -1, onNavigate, onMessageAnalyzed }) {
+function EmailDetail({ messageId, messageMeta, onBack, resultSet = [], currentIndex = -1, onNavigate, onMessageAnalyzed }) {
+  console.log("EMAIL DETAIL RENDER:", {
+    messageId,
+    currentIndex,
+    resultSetLength: resultSet.length,
+  });
+
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [progressStep, setProgressStep] = useState("Preparing analysis");
+  const [progressDetail, setProgressDetail] = useState("");
 
   useEffect(() => {
+    // 1. Abort previous request (handled by cleanup)
+    // 2. Clear previous message
+    setMessage(null);
+    // 3. Clear previous error
+    setError("");
+    // 4. Reset progress
+    setProgress(0);
+    setProgressStep("Preparing analysis");
+    setProgressDetail("");
+
     if (!messageId) {
-      setMessage(null);
+      return;
+    }
+
+    if (!messageMeta) {
+      setError("Email metadata is unavailable. Please return to the inbox and try again.");
+      setLoading(false);
       return;
     }
 
     const controller = new AbortController();
     const { signal } = controller;
+    setLoading(true);
 
     const loadMessage = async () => {
       try {
-        setLoading(true);
-        setError("");
-        console.log("Fetching message:", messageId);
-        const data = await getMessage(messageId, { signal });
-        setMessage(data);
-        // Notify inbox to update this message's badge from UNANALYZED → real verdict
-        if (data && onMessageAnalyzed) {
-          onMessageAnalyzed(messageId, data);
+        if (messageMeta.analysis_status === "ANALYZED") {
+          console.log("Loading cached message:", messageId);
+          const data = await getMessage(messageId, { signal });
+          if (!signal.aborted) {
+            setMessage(data);
+          }
+        } else if (messageMeta.analysis_status === "UNANALYZED") {
+          setProgressDetail("Starting security analysis...");
+          console.log("Streaming analysis for message:", messageId);
+
+          await streamMessage(messageId, {
+            signal,
+            onProgress: (event) => {
+              if (signal.aborted) return;
+              setProgress(event.progress ?? 0);
+              setProgressStep(event.step || "Analyzing email");
+              setProgressDetail(event.detail || "");
+            },
+            onResult: (data) => {
+              if (signal.aborted) return;
+              setProgress(100);
+              setProgressStep("Analysis complete");
+              setProgressDetail("Security analysis completed successfully.");
+              setMessage(data);
+              if (data && onMessageAnalyzed) {
+                onMessageAnalyzed(messageId, data);
+              }
+            },
+            onError: (event) => {
+              if (signal.aborted) return;
+              console.error("Streaming analysis error:", event);
+              setError(event.message || "Failed to load email analysis.");
+            },
+          });
+        } else {
+          setError("Unknown email analysis status.");
+          setLoading(false);
         }
       } catch (err) {
-        if (err.name === 'AbortError') {
-            console.log("Fetch aborted for message:", messageId);
-            return;
+        if (err.name === "AbortError") {
+          console.log("Analysis aborted for message:", messageId);
+          return;
         }
         console.error(err);
         setError("Failed to load email analysis.");
       } finally {
         if (!signal.aborted) {
-            setLoading(false);
+          setLoading(false);
         }
       }
     };
 
     loadMessage();
-    
+
     return () => {
-        controller.abort();
+      controller.abort();
     };
-  }, [messageId]);
+  }, [messageId, messageMeta, onMessageAnalyzed]);
 
   /* --------------------------------------------- */
   /* EMPTY STATE */
@@ -83,6 +138,16 @@ function EmailDetail({ messageId, onBack, resultSet = [], currentIndex = -1, onN
   /* LOADING */
   /* --------------------------------------------- */
   if (loading) {
+    if (messageMeta?.analysis_status === "UNANALYZED" || progress > 0) {
+      return (
+        <AnalysisProgressScreen
+          progress={progress}
+          step={progressStep}
+          detail={progressDetail}
+        />
+      );
+    }
+
     return <LoadingSkeleton />;
   }
 

@@ -93,3 +93,19 @@ class GmailConnector:
         )
 
         return message
+
+    def get_attachment(self, message_id, attachment_id):
+        """Fetch raw attachment bytes (base64url encoded) from Gmail API."""
+        attachment = (
+            self.service.users()
+            .messages()
+            .attachments()
+            .get(
+                userId="me",
+                messageId=message_id,
+                id=attachment_id,
+            )
+            .execute()
+        )
+        
+        return attachment

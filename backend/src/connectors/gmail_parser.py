@@ -130,6 +130,13 @@ class GmailParser:
                             {}
                         ).get(
                             "size"
+                        ),
+                        
+                        "attachmentId": part.get(
+                            "body",
+                            {}
+                        ).get(
+                            "attachmentId"
                         )
                     }
                 )
