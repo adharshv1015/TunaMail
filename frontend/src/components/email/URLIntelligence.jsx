@@ -475,6 +475,14 @@ function UrlCard({ item }) {
                     />
                   )}
 
+                  {/* CT Evidence */}
+                  {item.tls && item.tls.certificate_transparency && item.tls.certificate_transparency.available && (
+                    <EvidenceRow
+                      type="neutral"
+                      text={`CT Log Intelligence: Earliest certificate observed ${item.tls.certificate_transparency.first_seen_days_ago} days ago (${item.tls.certificate_transparency.certificate_count} certificates found across ${item.tls.certificate_transparency.issuer_count} unique CAs)`}
+                    />
+                  )}
+
                   {/* Redirects */}
                   {item.redirects && item.redirects.detected ? (
                     <EvidenceRow

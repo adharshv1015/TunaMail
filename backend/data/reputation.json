@@ -1,495 +1,61 @@
 {
-  "est2@test.com": {
-    "sender": "est2@test.com",
+  "saseendranv888@gmail.com": {
+    "sender": "saseendranv888@gmail.com",
     "messages_seen": 5,
-    "legitimate_count": 5,
-    "suspicious_count": 0,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN"
-  },
-  "trust3@test.com": {
-    "sender": "trust3@test.com",
-    "messages_seen": 15,
-    "legitimate_count": 15,
-    "suspicious_count": 0,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN"
-  },
-  "susp4@test.com": {
-    "sender": "susp4@test.com",
-    "messages_seen": 4,
-    "legitimate_count": 0,
-    "suspicious_count": 4,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN"
-  },
-  "hr5@test.com": {
-    "sender": "hr5@test.com",
-    "messages_seen": 3,
-    "legitimate_count": 0,
-    "suspicious_count": 0,
-    "phishing_count": 3,
-    "reputation": "UNKNOWN"
-  },
-  "trust21@test.com": {
-    "sender": "trust21@test.com",
-    "messages_seen": 20,
-    "legitimate_count": 20,
-    "suspicious_count": 0,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN"
-  },
-  "trust22@test.com": {
-    "sender": "trust22@test.com",
-    "messages_seen": 20,
-    "legitimate_count": 20,
-    "suspicious_count": 0,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN"
-  },
-  "trust23@test.com": {
-    "sender": "trust23@test.com",
-    "messages_seen": 20,
-    "legitimate_count": 20,
-    "suspicious_count": 0,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN"
-  },
-  "trust24@test.com": {
-    "sender": "trust24@test.com",
-    "messages_seen": 20,
-    "legitimate_count": 20,
-    "suspicious_count": 0,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN"
-  },
-  "trust25@test.com": {
-    "sender": "trust25@test.com",
-    "messages_seen": 20,
-    "legitimate_count": 20,
-    "suspicious_count": 0,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN"
-  },
-  "test@test.com": {
-    "total_messages": 1,
-    "legitimate_count": 0,
-    "suspicious_count": 0,
-    "phishing_count": 1,
-    "reputation": "UNKNOWN",
-    "score": 50,
-    "first_seen": "2026-08-12T05:01:41.182751",
-    "last_seen": "2026-08-12T05:01:41.182774"
-  },
-  "tuntunsahur19992000@gmail.com": {
-    "sender": "tuntunsahur19992000@gmail.com",
-    "messages_seen": 49,
-    "legitimate_count": 24,
-    "suspicious_count": 25,
-    "phishing_count": 0,
-    "reputation": "SUSPICIOUS",
-    "seen_message_ids": [
-      "19ff467ac8fdaf80",
-      "19ff45fe5f740d34",
-      "19ff04f1d6c4b008",
-      "19feb0a04b83dcbe",
-      "19feb07acb23cf50"
-    ]
-  },
-  "adharshv1015@gmail.com": {
-    "sender": "adharshv1015@gmail.com",
-    "messages_seen": 37,
     "legitimate_count": 2,
-    "suspicious_count": 26,
-    "phishing_count": 9,
-    "reputation": "HIGH_RISK",
-    "seen_message_ids": [
-      "19fef1c21d75f053",
-      "19feb15d053c58bf",
-      "19fea40acb1bc151",
-      "19ff99e7b5921494",
-      "19ff99e489628c44"
-    ]
-  },
-  "no-reply@accounts.google.com": {
-    "sender": "no-reply@accounts.google.com",
-    "messages_seen": 23,
-    "legitimate_count": 8,
-    "suspicious_count": 0,
-    "phishing_count": 15,
-    "reputation": "HIGH_RISK",
-    "seen_message_ids": [
-      "19fd6f157661bf87",
-      "19fd6f15612105a0"
-    ]
-  },
-  "test@example.com": {
-    "sender": "test@example.com",
-    "messages_seen": 28,
-    "legitimate_count": 0,
-    "suspicious_count": 0,
-    "phishing_count": 6,
-    "reputation": "HIGH_RISK",
-    "seen_message_ids": [
-      "msg_double_request",
-      "msg_simultaneous",
-      "msg_large",
-      "msg_many_urls",
-      "msg_timeout",
-      "msg_crash"
-    ]
-  },
-  "jobalerts-noreply@linkedin.com": {
-    "sender": "jobalerts-noreply@linkedin.com",
-    "messages_seen": 9,
-    "legitimate_count": 4,
-    "suspicious_count": 2,
-    "phishing_count": 3,
-    "reputation": "HIGH_RISK",
-    "seen_message_ids": [
-      "19ff91c4863157b6",
-      "19fc0765ec375b7c",
-      "1a022bd0a86a8fcd",
-      "1a0224f2787787f8",
-      "1a0465bb4028ddaf",
-      "1a050a86b13ea4ba",
-      "1a04c5dc4d41e201",
-      "1a04b820b1387f6b",
-      "1a0601b77b8434c4"
-    ]
-  },
-  "naukrialerts@naukri.com": {
-    "sender": "naukrialerts@naukri.com",
-    "messages_seen": 2,
-    "legitimate_count": 2,
-    "suspicious_count": 0,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN",
-    "seen_message_ids": [
-      "19ff91528ac858c6",
-      "1a0417673848d50b"
-    ]
-  },
-  "sbi@communications.sbi.co.in": {
-    "sender": "sbi@communications.sbi.co.in",
-    "messages_seen": 9,
-    "legitimate_count": 0,
     "suspicious_count": 3,
-    "phishing_count": 6,
-    "reputation": "HIGH_RISK",
-    "seen_message_ids": [
-      "19ff717e04277c63",
-      "19ff4cb834eeb8c6",
-      "19fdc0e3facfaf19",
-      "19ffaee90d8a50f5",
-      "1a004c4bb2621c90",
-      "1a00f38aca497de4",
-      "1a00559183a161e6",
-      "1a04776511c6e31b",
-      "1a0480fa89a75962"
-    ]
-  },
-  "updates-noreply@linkedin.com": {
-    "sender": "updates-noreply@linkedin.com",
-    "messages_seen": 4,
-    "legitimate_count": 1,
-    "suspicious_count": 1,
-    "phishing_count": 2,
-    "reputation": "UNKNOWN",
-    "seen_message_ids": [
-      "19ff6f6fcfe357ac",
-      "1a01fbbfb31bdcae",
-      "1a040c7782b1e417",
-      "1a051f1fd1b7815c"
-    ]
-  },
-  "messages-noreply@linkedin.com": {
-    "sender": "messages-noreply@linkedin.com",
-    "messages_seen": 3,
-    "legitimate_count": 1,
-    "suspicious_count": 0,
-    "phishing_count": 2,
-    "reputation": "NEW",
-    "seen_message_ids": [
-      "19ff6892174d8bfc",
-      "1a0427ee96848580",
-      "1a048131ca7a6e0a"
-    ]
-  },
-  "hello@ollama.com": {
-    "sender": "hello@ollama.com",
-    "messages_seen": 3,
-    "legitimate_count": 1,
-    "suspicious_count": 1,
-    "phishing_count": 1,
-    "reputation": "NEW",
-    "seen_message_ids": [
-      "19ff4e7789345c1d",
-      "1a00a7427c329e8c",
-      "1a04b977c2f04e4d"
-    ]
-  },
-  "help@acct.epicgames.com": {
-    "sender": "help@acct.epicgames.com",
-    "messages_seen": 1,
-    "legitimate_count": 0,
-    "suspicious_count": 1,
     "phishing_count": 0,
     "reputation": "UNKNOWN",
     "seen_message_ids": [
-      "19ff4307a68d43d0"
+      "1a05c5b4c6559588",
+      "1a0609560ac4c48a",
+      "1a0619a97ff626c7",
+      "1a0619e52b63c7d5",
+      "1a0619cca9609357"
     ]
   },
-  "updates@account.ubisoft.com": {
-    "sender": "updates@account.ubisoft.com",
+  "security@getgitguardian.com": {
+    "sender": "security@getgitguardian.com",
     "messages_seen": 1,
     "legitimate_count": 0,
     "suspicious_count": 0,
     "phishing_count": 1,
     "reputation": "UNKNOWN",
     "seen_message_ids": [
-      "19ff42ac4c9b18c2"
+      "1a0606a9932ea84b"
+    ]
+  },
+  "noreply@github.com": {
+    "sender": "noreply@github.com",
+    "messages_seen": 1,
+    "legitimate_count": 0,
+    "suspicious_count": 0,
+    "phishing_count": 1,
+    "reputation": "UNKNOWN",
+    "seen_message_ids": [
+      "1a06064b2734fe85"
     ]
   },
   "donotreply@match.indeed.com": {
     "sender": "donotreply@match.indeed.com",
-    "messages_seen": 3,
-    "legitimate_count": 1,
-    "suspicious_count": 1,
-    "phishing_count": 1,
-    "reputation": "NEW",
-    "seen_message_ids": [
-      "19fbe287c2fa5309",
-      "1a01ff9c4cceda98",
-      "1a04e4d62900ad5c"
-    ]
-  },
-  "ansonkalleri@gmail.com": {
-    "sender": "ansonkalleri@gmail.com",
-    "messages_seen": 1,
-    "legitimate_count": 0,
-    "suspicious_count": 1,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN",
-    "seen_message_ids": [
-      "1958b7502b0ab4e0"
-    ]
-  },
-  "no-reply@info.bookmyshow.com": {
-    "sender": "no-reply@info.bookmyshow.com",
-    "messages_seen": 1,
-    "legitimate_count": 0,
-    "suspicious_count": 1,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN",
-    "seen_message_ids": [
-      "19ffadb798d89ad8"
-    ]
-  },
-  "cbsalerts.sbi@alerts.sbi.bank.in": {
-    "sender": "cbsalerts.sbi@alerts.sbi.bank.in",
-    "messages_seen": 1,
-    "legitimate_count": 0,
-    "suspicious_count": 1,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN",
-    "seen_message_ids": [
-      "1a00d8148cc4a735"
-    ]
-  },
-  "notifications-noreply@linkedin.com": {
-    "sender": "notifications-noreply@linkedin.com",
-    "messages_seen": 1,
-    "legitimate_count": 0,
-    "suspicious_count": 1,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN",
-    "seen_message_ids": [
-      "1a00adde8453754f"
-    ]
-  },
-  "recommendationnc@naukri.com": {
-    "sender": "recommendationnc@naukri.com",
-    "messages_seen": 1,
-    "legitimate_count": 0,
-    "suspicious_count": 1,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN",
-    "seen_message_ids": [
-      "1a00aceaaf4256a6"
-    ]
-  },
-  "amanyukrishnaak@gmail.com": {
-    "sender": "amanyukrishnaak@gmail.com",
-    "messages_seen": 2,
-    "legitimate_count": 0,
-    "suspicious_count": 2,
-    "phishing_count": 0,
-    "reputation": "NEW",
-    "seen_message_ids": [
-      "190360102a8a5641",
-      "19035f9605f7e725"
-    ]
-  },
-  "hr@oneteamsolutions.co.in": {
-    "sender": "hr@oneteamsolutions.co.in",
-    "messages_seen": 5,
-    "legitimate_count": 0,
-    "suspicious_count": 4,
-    "phishing_count": 1,
-    "reputation": "SUSPICIOUS",
-    "seen_message_ids": [
-      "1a00e787cda6aaf2",
-      "1a004c0d36000806",
-      "1a022f94df293e96",
-      "1a047fabc200cea7",
-      "1a0569037df5575e"
-    ]
-  },
-  "store@email.epicgames.com": {
-    "sender": "store@email.epicgames.com",
-    "messages_seen": 1,
-    "legitimate_count": 0,
-    "suspicious_count": 1,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN",
-    "seen_message_ids": [
-      "1a006f6e91f86c4a"
-    ]
-  },
-  "noreply@nedm.asus.com": {
-    "sender": "noreply@nedm.asus.com",
-    "messages_seen": 4,
-    "legitimate_count": 1,
-    "suspicious_count": 3,
-    "phishing_count": 0,
-    "reputation": "NEW",
-    "seen_message_ids": [
-      "1a021cd5e4f8b6f3",
-      "1a02073a24437546",
-      "1a044565813a8088",
-      "1a053d40f6f3115b"
-    ]
-  },
-  "noreply@embark.email": {
-    "sender": "noreply@embark.email",
-    "messages_seen": 1,
-    "legitimate_count": 0,
-    "suspicious_count": 1,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN",
-    "seen_message_ids": [
-      "1a0210e417b38378"
-    ]
-  },
-  "adharsh8055@gmail.com": {
-    "sender": "adharsh8055@gmail.com",
-    "messages_seen": 1,
-    "legitimate_count": 0,
-    "suspicious_count": 1,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN",
-    "seen_message_ids": [
-      "1a023d0fb4146ca3"
-    ]
-  },
-  "no-reply@mail.bookmyshow.com": {
-    "sender": "no-reply@mail.bookmyshow.com",
-    "messages_seen": 1,
-    "legitimate_count": 0,
-    "suspicious_count": 1,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN",
-    "seen_message_ids": [
-      "1a044182e981d697"
-    ]
-  },
-  "noreply@email.openai.com": {
-    "sender": "noreply@email.openai.com",
     "messages_seen": 1,
     "legitimate_count": 1,
     "suspicious_count": 0,
     "phishing_count": 0,
     "reputation": "UNKNOWN",
     "seen_message_ids": [
-      "1a042e6b37ad76b5"
+      "1a05dbde7928e2d4"
     ]
   },
-  "noreply@mail.instagram.com": {
-    "sender": "noreply@mail.instagram.com",
+  "test@example.com": {
+    "sender": "test@example.com",
     "messages_seen": 1,
     "legitimate_count": 0,
-    "suspicious_count": 0,
-    "phishing_count": 1,
-    "reputation": "UNKNOWN",
-    "seen_message_ids": [
-      "1a0424e77eff86c5"
-    ]
-  },
-  "marketing@engage.canva.com": {
-    "sender": "marketing@engage.canva.com",
-    "messages_seen": 1,
-    "legitimate_count": 0,
-    "suspicious_count": 0,
-    "phishing_count": 1,
-    "reputation": "UNKNOWN",
-    "seen_message_ids": [
-      "1a041daa88922278"
-    ]
-  },
-  "mitxadmin@mit.edu": {
-    "sender": "mitxadmin@mit.edu",
-    "messages_seen": 1,
-    "legitimate_count": 0,
-    "suspicious_count": 0,
-    "phishing_count": 1,
-    "reputation": "UNKNOWN",
-    "seen_message_ids": [
-      "1a03ff4f429d006a"
-    ]
-  },
-  "info@naukri.com": {
-    "sender": "info@naukri.com",
-    "messages_seen": 1,
-    "legitimate_count": 1,
-    "suspicious_count": 0,
+    "suspicious_count": 1,
     "phishing_count": 0,
     "reputation": "UNKNOWN",
     "seen_message_ids": [
-      "1a055e72ebd0d644"
-    ]
-  },
-  "contentnc@naukri.com": {
-    "sender": "contentnc@naukri.com",
-    "messages_seen": 1,
-    "legitimate_count": 1,
-    "suspicious_count": 0,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN",
-    "seen_message_ids": [
-      "1a052d5e1f3bb67a"
-    ]
-  },
-  "msa@communication.microsoft.com": {
-    "sender": "msa@communication.microsoft.com",
-    "messages_seen": 1,
-    "legitimate_count": 1,
-    "suspicious_count": 0,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN",
-    "seen_message_ids": [
-      "1a048e68ab6709c4"
-    ]
-  },
-  "fortnite@email.epicgames.com": {
-    "sender": "fortnite@email.epicgames.com",
-    "messages_seen": 1,
-    "legitimate_count": 1,
-    "suspicious_count": 0,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN",
-    "seen_message_ids": [
-      "1a04a5742c23788f"
+      "mock_id"
     ]
   }
 }

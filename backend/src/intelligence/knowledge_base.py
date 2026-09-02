@@ -57,6 +57,21 @@ _SEED = {
         ".loan", ".work", ".rest", ".win", ".bid", ".review", ".trade",
         ".date", ".racing", ".download", ".accountant"
     ],
+    "trusted_tls_issuers": [
+        "Google Trust Services LLC",
+        "Let's Encrypt",
+        "DigiCert Inc",
+        "GlobalSign nv-sa",
+        "Sectigo Limited",
+        "Cloudflare, Inc.",
+        "Amazon",
+        "Microsoft Corporation",
+        "GoDaddy.com, Inc.",
+        "IdenTrust",
+        "ZeroSSL",
+        "ISRG Root X1",
+        "Baltimore CyberTrust Root"
+    ],
     "suspicious_patterns": {
         "login_lookalike": ["login-", "-login.", "signin-", "-signin.", "secure-", "-secure."],
         "brand_lookalike": ["paypa1", "micros0ft", "app1e", "g00gle", "arnazon"],
@@ -109,6 +124,15 @@ class KnowledgeBase:
         if d.startswith("www."):
             d = d[4:]
         return d in self._data.get("trusted_domains", [])
+
+    def is_trusted_tls_issuer(self, issuer: str) -> bool:
+        """Check if a TLS certificate issuer is explicitly trusted."""
+        if not issuer:
+            return False
+        
+        # Exact match or substring match (e.g., "Let's Encrypt" in "Let's Encrypt Authority X3")
+        trusted_issuers = self._data.get("trusted_tls_issuers", [])
+        return any(trusted.lower() in issuer.lower() for trusted in trusted_issuers)
 
     def brand_for_domain(self, domain: str) -> str | None:
         """Return the brand name associated with a domain, or None."""

@@ -660,11 +660,9 @@ def enforce_deterministic_priority(
         elif risk_score >= 60:
             decision["verdict"] = "HIGH RISK"
 
-        elif risk_score < 40:
-            decision["verdict"] = "SAFE"
-
         else:
             decision["verdict"] = "SUSPICIOUS"
+            decision["risk_score"] = max(risk_score, 40)
 
         decision["detail_verdict"] = (
             "POSSIBLE_COMPROMISED_SENDER"
@@ -690,11 +688,9 @@ def enforce_deterministic_priority(
         elif risk_score >= 60:
             decision["verdict"] = "HIGH RISK"
 
-        elif risk_score < 40:
-            decision["verdict"] = "SAFE"
-
         else:
             decision["verdict"] = "SUSPICIOUS"
+            decision["risk_score"] = max(risk_score, 40)
 
         decision["detail_verdict"] = (
             "STRONG_SECURITY_EVIDENCE"
@@ -753,11 +749,9 @@ def enforce_deterministic_priority(
             elif risk_score >= 60:
                 decision["verdict"] = "HIGH RISK"
 
-            elif risk_score < 40:
-                decision["verdict"] = "SAFE"
-
             else:
                 decision["verdict"] = "SUSPICIOUS"
+                decision["risk_score"] = max(risk_score, 40)
 
             decision["detail_verdict"] = (
                 "STRONG_SECURITY_EVIDENCE"
@@ -884,8 +878,8 @@ def enforce_unknown_when_insufficient(
         and not has_critical_evidence
     ):
 
-        decision["verdict"] = "UNKNOWN"
-        decision["confidence"] = 0
+        decision["verdict"] = "SAFE"
+        decision["confidence"] = 50
 
     decision["risk_score"] = _clamp_score(
         decision.get("risk_score", 0)

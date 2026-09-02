@@ -1,67 +1,22 @@
 {
-  "test.com": {
-    "messages_analyzed": 10,
-    "first_seen": "2026-08-12T05:01:33.021135",
-    "last_seen": "2026-08-12T05:01:41.171356"
-  },
   "gmail.com": {
-    "messages_analyzed": 281,
-    "first_seen": "2026-08-12T05:05:17.748693",
-    "last_seen": "2026-08-28T06:25:21.750228"
+    "messages_analyzed": 30,
+    "first_seen": "2026-09-02T05:03:54.016388",
+    "last_seen": "2026-09-02T12:20:48.446258"
   },
-  "accounts.google.com": {
-    "messages_analyzed": 69,
-    "first_seen": "2026-08-12T05:06:04.594386",
-    "last_seen": "2026-08-13T05:32:27.275203"
+  "getgitguardian.com": {
+    "messages_analyzed": 1,
+    "first_seen": "2026-09-02T06:16:02.816497",
+    "last_seen": "2026-09-02T06:16:02.816507"
+  },
+  "github.com": {
+    "messages_analyzed": 2,
+    "first_seen": "2026-09-02T07:09:23.281284",
+    "last_seen": "2026-09-02T07:26:52.759698"
   },
   "example.com": {
-    "messages_analyzed": 72,
-    "first_seen": "2026-08-12T09:44:49.951273",
-    "last_seen": "2026-08-19T11:07:40.034136"
-  },
-  "linkedin.com": {
-    "messages_analyzed": 20,
-    "first_seen": "2026-08-13T05:38:12.865140",
-    "last_seen": "2026-09-02T04:13:08.014159"
-  },
-  "communications.sbi.co.in": {
-    "messages_analyzed": 11,
-    "first_seen": "2026-08-13T05:38:48.753578",
-    "last_seen": "2026-08-17T11:52:58.054355"
-  },
-  "acct.epicgames.com": {
     "messages_analyzed": 1,
-    "first_seen": "2026-08-13T05:39:43.140817",
-    "last_seen": "2026-08-13T05:39:43.140825"
-  },
-  "match.indeed.com": {
-    "messages_analyzed": 1,
-    "first_seen": "2026-08-13T06:20:52.363536",
-    "last_seen": "2026-08-13T06:20:52.363556"
-  },
-  "info.bookmyshow.com": {
-    "messages_analyzed": 1,
-    "first_seen": "2026-08-13T12:13:22.925642",
-    "last_seen": "2026-08-13T12:13:22.925653"
-  },
-  "alerts.sbi.bank.in": {
-    "messages_analyzed": 4,
-    "first_seen": "2026-08-17T04:29:38.356460",
-    "last_seen": "2026-08-17T11:04:53.896964"
-  },
-  "naukri.com": {
-    "messages_analyzed": 1,
-    "first_seen": "2026-08-17T04:32:31.082291",
-    "last_seen": "2026-08-17T04:32:31.082303"
-  },
-  "oneteamsolutions.co.in": {
-    "messages_analyzed": 5,
-    "first_seen": "2026-08-17T08:56:51.288208",
-    "last_seen": "2026-08-31T09:23:34.418846"
-  },
-  "ollama.com": {
-    "messages_analyzed": 2,
-    "first_seen": "2026-08-17T11:40:27.752757",
-    "last_seen": "2026-08-31T09:48:05.089354"
+    "first_seen": "2026-09-02T07:43:07.756125",
+    "last_seen": "2026-09-02T07:43:07.756134"
   }
 }

@@ -22,6 +22,7 @@ import tldextract
 from .page_cache import page_cache
 from .url_jobs import URLInspectionJob, url_queue
 from .url_worker.worker import URLWorker
+from .ct_log_service import ct_log_service
 
 
 logger = logging.getLogger(__name__)
@@ -1680,6 +1681,7 @@ class URLInspectionService:
     def inspect(
         self,
         url: str,
+        skip_ct_lookup: bool = False,
     ) -> Dict[str, Any]:
         """
         Perform DNS + TLS inspection for one URL.
@@ -1818,6 +1820,7 @@ class URLInspectionService:
                                 "hostname resolved to a non-public address."
                             ),
                             "inspection_status": "UNAVAILABLE",
+                            "certificate_transparency": None,
                         },
                         "redirects": (
                             self._empty_redirects()
@@ -1891,6 +1894,7 @@ class URLInspectionService:
                         if scheme == "https"
                         else "NOT_APPLICABLE"
                     ),
+                    "certificate_transparency": None,
                 }
 
                 return {
@@ -1939,6 +1943,10 @@ class URLInspectionService:
                     port=port,
                     validated_ips=validated_ips,
                 )
+                if not skip_ct_lookup:
+                    tls["certificate_transparency"] = ct_log_service.fetch_ct_logs(hostname)
+                else:
+                    tls["certificate_transparency"] = {"available": False, "reason": "budget_exceeded"}
             else:
                 tls = {
                     "https": False,
@@ -1956,6 +1964,7 @@ class URLInspectionService:
                     "inspection_status": "NOT_APPLICABLE",
                     "tls_version": None,
                     "cipher": None,
+                    "certificate_transparency": None,
                 }
 
             registered_domain = (

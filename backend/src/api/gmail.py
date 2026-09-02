@@ -397,7 +397,7 @@ def process_single_message(
             "Checking for phishing language, urgency and suspicious requests..."
         )
 
-        content_analysis = safe_analyze("ContentAnalyzer", msg_id, analyzers["content"].analyze, tracker, body=parsed.get("body", ""), sender=parsed.get("from", ""), auth_results=auth_analysis, urls=url_analysis.get("urls", []))
+        content_analysis = safe_analyze("ContentAnalyzer", msg_id, analyzers["content"].analyze, tracker, body=parsed.get("body", ""), sender=parsed.get("from", ""), auth_results=auth_analysis, urls=url_analysis.get("urls", []), attachment_analysis=attachment_analysis)
 
         existing_analysis = {
             "authentication": auth_analysis,
@@ -693,6 +693,8 @@ def stream_message_analysis(
             })
 
         except Exception as exc:
+            import traceback
+            tb = traceback.format_exc()
             logger.exception(
                 "Streaming email analysis failed for %s",
                 message_id,
@@ -701,7 +703,7 @@ def stream_message_analysis(
             progress_queue.put({
                 "type": "error",
                 "status": 500,
-                "message": "Email analysis failed.",
+                "message": f"Email analysis failed: {str(exc)} | Trace: {tb}",
             })
 
         finally:
@@ -891,5 +893,94 @@ def get_message(
     
     return process_single_message(connector, message_id, is_batch=False)
 
-    
+class UnlockPDFRequest(BaseModel):
+    attachment_id: str
+    password: str
 
+@router.post("/message/{message_id}/unlock-pdf")
+def unlock_pdf(
+    request: Request,
+    message_id: str,
+    payload: UnlockPDFRequest
+):
+    session_id = request.session.get("session_id")
+    server_session = session_manager.get_session(session_id)
+    
+    if not server_session or not server_session.get("authenticated"):
+        raise HTTPException(
+            status_code=401,
+            detail="Please login first."
+        )
+
+    credentials = server_session.get("credentials")
+    if not credentials:
+        raise HTTPException(
+            status_code=401,
+            detail="Credentials missing from session."
+        )
+
+    connector = GmailConnector(credentials)
+    
+    try:
+        raw_attachment = connector.get_attachment(message_id, payload.attachment_id)
+        data = raw_attachment.get("data", "")
+        import base64
+        file_bytes = base64.urlsafe_b64decode(data)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to retrieve attachment: {str(e)}")
+
+    if not file_bytes.startswith(b"%PDF-"):
+        raise HTTPException(status_code=400, detail="Attachment is not a PDF")
+
+    # Enforce size limits (from AttachmentAnalyzer)
+    from src.analyzers.attachment_analyzer import ATTACHMENT_DEEP_SCAN_MAX_BYTES
+    if len(file_bytes) > ATTACHMENT_DEEP_SCAN_MAX_BYTES:
+        raise HTTPException(status_code=400, detail="Attachment exceeds maximum scan size")
+
+    analyzer = AttachmentAnalyzer()
+    # Provide a placeholder filename since we are only statically scanning the bytes
+    result = analyzer.analyze_encrypted_pdf(file_bytes, "unlocked.pdf", payload.password)
+    
+    if result.get("status") == "SUCCESS":
+        from src.services.analysis_cache import analysis_cache, get_analysis_fingerprint
+        cached = analysis_cache.get_by_message_id(message_id)
+        if cached and isinstance(cached, dict) and "analysis" in cached:
+            analysis = cached["analysis"]
+            attachments = analysis.get("attachment", {})
+            
+            # Remove PDF_ENCRYPTED evidence
+            if "structured_evidence" in attachments:
+                attachments["structured_evidence"] = [
+                    ev for ev in attachments["structured_evidence"]
+                    if ev.get("type") != "PDF_ENCRYPTED"
+                ]
+            if "evidence" in attachments:
+                attachments["evidence"] = [
+                    ev for ev in attachments["evidence"]
+                    if "encrypted" not in str(ev).lower()
+                ]
+                
+            if "structured_evidence" in attachments and result.get("structured_evidence"):
+                attachments["structured_evidence"].extend(result["structured_evidence"])
+            if "evidence" in attachments and result.get("evidence"):
+                attachments["evidence"].extend(result["evidence"])
+                
+            decision = analysis.get("decision", {})
+            from src.engines.decision_fusion_guard import enforce_deterministic_priority
+            decision = enforce_deterministic_priority(decision, analysis)
+            
+            # If the verdict is still UNKNOWN after removing PDF_ENCRYPTED and no new 
+            # severe negative evidence bumped it up, update the verdict to SAFE
+            if decision.get("verdict") == "UNKNOWN" and decision.get("risk_score", 0) <= 40:
+                decision["verdict"] = "SAFE"
+                decision["confidence"] = max(50, decision.get("confidence", 0))
+                
+            cached["decision"] = decision
+            analysis["decision"] = decision
+            
+            fingerprint = get_analysis_fingerprint(cached)
+            analysis_cache.set(message_id, fingerprint, cached)
+            
+            result["new_decision"] = decision
+            
+    return result

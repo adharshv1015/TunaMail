@@ -221,7 +221,26 @@ function EmailDetail({ messageId, messageMeta, onBack, resultSet = [], currentIn
       <ContentAnalysisCard content={content} />
       <URLIntelligence urlAnalysis={urlAnalysis} urlPageIntelligence={urlPageIntelligence} />
       <WhoisAnalysis whois={whois} />
-      <AttachmentAnalysis attachmentData={attachment} rawAttachments={message.attachments} />
+      <AttachmentAnalysis
+        attachmentData={attachment}
+        rawAttachments={message.attachments}
+        messageId={message.id}
+        onAnalysisUpdated={(newDecision) => {
+          if (!message) return;
+          const updatedMessage = {
+            ...message,
+            decision: newDecision,
+            analysis: {
+              ...message.analysis,
+              decision: newDecision
+            }
+          };
+          setMessage(updatedMessage);
+          if (onMessageAnalyzed) {
+            onMessageAnalyzed(message.id, updatedMessage);
+          }
+        }}
+      />
       <TrustAnalysis trust={trust} />
       <SecurityReasoning reasoning={reasoning} ai={analysis.ai} explanation={analysis.explanation} />
       <FinalDecision decision={decision} />

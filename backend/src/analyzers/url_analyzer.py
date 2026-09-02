@@ -241,16 +241,27 @@ class URLAnalyzer:
         )
 
         results = []
+        ct_lookups = 0
+        MAX_CT_LOOKUPS = 5
 
         for url in urls:
             try:
-                results.append(
-                    self.analyze_url(
-                        url=url,
-                        sender_headers=sender_headers,
-                        auth_results=auth_results,
-                    )
+                skip_ct_lookup = ct_lookups >= MAX_CT_LOOKUPS
+                result = self.analyze_url(
+                    url=url,
+                    sender_headers=sender_headers,
+                    auth_results=auth_results,
+                    skip_ct_lookup=skip_ct_lookup,
                 )
+                
+                # If it wasn't skipped and actually attempted a CT lookup, increment
+                tls = result.get("inspection_data", {}).get("tls", {})
+                ct_data = tls.get("certificate_transparency")
+                if ct_data and ct_data.get("reason") != "budget_exceeded" and ct_data.get("reason") != "timeout":
+                     # Count attempts, whether successful or failed (like invalid_domain)
+                     ct_lookups += 1
+                     
+                results.append(result)
             except Exception as exc:
                 results.append(
                     self._failed_url_result(
@@ -652,6 +663,7 @@ class URLAnalyzer:
         url: str,
         sender_headers: Dict[str, Any] | None = None,
         auth_results: Dict[str, Any] | None = None,
+        skip_ct_lookup: bool = False,
     ) -> Dict[str, Any]:
 
         sender_headers = (
@@ -722,7 +734,8 @@ class URLAnalyzer:
 
             inspection_data = (
                 self.inspection_service.inspect(
-                    url
+                    url,
+                    skip_ct_lookup=skip_ct_lookup,
                 )
                 or {}
             )
@@ -1769,6 +1782,38 @@ class URLAnalyzer:
                 "",
             )
         )
+        
+        # ----------------------------------------------------
+        # CT Log Evidence
+        # ----------------------------------------------------
+        tls_info = inspection_data.get("tls", {})
+        ct_data = tls_info.get("certificate_transparency") if tls_info else None
+        
+        if ct_data and ct_data.get("available"):
+            days_ago = ct_data.get("first_seen_days_ago")
+            if days_ago is not None:
+                if days_ago < 7:
+                    evidence.append(
+                        self._evidence(
+                            type_="CT_FIRST_CERT_RECENT",
+                            severity="MEDIUM",
+                            direction="NEUTRAL",
+                            source="CTLogService",
+                            explanation=f"Earliest observed certificate is very recent ({days_ago} days ago).",
+                            confidence=0.70,
+                        )
+                    )
+                elif days_ago > 365:
+                    evidence.append(
+                        self._evidence(
+                            type_="CT_LONG_CERTIFICATE_HISTORY",
+                            severity="LOW",
+                            direction="POSITIVE",
+                            source="CTLogService",
+                            explanation=f"Domain has a long certificate history (first observed > 1 year ago).",
+                            confidence=0.70,
+                        )
+                    )
 
         if inspection_data.get(
             "ip_based"

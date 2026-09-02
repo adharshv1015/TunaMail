@@ -150,14 +150,18 @@ class AttachmentAnalyzer:
                     elif extension in [".pdf"] or mime_type == "application/pdf":
                         if progress_callback:
                             progress_callback({"type": "progress", "step": "Inspecting PDF structure...", "progress": 25})
-                        self._deep_scan_pdf(file_bytes, filename, evidence, structured_evidence)
-                        deep_scan_successes += 1
+                        if self._deep_scan_pdf(file_bytes, filename, evidence, structured_evidence):
+                            deep_scan_successes += 1
+                        else:
+                            deep_scan_skips += 1
                         
                     elif extension in [".doc", ".xls", ".ppt", ".docx", ".xlsx", ".pptx", ".docm", ".xlsm", ".pptm"]:
                         if progress_callback:
                             progress_callback({"type": "progress", "step": "Scanning Office macros...", "progress": 25})
-                        self._deep_scan_office(file_bytes, filename, evidence, structured_evidence)
-                        deep_scan_successes += 1
+                        if self._deep_scan_office(file_bytes, filename, evidence, structured_evidence):
+                            deep_scan_successes += 1
+                        else:
+                            deep_scan_skips += 1
                     else:
                         # Unscannable extension
                         deep_scan_skips += 1
@@ -191,6 +195,80 @@ class AttachmentAnalyzer:
             "evidence": evidence,
             "structured_evidence": structured_evidence,
         }
+
+    def analyze_encrypted_pdf(self, file_bytes: bytes, filename: str, password: str) -> Dict[str, Any]:
+        """
+        Temporarily decrypt and deeply scan a password-protected PDF in memory.
+        Does not log or persist the password.
+        """
+        evidence = []
+        structured_evidence = []
+        
+        if not PYPDF2_AVAILABLE:
+            return {
+                "status": "ERROR",
+                "message": "PyPDF2 is not installed."
+            }
+            
+        try:
+            reader = PyPDF2.PdfReader(io.BytesIO(file_bytes))
+            
+            if not reader.is_encrypted:
+                return {
+                    "status": "ALREADY_DECRYPTED",
+                    "evidence": [],
+                    "structured_evidence": []
+                }
+                
+            # Attempt to decrypt
+            success = reader.decrypt(password)
+            if not success:
+                self._add_evidence("PDF_ENCRYPTED", "MEDIUM", f"PDF is encrypted/password-protected: {filename}", 0.9, evidence, structured_evidence)
+                return {
+                    "status": "INVALID_PASSWORD",
+                    "evidence": evidence,
+                    "structured_evidence": structured_evidence
+                }
+                
+            # Decryption succeeded. Perform static inspection.
+            if reader.trailer and "/Root" in reader.trailer:
+                root = reader.trailer["/Root"].get_object()
+                if "/OpenAction" in root:
+                    self._add_evidence("PDF_OPENACTION", "HIGH", f"PDF contains OpenAction: {filename}", 0.95, evidence, structured_evidence)
+                if "/Names" in root:
+                    names = root["/Names"].get_object()
+                    if "/JavaScript" in names:
+                        self._add_evidence("PDF_JAVASCRIPT", "HIGH", f"PDF contains JavaScript action: {filename}", 0.95, evidence, structured_evidence)
+                        
+                # Extract text now that it's decrypted and analyze URLs
+                extracted_text = ""
+                for page in reader.pages:
+                    extracted_text += (page.extract_text() or "") + "\n"
+                    
+                if extracted_text.strip():
+                    from src.analyzers.url_analyzer import URLAnalyzer
+                    url_analyzer = URLAnalyzer()
+                    url_results = url_analyzer.analyze(extracted_text)
+                    
+                    if url_results.get("structured_evidence"):
+                        for item in url_results["structured_evidence"]:
+                            item["source"] = f"AttachmentAnalyzer ({filename})"
+                            structured_evidence.append(item)
+                            if item.get("explanation") and item.get("direction") == "NEGATIVE":
+                                evidence.append(f"[URL in PDF] {item['explanation']}")
+                            
+                # Discard password entirely by letting it fall out of scope
+                return {
+                    "status": "SUCCESS",
+                    "evidence": evidence,
+                    "structured_evidence": structured_evidence
+                }
+        except Exception as e:
+            logger.error(f"Error scanning encrypted PDF {filename}: {e}")
+            return {
+                "status": "ERROR",
+                "message": str(e)
+            }
 
     def _deep_scan_zip(self, file_bytes: bytes, original_filename: str, evidence: list, structured_evidence: list, depth: int = 1):
         if depth > MAX_ARCHIVE_RECURSION_DEPTH:
@@ -231,7 +309,8 @@ class AttachmentAnalyzer:
     def _deep_scan_office(self, file_bytes: bytes, filename: str, evidence: list, structured_evidence: list):
         if not OLETOOLS_AVAILABLE:
             logger.warning("oletools not available, skipping Office macro scan")
-            return
+            self._add_evidence("DEPENDENCY_MISSING", "WARNING", f"Cannot deep scan Office macros in {filename} because 'oletools' is not installed.", 0.5, evidence, structured_evidence, direction="NEUTRAL")
+            return False
             
         try:
             parser = VBA_Parser(filename, data=file_bytes)
@@ -245,8 +324,10 @@ class AttachmentAnalyzer:
                     elif kw_type == 'Suspicious':
                         self._add_evidence("OFFICE_SUSPICIOUS_MACRO", "MEDIUM", f"Office document contains suspicious macro keyword: {keyword}", 0.9, evidence, structured_evidence)
             parser.close()
+            return True
         except Exception as e:
             logger.error(f"Error scanning Office doc {filename}: {e}")
+            return False
 
     def _deep_scan_pdf(self, file_bytes: bytes, filename: str, evidence: list, structured_evidence: list):
         # PyPDF2 analysis
@@ -264,8 +345,29 @@ class AttachmentAnalyzer:
                         names = root["/Names"].get_object()
                         if "/JavaScript" in names:
                             self._add_evidence("PDF_JAVASCRIPT", "HIGH", f"PDF contains JavaScript action: {filename}", 0.95, evidence, structured_evidence)
+                            
+                if not reader.is_encrypted:
+                    extracted_text = ""
+                    for page in reader.pages:
+                        extracted_text += (page.extract_text() or "") + "\n"
+                        
+                    if extracted_text.strip():
+                        from src.analyzers.url_analyzer import URLAnalyzer
+                        url_analyzer = URLAnalyzer()
+                        url_results = url_analyzer.analyze(extracted_text)
+                        
+                        if url_results.get("structured_evidence"):
+                            for item in url_results["structured_evidence"]:
+                                item["source"] = f"AttachmentAnalyzer ({filename})"
+                                structured_evidence.append(item)
+                                if item.get("explanation") and item.get("direction") == "NEGATIVE":
+                                    evidence.append(f"[URL in PDF] {item['explanation']}")
             except Exception as e:
                 logger.error(f"Error scanning PDF via PyPDF2 {filename}: {e}")
+        else:
+            logger.warning("PyPDF2 not available, skipping PDF deep scan")
+            self._add_evidence("DEPENDENCY_MISSING", "WARNING", f"Cannot deep scan {filename} because 'PyPDF2' is not installed.", 0.5, evidence, structured_evidence, direction="NEUTRAL")
+            return False
         
         # PDFiD analysis
         if PDFID_AVAILABLE:
@@ -291,9 +393,12 @@ class AttachmentAnalyzer:
                 pass
             except Exception as e:
                 pass
+        
+        return True
 
     def _add_evidence(self, type_: str, severity: str, explanation: str, confidence: float, evidence_list: list, structured_list: list, direction: str = "NEGATIVE"):
-        evidence_list.append(explanation)
+        if direction != "POSITIVE":
+            evidence_list.append(explanation)
         structured_list.append({
             "type": str(type_).strip().upper().replace("-", "_").replace(" ", "_"),
             "severity": str(severity).strip().upper(),

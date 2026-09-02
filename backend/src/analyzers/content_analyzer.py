@@ -175,6 +175,7 @@ class ContentAnalyzer:
         sender: str = "",
         auth_results: dict | None = None,
         urls: Iterable[Any] | None = None,
+        attachment_analysis: dict | None = None,
     ) -> Dict[str, Any]:
         """
         Analyze email content.
@@ -360,24 +361,35 @@ class ContentAnalyzer:
                 )
             )
 
+        has_encrypted_attachment = False
+        if attachment_analysis and "structured_evidence" in attachment_analysis:
+            for ev in attachment_analysis.get("structured_evidence", []):
+                if ev.get("type") == "PDF_ENCRYPTED":
+                    has_encrypted_attachment = True
+                    break
+
         if credential_request:
-            score += 25
+            if has_encrypted_attachment:
+                # Suppress penalty and warning since the password request is likely just for the attached file.
+                credential_request = False
+            else:
+                score += 25
 
-            evidence.append(
-                "Credential request language detected"
-            )
-
-            structured_evidence.append(
-                self._evidence(
-                    type_="CREDENTIAL_REQUEST",
-                    severity="HIGH",
-                    explanation=(
-                        "The message contains language "
-                        "requesting credentials or account verification."
-                    ),
-                    confidence=0.85,
+                evidence.append(
+                    "Credential request language detected"
                 )
-            )
+
+                structured_evidence.append(
+                    self._evidence(
+                        type_="CREDENTIAL_REQUEST",
+                        severity="HIGH",
+                        explanation=(
+                            "The message contains language "
+                            "requesting credentials or account verification."
+                        ),
+                        confidence=0.85,
+                    )
+                )
 
         if financial_request:
             score += 25

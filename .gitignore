@@ -36,24 +36,48 @@ scratch/
 # Node.js & React (Frontend)
 # ==============================
 node_modules/
+frontend/node_modules/
 dist/
+frontend/dist/
 dist-ssr/
 build/
-*.local
 .npm/
 *.tsbuildinfo
-frontend/node_modules/
-frontend/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
 # ==============================
 # Python & FastAPI (Backend)
 # ==============================
-# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
+# ==============================
 # Virtual Environments
+# ==============================
+.env
 .venv/
 venv/
 ENV/
@@ -61,16 +85,28 @@ env/
 env.bak/
 venv.bak/
 backend/.venv/
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Environment Variables
+# ==============================
+# Environment Variables & Secrets
+# ==============================
 .env
 .env.*
 !.env.example
 backend/.env
 backend/.env.*
+# Ignore all credentials and token files
+*credentials*.json
+*token*.json
+# Except explicit client secrets we might need as templates
+!backend/client_secret.json
 
+# ==============================
 # Pytest / Coverage
+# ==============================
 .pytest_cache/
+backend/.pytest_cache/
 htmlcov/
 .coverage
 .coverage.*
@@ -78,14 +114,17 @@ coverage.xml
 *.cover
 .tox/
 .nox/
-backend/.pytest_cache/
 
+# ==============================
 # Logs
+# ==============================
 *.log
 logs/
 backend/logs/
 
+# ==============================
 # Data and SQLite
+# ==============================
 *.sqlite3
 *.db
 backend/data/*.db
@@ -93,24 +132,28 @@ backend/data/*.json
 backend/data/*.sqlite3
 backend/intelligence/*.db
 backend/intelligence/*.json
+# Keep the directory and seed files
+!backend/data/.gitkeep
 !backend/data/seed_*.json
 
+# ==============================
 # File Uploads / Outputs
+# ==============================
 backend/uploads/
 backend/reports/
 backend/test_certs/
 *.eml
 *.txt
 backend/*.json
-!backend/client_secret.json
 !backend/openapi_test.json
 
+# ==============================
 # Test & Scratch Scripts
+# ==============================
 backend/stage16_test.py
 backend/test_*.py
 backend/inspection_timing.py
 backend/phishing_test.eml
 backend/private_ip_test.eml
-backend/output.json
-backend/output2.json
+backend/output*.json
 backend.zip

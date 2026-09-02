@@ -8,7 +8,7 @@ class URLSafetyException(Exception):
 
 
 class URLSafetyChecker:
-    ALLOWED_SCHEMES = {"http", "https"}
+    ALLOWED_SCHEMES = {"http", "https", "data", "blob"}
 
     BLOCKED_NETWORKS = (
         ipaddress.ip_network("0.0.0.0/8"),
@@ -185,6 +185,9 @@ class URLSafetyChecker:
         parsed = urlparse(
             url
         )
+
+        if parsed.scheme.lower() in {"data", "blob"}:
+            return
 
         if not parsed.hostname:
             raise URLSafetyException(

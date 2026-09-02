@@ -1,403 +1,41 @@
 {
-  "hi@bumble.com": {
+  "saseendranv888@gmail.com": {
     "timestamps": [
-      1786490965.494737,
-      1786490976.352097
+      1788305634.024411,
+      1788307080.286453,
+      1788324136.295935,
+      1788324388.270627,
+      1788324393.488202
     ],
-    "url_domains": [
-      "eu1.ecdn2.bumbcdn.com",
-      "eu1.bumble.com",
-      "bumble.com",
-      "www.facebook.com",
-      "twitter.com",
-      "www.instagram.com",
-      "www.pinterest.com",
-      "www.linkedin.com",
-      "cdn.bumble.com"
-    ],
+    "url_domains": [],
     "auth_summary": [
       "SPF:pass DKIM:pass DMARC:pass"
     ]
   },
-  "tuntunsahur19992000@gmail.com": {
+  "security@getgitguardian.com": {
     "timestamps": [
-      1786490966.651753,
-      1786490974.205878,
-      1786490977.466227,
-      1786490978.604534,
-      1786490981.734676,
-      1786490983.205982,
-      1786491317.750476,
-      1786491323.036947,
-      1786491324.602663,
-      1786491337.575172,
-      1786491342.395396,
-      1786491343.948893,
-      1786491543.761372,
-      1786491549.216181,
-      1786491550.841452,
-      1786491563.63872,
-      1786491564.196919,
-      1786491571.781486,
-      1786491576.490538,
-      1786491674.945202,
-      1786491675.618151,
-      1786491681.567821,
-      1786491683.088612,
-      1786491694.748344,
-      1786491695.290952,
-      1786491699.659763,
-      1786491701.127409,
-      1786491821.583275,
-      1786492090.633907,
-      1786492091.228625,
-      1786492091.756475,
-      1786492096.530466,
-      1786492098.184131,
-      1786492109.448614,
-      1786492110.048097,
-      1786492110.60871,
-      1786492115.269915,
-      1786492116.806989,
-      1786492132.56264,
-      1786492428.166625,
-      1786492428.771479,
-      1786492429.299437,
-      1786492434.037192,
-      1786492435.594364,
-      1786492446.363935,
-      1786492447.007866,
-      1786492447.588045,
-      1786492452.141763,
-      1786492453.73718,
-      1786492482.955102,
-      1786495952.841125,
-      1786495953.47449,
-      1786495954.087538,
-      1786495961.68472,
-      1786495966.179969
+      1788309962.866472
     ],
     "url_domains": [
-      "100percentworkingoil.com",
-      "gogle.accounts.com"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "adharshv1015@gmail.com": {
-    "timestamps": [
-      1786490969.074441,
-      1786490973.61361,
-      1786490979.689337,
-      1786490981.111495,
-      1786490991.813574,
-      1786490996.627705,
-      1786491320.829513,
-      1786491322.452082,
-      1786491338.050732,
-      1786491340.157764,
-      1786491341.788433,
-      1786491357.133917,
-      1786491416.473161,
-      1786491547.006146,
-      1786491548.663751,
-      1786491564.372179,
-      1786491566.622934,
-      1786491571.225308,
-      1786491591.415324,
-      1786491678.705185,
-      1786491680.304548,
-      1786491696.577261,
-      1786491697.556883,
-      1786491699.068535,
-      1786491714.461469,
-      1786491953.089339,
-      1786492094.295571,
-      1786492095.981985,
-      1786492103.707837,
-      1786492113.099883,
-      1786492114.674138,
-      1786492122.333296,
-      1786492431.872644,
-      1786492433.477996,
-      1786492441.268313,
-      1786492449.976593,
-      1786492451.581295,
-      1786492459.222451,
-      1786495956.464582,
-      1786495961.055949,
-      1786495971.667568,
-      1786579542.630152,
-      1786579678.431576
-    ],
-    "url_domains": [
-      "example.com",
-      "coccyxwickimp.com",
-      "docs.google.com"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass",
-      "SPF:unknown DKIM:unknown DMARC:unknown"
-    ]
-  },
-  "no-reply@accounts.google.com": {
-    "timestamps": [
-      1786491018.113482,
-      1786491023.26348,
-      1786491044.952674,
-      1786491050.397694,
-      1786491364.619607,
-      1786491397.914266,
-      1786491398.666369,
-      1786491424.790511,
-      1786491591.45674,
-      1786491618.705896,
-      1786491619.283077,
-      1786491645.558208,
-      1786491724.575517,
-      1786491740.857304,
-      1786491751.402203,
-      1786491768.033918,
-      1786492114.985327,
-      1786492125.987999,
-      1786492132.958632,
-      1786492144.47455,
-      1786492451.879515,
-      1786492462.637374,
-      1786492470.431198,
-      1786492480.730081,
-      1786492517.904477,
-      1786495990.108703,
-      1786495998.011597
-    ],
-    "url_domains": [
-      "accounts.google.com",
-      "myaccount.google.com"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "test@example.com": {
-    "timestamps": [
-      1786508089.961097,
-      1786508090.039535,
-      1786508743.929962,
-      1786508858.142558,
-      1786508938.413476,
-      1786508938.446967
-    ],
-    "url_domains": [
-      "example0.com",
-      "example1.com",
-      "example2.com",
-      "example3.com",
-      "example4.com",
-      "example5.com",
-      "example6.com",
-      "example7.com",
-      "example8.com",
-      "example9.com",
-      "example10.com",
-      "example11.com",
-      "example12.com",
-      "example13.com",
-      "example14.com",
-      "example15.com",
-      "example16.com",
-      "example17.com",
-      "example18.com",
-      "example19.com",
-      "example20.com",
-      "example21.com",
-      "example22.com",
-      "example23.com",
-      "example24.com",
-      "example25.com",
-      "example26.com",
-      "example27.com",
-      "example28.com",
-      "example29.com",
-      "example30.com",
-      "example31.com",
-      "example32.com",
-      "example33.com",
-      "example34.com",
-      "example35.com",
-      "example36.com",
-      "example37.com",
-      "example38.com",
-      "example39.com",
-      "example40.com",
-      "example41.com",
-      "example42.com",
-      "example43.com",
-      "example44.com",
-      "example45.com",
-      "example46.com",
-      "example47.com",
-      "example48.com",
-      "example49.com"
-    ],
-    "auth_summary": [
-      "SPF:unknown DKIM:unknown DMARC:unknown"
-    ]
-  },
-  "jobalerts-noreply@linkedin.com": {
-    "timestamps": [
-      1786579693.086018,
-      1786582212.719415,
-      1787272174.208192,
-      1787287138.414821,
-      1787874872.505167,
-      1788140883.809864,
-      1788148509.223363,
-      1788150366.866006,
-      1788302588.395142
-    ],
-    "url_domains": [
-      "www.linkedin.com",
-      "static.licdn.com",
-      "media.licdn.com",
-      "in.linkedin.com",
-      "www.w3.org"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "naukrialerts@naukri.com": {
-    "timestamps": [
-      1786579715.574074,
-      1787882874.950736
-    ],
-    "url_domains": [
-      "fonts.googleapis.com",
-      "logs.naukri.com",
-      "www.naukri.com",
-      "static.naukimg.com",
-      "cm.naukri.com",
-      "www.ieplads.com",
-      "img.naukimg.com",
-      "www.ambitionbox.com",
-      "tr.naukri.com"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "sbi@communications.sbi.co.in": {
-    "timestamps": [
-      1786579728.863039,
-      1786579770.982552,
-      1786581899.250072,
-      1786601746.166902,
-      1786921600.767053,
-      1786943510.230554,
-      1786946999.097983,
-      1787889259.017287,
-      1787897850.400228
-    ],
-    "url_domains": [
-      "imagescommunications.sbi.bank.in",
-      "deliveryalerts.sbi.co.in",
-      "imagescommunications.sbi.co.in",
-      "sbi.bank.in",
-      "play.google.com",
-      "apps.apple.com",
-      "onlinesbi.sbi.bank.in",
+      "github.com",
+      "dashboard.gitguardian.com",
+      "blog.gitguardian.com",
+      "www.gitguardian.com",
+      "email.getgitguardian.com",
       "www.w3.org",
-      "fonts.googleapis.com"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "updates-noreply@linkedin.com": {
-    "timestamps": [
-      1786579740.608661,
-      1787287311.470262,
-      1787882923.814274,
-      1788140831.883502
-    ],
-    "url_domains": [
-      "www.linkedin.com",
-      "static.licdn.com",
-      "media.licdn.com"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "messages-noreply@linkedin.com": {
-    "timestamps": [
-      1786579748.394492,
-      1787882667.944637,
-      1787897829.255913
-    ],
-    "url_domains": [
-      "www.linkedin.com",
-      "static.licdn.com",
-      "apps.microsoft.com",
-      "itunes.apple.com",
-      "play.google.com",
-      "www.w3.org",
-      "in.linkedin.com",
-      "media.licdn.com",
       "schema.org"
     ],
     "auth_summary": [
       "SPF:pass DKIM:pass DMARC:pass"
     ]
   },
-  "hello@ollama.com": {
+  "noreply@github.com": {
     "timestamps": [
-      1786579764.758113,
-      1786947027.897662,
-      1788149885.221687
+      1788313163.30936
     ],
     "url_domains": [
-      "c.vialoops.com",
-      "images.vialoops.com",
-      "www.nvidia.com",
-      "ollama.com",
-      "discord.gg",
-      "app.loops.so",
-      "www.w3.org"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "help@acct.epicgames.com": {
-    "timestamps": [
-      1786579783.276129
-    ],
-    "url_domains": [
-      "fonts.googleapis.com",
-      "fonts.gstatic.com",
-      "epicgames.com",
-      "images.acct.epicgames.com",
-      "www.epicgames.com",
-      "help.epicgames.com",
-      "view.acct.epicgames.com",
-      "preferences.email.epicgames.com",
-      "www.w3.org"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "updates@account.ubisoft.com": {
-    "timestamps": [
-      1786579801.946336
-    ],
-    "url_domains": [
-      "www.ubisoft.com",
-      "static2.cdn.ubi.com",
-      "support.ubi.com",
-      "static-cp.akamaized.net"
+      "www.w3.org",
+      "github.githubassets.com"
     ],
     "auth_summary": [
       "SPF:pass DKIM:pass DMARC:pass"
@@ -405,17 +43,15 @@
   },
   "donotreply@match.indeed.com": {
     "timestamps": [
-      1786582252.559401,
-      1787287280.596384,
-      1788140906.903939
+      1788313229.723499
     ],
     "url_domains": [
       "cts.indeed.com",
       "prod.statics.indeed.com",
       "d3hbwax96mbv6t.cloudfront.net",
       "go.onelink.me",
-      "engage.indeed.com",
       "subscriptions.indeed.com",
+      "engage.indeed.com",
       "www.w3.org",
       "fonts.googleapis.com"
     ],
@@ -423,262 +59,15 @@
       "SPF:pass DKIM:pass DMARC:pass"
     ]
   },
-  "ansonkalleri@gmail.com": {
+  "test@example.com": {
     "timestamps": [
-      1786583057.063895
-    ],
-    "url_domains": [],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "no-reply@info.bookmyshow.com": {
-    "timestamps": [
-      1786603403.228315
-    ],
-    "url_domains": [],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "cbsalerts.sbi@alerts.sbi.bank.in": {
-    "timestamps": [
-      1786921178.386653
-    ],
-    "url_domains": [],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "notifications-noreply@linkedin.com": {
-    "timestamps": [
-      1786921244.509641
-    ],
-    "url_domains": [],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "recommendationnc@naukri.com": {
-    "timestamps": [
-      1786921351.340226
-    ],
-    "url_domains": [],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "amanyukrishnaak@gmail.com": {
-    "timestamps": [
-      1786921765.657253,
-      1787878521.767353
+      1788315187.777975
     ],
     "url_domains": [
-      "www.acer.com"
+      "example.com"
     ],
     "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "hr@oneteamsolutions.co.in": {
-    "timestamps": [
-      1786937211.485451,
-      1786946977.667281,
-      1787275953.692111,
-      1787897923.539408,
-      1788140685.264865
-    ],
-    "url_domains": [
-      "us.list-manage.com",
-      "oneteamsolutions.us6.list-manage.com",
-      "www.w3.org",
-      "mcusercontent.com"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "store@email.epicgames.com": {
-    "timestamps": [
-      1786947019.379738
-    ],
-    "url_domains": [],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "noreply@nedm.asus.com": {
-    "timestamps": [
-      1787287168.443645,
-      1787287248.699881,
-      1787874946.261946,
-      1788140763.44344
-    ],
-    "url_domains": [
-      "dlcdnimgs.asus.com",
-      "omicard.asus.com",
-      "rog.asus.com"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "noreply@embark.email": {
-    "timestamps": [
-      1787287237.253182
-    ],
-    "url_domains": [],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "adharsh8055@gmail.com": {
-    "timestamps": [
-      1787287517.987488
-    ],
-    "url_domains": [],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "no-reply@mail.bookmyshow.com": {
-    "timestamps": [
-      1787879586.968515
-    ],
-    "url_domains": [
-      "link.mail.bookmyshow.com",
-      "d1ldtsunu0i0zh.cloudfront.net",
-      "mailer-assets-in.bmscdn.com",
-      "wizrocketmail.net"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "noreply@email.openai.com": {
-    "timestamps": [
-      1787882659.54041
-    ],
-    "url_domains": [
-      "u.email.openai.com",
-      "cdn.mcauto-images-production.sendgrid.net",
-      "www.w3.org",
-      "cdn.openai.com"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "noreply@mail.instagram.com": {
-    "timestamps": [
-      1787882698.121374
-    ],
-    "url_domains": [
-      "www.instagram.com",
-      "static.xx.fbcdn.net",
-      "scontent.cdninstagram.com",
-      "scontent.xx.fbcdn.net",
-      "www.facebook.com"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "marketing@engage.canva.com": {
-    "timestamps": [
-      1787882856.008025
-    ],
-    "url_domains": [
-      "fonts.googleapis.com",
-      "l.engage.canva.com",
-      "braze-images.com",
-      "content-management-files.canva.com"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "mitxadmin@mit.edu": {
-    "timestamps": [
-      1787883041.727479
-    ],
-    "url_domains": [
-      "fonts.googleapis.com",
-      "fonts.gstatic.com",
-      "us.list-manage.com",
-      "mailchi.mp",
-      "mcusercontent.com",
-      "mit.us6.list-manage.com",
-      "cdn-images.mailchimp.com",
-      "sawa-dev-2-storage-bucket.storage.googleapis.com",
-      "openlearning.mit.edu",
-      "micromasters.mit.edu",
-      "learn.mit.edu"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "info@naukri.com": {
-    "timestamps": [
-      1788134916.475816
-    ],
-    "url_domains": [
-      "fonts.gstatic.com",
-      "fonts.googleapis.com",
-      "logs.naukri.com",
-      "tr.naukri.com",
-      "static.naukimg.com",
-      "www.ieplads.com",
-      "img.naukimg.com"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "contentnc@naukri.com": {
-    "timestamps": [
-      1788140795.92196
-    ],
-    "url_domains": [
-      "fonts.googleapis.com",
-      "fonts.gstatic.com",
-      "logs.naukri.com",
-      "tr.naukri.com",
-      "www.ieplads.com",
-      "www.naukri.com",
-      "www.w3.org"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "msa@communication.microsoft.com": {
-    "timestamps": [
-      1788149981.59127
-    ],
-    "url_domains": [
-      "go.microsoft.com",
-      "iriscmsproddatastorage.azureedge.net",
-      "www.w3.org"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
-    ]
-  },
-  "fortnite@email.epicgames.com": {
-    "timestamps": [
-      1788150463.252306
-    ],
-    "url_domains": [
-      "client-data.knak.io",
-      "e.email.epicgames.com",
-      "cdn.app.zetaglobal.net",
-      "images.email.epicgames.com",
-      "www.w3.org"
-    ],
-    "auth_summary": [
-      "SPF:pass DKIM:pass DMARC:pass"
+      "SPF:unknown DKIM:unknown DMARC:unknown"
     ]
   }
 }
