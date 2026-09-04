@@ -29,14 +29,21 @@ coverage.xml
 logs/
 
 # Data and SQLite
-*.sqlite3
-*.db
-data/*.db
+*.sqlite3*
+*.db*
+data/*.db*
 data/*.json
-data/*.sqlite3
-intelligence/*.db
+data/*.sqlite3*
+intelligence/*.db*
 intelligence/*.json
 !data/seed_*.json
+!data/.gitkeep
+
+# Certificates & Secrets
+*.pem
+*.key
+*.crt
+*.cert
 
 # File Uploads / Outputs
 uploads/

@@ -124,7 +124,8 @@ class CTLogService:
                 if not name_value.endswith(f".{norm_domain}") and name_value != f"*.{norm_domain}":
                     continue
             else:
-                if norm_domain not in name_value:
+                # Must be exact match or a proper subdomain
+                if name_value != norm_domain and not name_value.endswith(f".{norm_domain}"):
                     continue
 
             cert_count += 1

@@ -39,6 +39,7 @@ class DecisionValidator:
     }
 
     VALID_DETAIL_VERDICTS = {
+        "AVAILABLE",
         "CLEAR_POSITIVE_EVIDENCE",
         "LIMITED_CONTEXT",
         "INSUFFICIENT_EVIDENCE",
@@ -78,7 +79,6 @@ class DecisionValidator:
     STRONG_NEGATIVE_TYPES = {
         "DOMAIN_MISMATCH",
         "URL_DOMAIN_MISMATCH",
-        "SUSPICIOUS_URL",
         "SUSPICIOUS_REDIRECT",
         "HOMOGRAPH_DOMAIN",
         "PUNYCODE_DOMAIN",
@@ -280,10 +280,9 @@ class DecisionValidator:
                     verdict = "PHISHING"
                 elif risk >= 60:
                     verdict = "HIGH RISK"
-                elif risk < 40:
-                    verdict = "SAFE"
                 else:
                     verdict = "SUSPICIOUS"
+                    risk = max(risk, 40)
 
                 confidence = min(
                     confidence,
@@ -303,10 +302,9 @@ class DecisionValidator:
                     verdict = "PHISHING"
                 elif risk >= 60:
                     verdict = "HIGH RISK"
-                elif risk < 40:
-                    verdict = "SAFE"
                 else:
                     verdict = "SUSPICIOUS"
+                    risk = max(risk, 40)
 
                 detail = "STRONG_SECURITY_EVIDENCE"
 
@@ -401,13 +399,10 @@ class DecisionValidator:
                 verdict = "HIGH RISK"
                 detail = "STRONG_SECURITY_EVIDENCE"
 
-            elif risk < 40:
-                verdict = "SAFE"
-                detail = "SAFE_EVIDENCE"
-
             else:
                 verdict = "SUSPICIOUS"
-                detail = "SUSPICIOUS_EVIDENCE"
+                risk = max(risk, 40)
+                detail = "STRONG_SECURITY_EVIDENCE"
 
         # ----------------------------------------------------
         # Historical evidence handling
@@ -492,6 +487,22 @@ class DecisionValidator:
                     confidence,
                     85,
                 )
+
+        # ----------------------------------------------------
+        # Never allow legitimate verdicts to coexist with
+        # strong or malicious security details.
+        # ----------------------------------------------------
+
+        if verdict in self.LEGITIMATE_VERDICTS and (
+            has_strong
+            or detail in {
+                "STRONG_SECURITY_EVIDENCE",
+                "MALICIOUS_EVIDENCE",
+            }
+        ):
+            verdict = "SUSPICIOUS"
+            risk = max(risk, 40)
+            detail = "STRONG_SECURITY_EVIDENCE"
 
         # ----------------------------------------------------
         # Final clamping

@@ -436,12 +436,24 @@ def process_single_message(
                 if page_data is not None:
                     item["page_analysis"] = page_phishing_analyzer.analyze(page_data, item_url)
                 else:
-                    item["page_analysis"] = {"available": False, "indicators": [], "page_risk_score": 0}
+                    item["page_analysis"] = {
+                        "available": False,
+                        "status": "NOT_ANALYZED",
+                        "indicators": [],
+                        "page_risk_score": None,
+                    }
         else:
             if tracker.is_over_budget():
                 tracker.record_timeout("URLPageInspection", reason="Analysis budget exceeded before page inspection")
+            if urls_to_inspect:
+                url_page_intelligence["_status"] = "SKIPPED_TIMEOUT"
             for item in url_items:
-                item["page_analysis"] = {"available": False, "indicators": [], "page_risk_score": 0}
+                item["page_analysis"] = {
+                    "available": False,
+                    "status": "NOT_ANALYZED",
+                    "indicators": [],
+                    "page_risk_score": None,
+                }
 
         existing_analysis["url_page_intelligence"] = url_page_intelligence
 
@@ -969,11 +981,18 @@ def unlock_pdf(
             from src.engines.decision_fusion_guard import enforce_deterministic_priority
             decision = enforce_deterministic_priority(decision, analysis)
             
-            # If the verdict is still UNKNOWN after removing PDF_ENCRYPTED and no new 
-            # severe negative evidence bumped it up, update the verdict to SAFE
-            if decision.get("verdict") == "UNKNOWN" and decision.get("risk_score", 0) <= 40:
-                decision["verdict"] = "SAFE"
-                decision["confidence"] = max(50, decision.get("confidence", 0))
+            # Do not convert UNKNOWN to SAFE merely because the risk score is low.
+            # UNKNOWN must remain UNKNOWN when evidence is insufficient or degraded.
+            #
+            # Re-run the complete deterministic decision architecture after removing
+            # PDF_ENCRYPTED so the result is governed by the same safety rules as the
+            # main production analysis path.
+            parsed = cached
+            decision = finalize_intelligence(
+                parsed,
+                analysis,
+                decision,
+            )
                 
             cached["decision"] = decision
             analysis["decision"] = decision

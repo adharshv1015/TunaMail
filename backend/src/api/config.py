@@ -27,6 +27,11 @@ class Settings:
         "86400"
     ))
 
+    MAX_CT_LOOKUPS_PER_EMAIL = int(os.getenv(
+        "MAX_CT_LOOKUPS_PER_EMAIL",
+        "5"
+    ))
+
     SESSION_COOKIE_SECURE = os.getenv(
         "SESSION_COOKIE_SECURE",
         "false"

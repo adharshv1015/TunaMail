@@ -644,11 +644,23 @@ class DecisionFusionEngine:
         verdict = "UNKNOWN"
 
         # -----------------------------------------------------
+        # Preserve degraded / limited-context state from ARE
+        # -----------------------------------------------------
+
+        if (
+            are_verdict == "UNKNOWN"
+            and detail_verdict in {"LIMITED_CONTEXT", "INSUFFICIENT_EVIDENCE"}
+        ):
+            verdict = "UNKNOWN"
+            detail_verdict = "LIMITED_CONTEXT"
+            confidence = min(confidence, 40)
+
+        # -----------------------------------------------------
         # Priority 1:
         # CURRENT CRITICAL DETERMINISTIC EVIDENCE
         # -----------------------------------------------------
 
-        if has_critical:
+        elif has_critical:
             verdict = "PHISHING"
             risk_score = max(
                 risk_score,
@@ -1004,6 +1016,10 @@ class DecisionFusionEngine:
         if (
             verdict == "UNKNOWN"
             and has_strong
+            and detail_verdict not in {
+                "LIMITED_CONTEXT",
+                "INSUFFICIENT_EVIDENCE",
+            }
         ):
             if risk_score >= 80:
                 verdict = "PHISHING"

@@ -1906,9 +1906,40 @@ class AnalyticalReasoningEngine:
                 normalized = self._structured_evidence(struct_item)
                 structured_evidence.append(normalized)
 
+            for struct_item in (
+                url_analysis.get(
+                    "structured_evidence",
+                    []
+                )
+                or []
+            ):
+                normalized = self._structured_evidence(struct_item)
+                structured_evidence.append(normalized)
+
         # =====================================================
         # 7. LINK-ONLY / LIMITED CONTEXT + PAGE INTELLIGENCE
         # =====================================================
+
+        url_items = (
+            url_analysis.get("analysis", [])
+            if isinstance(url_analysis, dict)
+            else []
+        )
+
+        page_inspection_skipped = (
+            isinstance(url_page_intelligence, dict)
+            and url_page_intelligence.get("_status") == "SKIPPED_TIMEOUT"
+        )
+        any_url_not_analyzed = any(
+            isinstance(u, dict)
+            and (
+                u.get("page_analysis", {}).get("status") == "NOT_ANALYZED"
+                or (u.get("page_analysis", {}).get("available") is False and page_inspection_skipped)
+            )
+            for u in url_items
+        )
+
+        degraded_page_inspection = bool(page_inspection_skipped or any_url_not_analyzed)
 
         limited_context = bool(
             url_analysis.get(
@@ -1917,15 +1948,21 @@ class AnalyticalReasoningEngine:
             or content_analysis.get(
                 "link_only"
             )
+            or degraded_page_inspection
         )
 
         if limited_context or url_page_intelligence:
 
             if limited_context:
-                evidence["behavioral"].append(
-                    "Limited context: Email contains "
-                    "mostly URLs with minimal surrounding text"
-                )
+                if degraded_page_inspection:
+                    evidence["behavioral"].append(
+                        "Limited context: URL page inspection was skipped or unavailable."
+                    )
+                else:
+                    evidence["behavioral"].append(
+                        "Limited context: Email contains "
+                        "mostly URLs with minimal surrounding text"
+                    )
             # -----------------------------------------
             # URL Threat Intelligence
             # -----------------------------------------
@@ -2011,6 +2048,7 @@ class AnalyticalReasoningEngine:
                         ),
                         "confidence": 0.99,
                     })
+            inspected_pages_count = 0
             if url_page_intelligence:
 
                 page_risk_found = False
@@ -2018,6 +2056,8 @@ class AnalyticalReasoningEngine:
                 for url, page_data in (
                     url_page_intelligence.items()
                 ):
+                    if str(url).startswith("_"):
+                        continue
 
                     page_data = (
                         page_data
@@ -2027,6 +2067,8 @@ class AnalyticalReasoningEngine:
                         )
                         else {}
                     )
+
+                    inspected_pages_count += 1
 
                     security = (
                         page_data.get(
@@ -2287,7 +2329,7 @@ class AnalyticalReasoningEngine:
                             "confidence": page_confidence,
                         })
 
-                if not page_risk_found:
+                if not page_risk_found and not degraded_page_inspection and inspected_pages_count > 0:
 
                     evidence["positive"].append(
                         "Deep URL inspection found no "
@@ -3420,6 +3462,8 @@ class AnalyticalReasoningEngine:
                 10,
                 confidence - 30,
             )
+            if degraded_page_inspection:
+                confidence = min(confidence, 40)
 
             if not has_negative:
 
@@ -3681,21 +3725,29 @@ class AnalyticalReasoningEngine:
             verdict = "SUSPICIOUS"
             confidence = min(confidence, 65)
 
-        # Score below 40 is SAFE.
+        # Score below 40 is SAFE only if context is not limited.
         elif raw_score < 40:
-            verdict = "SAFE"
+            if limited_context:
+                verdict = "UNKNOWN"
+                ai_state = "LIMITED_CONTEXT"
+                confidence = min(confidence, 40)
+            else:
+                verdict = "SAFE"
 
         # Contradictions reduce confidence.
         if final_contradiction:
             confidence = min(confidence, 50)
 
-        # Limited context must not overwrite SAFE.
+        # Limited context handling
         if limited_context and not final_has_critical:
-            if final_has_strong or final_has_negative:
-                if verdict in {"VERIFIED LEGITIMATE", "LIKELY LEGITIMATE"}:
+            if not final_has_negative and not final_has_strong:
+                verdict = "UNKNOWN"
+                ai_state = "LIMITED_CONTEXT"
+            elif final_has_strong or final_has_negative:
+                if verdict in {"VERIFIED LEGITIMATE", "LIKELY LEGITIMATE", "SAFE"}:
                     verdict = "UNKNOWN"
 
-            confidence = min(confidence, 50)
+            confidence = min(confidence, 40)
 
         # Positive evidence can only promote messages that
         # are not already classified as SAFE.

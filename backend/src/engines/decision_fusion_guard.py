@@ -22,7 +22,6 @@ CRITICAL_NEGATIVE_TYPES = {
 STRONG_NEGATIVE_TYPES = {
     "DOMAIN_MISMATCH",
     "URL_DOMAIN_MISMATCH",
-    "SUSPICIOUS_URL",
     "SUSPICIOUS_REDIRECT",
     "HOMOGRAPH_DOMAIN",
     "PUNYCODE_DOMAIN",
@@ -877,9 +876,30 @@ def enforce_unknown_when_insufficient(
         and not has_negative_evidence
         and not has_critical_evidence
     ):
+        current_verdict = str(decision.get("verdict", "UNKNOWN")).upper()
+        current_detail = str(decision.get("detail_verdict", "")).upper()
+        url_intel = analysis.get("url_page_intelligence")
+        url_status = url_intel.get("_status") if isinstance(url_intel, dict) else None
 
-        decision["verdict"] = "SAFE"
-        decision["confidence"] = 50
+        is_limited_context = (
+            current_detail in {"LIMITED_CONTEXT", "INSUFFICIENT_EVIDENCE"}
+            or current_verdict == "UNKNOWN"
+            or url_status == "SKIPPED_TIMEOUT"
+        )
+
+        conf = decision.get("confidence")
+        conf_val = _clamp_confidence(conf) if conf is not None else 40
+
+        if is_limited_context:
+            decision["verdict"] = "UNKNOWN"
+            decision["detail_verdict"] = "LIMITED_CONTEXT"
+            decision["confidence"] = min(conf_val, 40)
+        elif current_verdict not in RISK_VERDICTS:
+            decision["verdict"] = "UNKNOWN"
+            decision["detail_verdict"] = (
+                current_detail if current_detail else "INSUFFICIENT_EVIDENCE"
+            )
+            decision["confidence"] = min(conf_val, 40)
 
     decision["risk_score"] = _clamp_score(
         decision.get("risk_score", 0)

@@ -18,6 +18,7 @@ from urllib.parse import (
 
 import tldextract
 from src.services.mta_sts_service import MTASTSService
+from src.api.config import settings
 
 try:
     from bs4 import BeautifulSoup
@@ -242,7 +243,7 @@ class URLAnalyzer:
 
         results = []
         ct_lookups = 0
-        MAX_CT_LOOKUPS = 5
+        MAX_CT_LOOKUPS = settings.MAX_CT_LOOKUPS_PER_EMAIL
 
         for url in urls:
             try:
