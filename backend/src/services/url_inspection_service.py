@@ -1682,6 +1682,7 @@ class URLInspectionService:
         self,
         url: str,
         skip_ct_lookup: bool = False,
+        infrastructure_cache: Dict[str, Dict[str, Any]] | None = None,
     ) -> Dict[str, Any]:
         """
         Perform DNS + TLS inspection for one URL.
@@ -1779,9 +1780,43 @@ class URLInspectionService:
                 # Hostname -> DNS
                 # ------------------------------------------------
 
-                dns = _resolve_dns(
+                cache_key_base = (
                     hostname
                 )
+
+                cached_infrastructure = (
+                    infrastructure_cache.get(
+                        cache_key_base
+                    )
+                    if infrastructure_cache is not None
+                    else None
+                )
+
+                if cached_infrastructure is not None:
+                    dns = dict(
+                        cached_infrastructure.get(
+                            "dns",
+                            {},
+                        )
+                        or {}
+                    )
+                else:
+                    dns = _resolve_dns(
+                        hostname
+                    )
+
+                    # Cache only successfully resolved public
+                    # infrastructure. Blocked/failed destinations
+                    # remain independently evaluated.
+                    if (
+                        infrastructure_cache is not None
+                        and dns.get("validated_ips")
+                    ):
+                        infrastructure_cache[
+                            cache_key_base
+                        ] = {
+                            "dns": dict(dns),
+                        }
 
                 if dns.get(
                     "blocked_ip_detected"
@@ -1938,15 +1973,67 @@ class URLInspectionService:
             # ------------------------------------------------
 
             if scheme == "https":
-                tls = _check_tls(
-                    hostname=hostname,
-                    port=port,
-                    validated_ips=validated_ips,
+                cache_key = (
+                    f"{scheme}://{hostname}:{port}"
                 )
-                if not skip_ct_lookup:
-                    tls["certificate_transparency"] = ct_log_service.fetch_ct_logs(hostname)
+
+                cached_infrastructure = (
+                    infrastructure_cache.get(
+                        cache_key
+                    )
+                    if infrastructure_cache is not None
+                    else None
+                )
+
+                if (
+                    cached_infrastructure is not None
+                    and cached_infrastructure.get("tls") is not None
+                ):
+                    tls = dict(
+                        cached_infrastructure["tls"]
+                    )
                 else:
-                    tls["certificate_transparency"] = {"available": False, "reason": "budget_exceeded"}
+                    tls = _check_tls(
+                        hostname=hostname,
+                        port=port,
+                        validated_ips=validated_ips,
+                    )
+
+                    if infrastructure_cache is not None:
+                        existing_cache = (
+                            infrastructure_cache.get(
+                                hostname,
+                                {},
+                            )
+                        )
+
+                        infrastructure_cache[
+                            cache_key
+                        ] = {
+                            "dns": dict(
+                                existing_cache.get(
+                                    "dns",
+                                    dns,
+                                )
+                            ),
+                            "tls": dict(tls),
+                        }
+
+                # CT remains URLAnalyzer-budgeted and is deliberately
+                # NOT reused through the infrastructure cache.
+                if not skip_ct_lookup:
+                    tls[
+                        "certificate_transparency"
+                    ] = ct_log_service.fetch_ct_logs(
+                        hostname
+                    )
+                else:
+                    tls[
+                        "certificate_transparency"
+                    ] = {
+                        "available": False,
+                        "reason": "budget_exceeded",
+                    }
             else:
                 tls = {
                     "https": False,

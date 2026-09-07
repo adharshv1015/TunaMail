@@ -36,10 +36,36 @@ class AdversarialAnalyzer:
         
         # Determine if URLs are "unrelated" (different from sender)
         has_unrelated_url = False
+
         for u in url_analysis:
-            if u.get("domain") and sender_domain:
-                if u.get("domain") not in sender_domain and sender_domain not in u.get("domain"):
-                    has_unrelated_url = True
+            domain = str(u.get("domain") or "").lower().strip()
+            alignment = str(u.get("alignment") or "").lower().strip()
+            brand_relationship = str(
+                u.get("brand_relationship") or ""
+            ).upper().strip()
+
+            if not domain or not sender_domain:
+                continue
+
+            # URL Intelligence has already established that these are
+            # legitimate third-party resources associated with the sender.
+            if alignment in {
+                "esp_tracking",
+                "official_third_party",
+            }:
+                continue
+
+            if brand_relationship in {
+                "OFFICIAL",
+                "SUBDOMAIN_OF_OFFICIAL",
+            }:
+                continue
+
+            sender = str(sender_domain).lower().strip()
+
+            if domain != sender and not domain.endswith("." + sender):
+                has_unrelated_url = True
+                break
 
         # Rule 1: Urgency + Credential Request
         if has_urgency and has_credential_req:

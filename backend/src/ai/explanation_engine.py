@@ -43,6 +43,7 @@ class ExplanationEngine:
         # Defensive: work on copies so we cannot accidentally mutate
         analysis = analysis or {}
         decision_snap = dict(decision or {})
+        parsed = parsed_email if isinstance(parsed_email, dict) else {}
 
         # ----------------------------------------------------------------
         # Initialise output structure
@@ -159,6 +160,15 @@ class ExplanationEngine:
                     "Sender authentication passed",
                     "SPF, DKIM, and DMARC checks all passed. Cryptographic signatures and "
                     "domain policy records confirm the email originated from the claimed domain.",
+                )
+                add_ev(
+                    "POSITIVE_EVIDENCE",
+                    "AuthenticationAnalyzer",
+                    "AUTHENTICATION_PASS",
+                    "LOW", 15, 0.96, "POSITIVE",
+                    "All three authentication protocols passed",
+                    "SPF verified sending IP authorisation, DKIM confirmed message integrity, "
+                    "and DMARC enforced domain-level policy compliance.",
                 )
                 add_ev(
                     "AUTHENTICATION_FINDINGS",
@@ -281,6 +291,14 @@ class ExplanationEngine:
                     "threat intelligence detections.",
                 )
                 add_ev(
+                    "POSITIVE_EVIDENCE",
+                    "URLAnalyzer",
+                    "SAFE_URLS",
+                    "LOW", 10, 0.80, "POSITIVE",
+                    "URLs appear benign",
+                    "All inspected URLs passed threat intelligence checks.",
+                )
+                add_ev(
                     "URL_FINDINGS",
                     "URLAnalyzer",
                     "SAFE_URLS",
@@ -344,6 +362,91 @@ class ExplanationEngine:
         # ================================================================
         content_status = content.get("analysis_status", "AVAILABLE")
         if content_status != "UNAVAILABLE":
+            if content.get("impersonation"):
+                # Extract specific brand and domain details to present concrete evidence
+                brand_mentions = content.get("brand_mentions") or []
+                org_rels = content.get("organization_relationships") or []
+                sender_field = parsed_email.get("sender") if isinstance(parsed_email, dict) else {}
+                sender_dict = sender_field if isinstance(sender_field, dict) else {}
+                sender_domain = content.get("sender_domain") or sender_dict.get("domain") or ""
+                if not sender_domain and isinstance(parsed_email, dict):
+                    sender_val = sender_dict.get("email") or parsed_email.get("from") or (sender_field if isinstance(sender_field, str) else "")
+                    if "@" in str(sender_val):
+                        sender_domain = str(sender_val).split("@")[-1].rstrip(">").strip()
+
+                unmatched_rel = next((r for r in org_rels if isinstance(r, dict) and not r.get("legitimate")), None)
+                claimed_org = ""
+                mismatched_url = ""
+                if unmatched_rel:
+                    claimed_org = str(unmatched_rel.get("organization", "")).title()
+                    mismatched_url = unmatched_rel.get("url_domain", "")
+                    sender_domain = sender_domain or unmatched_rel.get("sender_domain", "")
+                elif brand_mentions:
+                    claimed_org = str(brand_mentions[0]).title()
+
+                ca_expl = ""
+                for sev in content.get("structured_evidence", []):
+                    if isinstance(sev, dict) and sev.get("type") == "BRAND_IMPERSONATION" and sev.get("explanation"):
+                        ca_expl = sev.get("explanation")
+                        break
+
+                if claimed_org and sender_domain:
+                    title_1 = f"Brand impersonation: {claimed_org}"
+                    exp_1 = (
+                        f"The message references or claims association with {claimed_org}, "
+                        f"but originated from '{sender_domain}', which is not an authorized sender domain for {claimed_org}."
+                    )
+                    title_2 = f"Sender mismatch for {claimed_org}"
+                    exp_2 = f"Sending domain '{sender_domain}' does not match official infrastructure for {claimed_org}."
+                elif ca_expl:
+                    title_1 = "Possible brand impersonation detected"
+                    exp_1 = ca_expl
+                    title_2 = "Potential brand impersonation"
+                    exp_2 = "The message claims association with an organization inconsistent with the sending domain."
+                else:
+                    title_1 = "Possible brand impersonation detected"
+                    exp_1 = (
+                        "Content analysis identified indicators of brand or sender impersonation. "
+                        "The message claims association with an organization or authority "
+                        "inconsistent with the sending domain."
+                    )
+                    title_2 = "Potential brand impersonation"
+                    exp_2 = "The message exhibits characteristics of brand impersonation or spoofing."
+
+                ev_meta = {
+                    "claimed_brand": claimed_org,
+                    "sender_domain": sender_domain,
+                    "mismatched_url": mismatched_url,
+                    "issue": exp_1,
+                }
+
+                add_ev(
+                    "NEGATIVE_EVIDENCE",
+                    "ContentAnalyzer",
+                    "BRAND_IMPERSONATION",
+                    "CRITICAL", 80, 0.95, "NEGATIVE",
+                    title_1,
+                    exp_1,
+                    ev_meta,
+                )
+                add_ev(
+                    "NEGATIVE_EVIDENCE",
+                    "BrandIntelligence",
+                    "BRAND_IMPERSONATION",
+                    "HIGH", 75, 0.90, "NEGATIVE",
+                    title_2,
+                    exp_2,
+                    ev_meta,
+                )
+                add_ev(
+                    "BRAND_FINDINGS",
+                    "BrandIntelligence",
+                    "BRAND_IMPERSONATION",
+                    "HIGH", 75, 0.90, "NEGATIVE",
+                    title_2,
+                    exp_2,
+                    ev_meta,
+                )
             if content.get("credential_request"):
                 add_ev(
                     "NEGATIVE_EVIDENCE",
@@ -680,7 +783,7 @@ class ExplanationEngine:
                     "CONTRADICTIONS",
                     "ContradictionEngine",
                     "AUTH_URL_CONFLICT",
-                    "HIGH", 0, 0.90, "NEGATIVE",
+                    "HIGH", 0, 0.90, "NEUTRAL",
                     "Authentication passed but URL is suspicious",
                     "Authentication evidence supports sender identity, but URL intelligence "
                     "provides independent evidence inconsistent with the claimed organisation. "
@@ -692,7 +795,7 @@ class ExplanationEngine:
                     "CONTRADICTIONS",
                     "ContradictionEngine",
                     "TRUST_HISTORY_CONFLICT",
-                    "HIGH", 0, 0.90, "NEGATIVE",
+                    "HIGH", 0, 0.90, "NEUTRAL",
                     "Trust history conflict — possible compromised sender",
                     "Historical sender trust conflicts with the current message behaviour. "
                     "This pattern may indicate the sender's account has been compromised or "
@@ -703,7 +806,7 @@ class ExplanationEngine:
                     "CONTRADICTIONS",
                     "ContradictionEngine",
                     "MIXED_SIGNALS",
-                    "MEDIUM", 0, 0.80, "NEGATIVE",
+                    "MEDIUM", 0, 0.80, "NEUTRAL",
                     "Contradictory intelligence signals",
                     "Different analysis components produced strongly opposing classifications. "
                     "The final verdict accounts for this uncertainty.",
@@ -738,14 +841,44 @@ class ExplanationEngine:
                 )
 
         for ev_str in are_behavioral:
-            add_ev(
-                "SUPPORTING_EVIDENCE",
-                "AnalyticalReasoningEngine",
-                "BEHAVIORAL_SIGNAL",
-                "INFO", 5, 0.75, "NEUTRAL",
-                ev_str,
-                "Behavioural signal from the Analytical Reasoning Engine.",
-            )
+            ev_lower = str(ev_str).lower()
+            if "impersonation" in ev_lower:
+                if not any(e["type"] == "BRAND_IMPERSONATION" for e in all_evidence):
+                    add_ev(
+                        "NEGATIVE_EVIDENCE",
+                        "AnalyticalReasoningEngine",
+                        "BRAND_IMPERSONATION",
+                        "CRITICAL", 80, 0.90, "NEGATIVE",
+                        "Possible impersonation detected",
+                        "Behavioural analysis identified indicators of brand or sender impersonation.",
+                    )
+                    add_ev(
+                        "BRAND_FINDINGS",
+                        "AnalyticalReasoningEngine",
+                        "BRAND_IMPERSONATION",
+                        "CRITICAL", 80, 0.90, "NEGATIVE",
+                        "Sender impersonation detected",
+                        "Analytical Reasoning Engine identified potential impersonation characteristics.",
+                    )
+            elif "credential" in ev_lower:
+                if not any(e["type"] == "CREDENTIAL_HARVESTING" for e in all_evidence):
+                    add_ev(
+                        "NEGATIVE_EVIDENCE",
+                        "AnalyticalReasoningEngine",
+                        "CREDENTIAL_HARVESTING",
+                        "HIGH", 40, 0.85, "NEGATIVE",
+                        "Credential harvesting language",
+                        "Behavioural analysis identified credential collection patterns.",
+                    )
+            else:
+                add_ev(
+                    "SUPPORTING_EVIDENCE",
+                    "AnalyticalReasoningEngine",
+                    "BEHAVIORAL_SIGNAL",
+                    "INFO", 5, 0.75, "NEUTRAL",
+                    ev_str,
+                    "Behavioural signal from the Analytical Reasoning Engine.",
+                )
 
         for ev_str in are_network:
             ev_lower = str(ev_str).lower()
@@ -768,11 +901,44 @@ class ExplanationEngine:
                     "Network safety signal from the Analytical Reasoning Engine.",
                 )
 
+        # Check decision structured_evidence for any uncaught critical negative evidence
+        decision_structured_ev = decision_snap.get("structured_evidence") or []
+        for sev in decision_structured_ev:
+            if not isinstance(sev, dict):
+                continue
+            s_type = str(sev.get("type", "")).upper()
+            s_dir = str(sev.get("direction", "")).upper()
+            s_sev = str(sev.get("severity", "HIGH")).upper()
+            s_source = sev.get("source") or "AnalyticalReasoningEngine"
+            s_exp = sev.get("explanation") or ""
+            s_conf = float(sev.get("confidence", 0.85))
+
+            if s_dir == "NEGATIVE" and s_type in ("BRAND_IMPERSONATION", "CREDENTIAL_HARVESTING", "MALICIOUS_URL", "DANGEROUS_ATTACHMENT"):
+                if not any(e["type"] == s_type for e in all_evidence):
+                    title = "Possible impersonation detected" if s_type == "BRAND_IMPERSONATION" else f"Security risk: {s_type.replace('_', ' ').title()}"
+                    add_ev(
+                        "NEGATIVE_EVIDENCE",
+                        s_source,
+                        s_type,
+                        s_sev, 80 if s_sev == "CRITICAL" else 40, s_conf, "NEGATIVE",
+                        title,
+                        s_exp or f"Deterministic analysis identified {s_type.replace('_', ' ').lower()}.",
+                    )
+                    if s_type == "BRAND_IMPERSONATION" and not any(e["type"] == "BRAND_IMPERSONATION" for e in explanation["groups"]["BRAND_FINDINGS"]):
+                        add_ev(
+                            "BRAND_FINDINGS",
+                            s_source,
+                            s_type,
+                            s_sev, 80, s_conf, "NEGATIVE",
+                            "Brand Impersonation Signal",
+                            s_exp or "Potential brand or entity impersonation detected.",
+                        )
+
         # ================================================================
         # 15. AGGREGATE COUNTS
         # ================================================================
-        explanation["agreement"]["positive_sources"] = positive_count
-        explanation["agreement"]["negative_sources"] = negative_count
+        explanation["agreement"]["positive_sources"] = len(explanation["groups"]["POSITIVE_EVIDENCE"])
+        explanation["agreement"]["negative_sources"] = len(explanation["groups"]["NEGATIVE_EVIDENCE"])
         explanation["agreement"]["independent_sources"] = len(independent_sources)
 
         # ================================================================

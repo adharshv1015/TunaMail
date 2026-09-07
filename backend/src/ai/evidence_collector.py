@@ -234,7 +234,8 @@ class EvidenceCollector:
                 severity=EvidenceSeverity.MEDIUM,
                 direction=EvidenceDirection.NEGATIVE,
                 source="content_analyzer",
-                explanation="Email contains a credential request or login prompt."
+                explanation="Email contains a credential request or login prompt.",
+                confidence=0.85
             ))
 
         if ThreatPatterns.match_financial_request(body) or content.get("financial_request"):
@@ -288,7 +289,8 @@ class EvidenceCollector:
                 severity=EvidenceSeverity.HIGH,
                 direction=EvidenceDirection.NEGATIVE,
                 source="adversarial_analyzer",
-                explanation=adv.get("explanation")
+                explanation=adv.get("explanation"),
+                confidence=adv.get("confidence", 0)
             ))
 
         # 9. Contradictions

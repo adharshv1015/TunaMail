@@ -16,7 +16,11 @@ class CTLogService:
         # In-memory cache: domain -> {"data": dict, "timestamp": float}
         self._cache: Dict[str, Dict[str, Any]] = {}
         self.cache_ttl_seconds = cache_ttl_seconds
-        self.timeout = 3.0  # Strict 3-second timeout
+        self.timeout = 1.5  # Strict 1.5-second timeout
+
+        # Short-lived negative cache prevents repeated timeout amplification
+        # for the same domain while keeping failures retryable.
+        self.timeout_cache_ttl_seconds = 60
 
     def _normalize_domain(self, domain: str) -> str:
         """Strip www, leading dots, and lower case."""
@@ -49,7 +53,11 @@ class CTLogService:
             return cn_name
         return issuer_name.strip()
 
-    def fetch_ct_logs(self, domain: str) -> Dict[str, Any]:
+    def fetch_ct_logs(
+        self,
+        domain: str,
+        timeout: float | None = None,
+    ) -> Dict[str, Any]:
         """
         Fetch CT logs for a given domain safely.
         Returns a dict with intelligence metrics or an 'unavailable' state.
@@ -69,23 +77,66 @@ class CTLogService:
         # Check Cache
         now = time.time()
         cached = self._cache.get(norm_domain)
-        if cached and (now - cached["timestamp"] < self.cache_ttl_seconds):
-            return cached["data"]
+
+        if cached:
+            if "expires_at" in cached:
+                if now < cached["expires_at"]:
+                    return cached["data"]
+                self._cache.pop(norm_domain, None)
+            elif now - cached["timestamp"] < self.cache_ttl_seconds:
+                return cached["data"]
+            else:
+                self._cache.pop(norm_domain, None)
 
         # Proceed to query crt.sh
         url = f"https://crt.sh/?q={norm_domain}&output=json"
         
         try:
-            # Use requests with strict timeout
-            response = requests.get(url, timeout=self.timeout)
+            # Use requests with strict timeout bounded by remaining budget
+            req_timeout = (
+                min(self.timeout, timeout)
+                if timeout is not None
+                else self.timeout
+            )
+            response = requests.get(url, timeout=req_timeout)
             response.raise_for_status()
             data = response.json()
         except requests.exceptions.Timeout:
             logger.warning(f"CT Log lookup timed out for {norm_domain}")
-            return {"available": False, "reason": "timeout"}
+
+            result = {
+                "available": False,
+                "reason": "timeout",
+            }
+
+            # Cache timeout results briefly so repeated URLs/domains do not
+            # repeatedly block on the same unavailable CT service.
+            self._cache[norm_domain] = {
+                "data": result,
+                "timestamp": time.time(),
+                "expires_at": time.time() + self.timeout_cache_ttl_seconds,
+            }
+
+            return result
         except requests.exceptions.RequestException as e:
             logger.warning(f"CT Log HTTP error for {norm_domain}: {e}")
-            return {"available": False, "reason": "http_error"}
+
+            result = {
+                "available": False,
+                "reason": "http_error",
+            }
+
+            # Negative-cache HTTP failures as well as timeouts.
+            # crt.sh commonly returns transient 404/502 responses for
+            # domains that have no directly queryable CT result.
+            # Avoid retrying the same domain repeatedly within the email.
+            self._cache[norm_domain] = {
+                "data": result,
+                "timestamp": time.time(),
+                "expires_at": time.time() + self.timeout_cache_ttl_seconds,
+            }
+
+            return result
         except ValueError:
             logger.warning(f"CT Log invalid JSON for {norm_domain}")
             return {"available": False, "reason": "invalid_json"}

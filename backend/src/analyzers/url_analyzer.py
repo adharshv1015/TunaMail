@@ -16,8 +16,10 @@ from urllib.parse import (
     urlparse,
 )
 
+import time
 import tldextract
 from src.services.mta_sts_service import MTASTSService
+from src.services.ct_log_service import ct_log_service
 from src.api.config import settings
 
 try:
@@ -111,9 +113,16 @@ class URLAnalyzer:
 
         "x.com",
         "twitter.com",
+        "youtube.com",
+        "youtu.be",
 
         "dropbox.com",
         "cloudflare.com",
+    }
+
+    ESP_TRACKING_DOMAINS = {
+        "sendgrid.net",
+        "sendgrid.com",
     }
 
     SHORTENERS = {
@@ -243,33 +252,111 @@ class URLAnalyzer:
 
         results = []
         ct_lookups = 0
+        ct_elapsed = 0.0
         MAX_CT_LOOKUPS = settings.MAX_CT_LOOKUPS_PER_EMAIL
+        CT_TOTAL_BUDGET_SECONDS = getattr(
+            settings, "CT_TOTAL_BUDGET_SECONDS", 3.0
+        )
 
-        for url in urls:
+        # Per-email infrastructure cache.
+        #
+        # Only hostname/port-level DNS + TLS infrastructure is reused.
+        # URL-specific analysis remains independent for every URL.
+        infrastructure_cache: Dict[str, Dict[str, Any]] = {}
+
+        # Measure actual CT request time only (excluding DNS, TLS, MTA-STS, lexical, etc.)
+        orig_fetch_ct_logs = ct_log_service.fetch_ct_logs
+
+        def timed_fetch_ct_logs(
+            domain: str,
+            timeout: float | None = None,
+        ) -> Dict[str, Any]:
+            nonlocal ct_elapsed
+            remaining_budget = max(
+                0.0,
+                CT_TOTAL_BUDGET_SECONDS - ct_elapsed,
+            )
+            if remaining_budget <= 0.0:
+                return {
+                    "available": False,
+                    "reason": "budget_exceeded",
+                }
+
+            effective_timeout = (
+                min(1.5, remaining_budget)
+                if timeout is None
+                else min(1.5, timeout, remaining_budget)
+            )
+
+            t0 = time.perf_counter()
             try:
-                skip_ct_lookup = ct_lookups >= MAX_CT_LOOKUPS
-                result = self.analyze_url(
-                    url=url,
-                    sender_headers=sender_headers,
-                    auth_results=auth_results,
-                    skip_ct_lookup=skip_ct_lookup,
-                )
-                
-                # If it wasn't skipped and actually attempted a CT lookup, increment
-                tls = result.get("inspection_data", {}).get("tls", {})
-                ct_data = tls.get("certificate_transparency")
-                if ct_data and ct_data.get("reason") != "budget_exceeded" and ct_data.get("reason") != "timeout":
-                     # Count attempts, whether successful or failed (like invalid_domain)
-                     ct_lookups += 1
-                     
-                results.append(result)
-            except Exception as exc:
-                results.append(
-                    self._failed_url_result(
-                        url,
-                        str(exc),
+                try:
+                    return orig_fetch_ct_logs(
+                        domain,
+                        timeout=effective_timeout,
                     )
-                )
+                except TypeError:
+                    return orig_fetch_ct_logs(domain)
+            finally:
+                ct_elapsed += (time.perf_counter() - t0)
+
+        ct_log_service.fetch_ct_logs = timed_fetch_ct_logs
+        try:
+            for url in urls:
+                try:
+                    remaining_budget = max(
+                        0.0,
+                        CT_TOTAL_BUDGET_SECONDS - ct_elapsed,
+                    )
+                    skip_ct_lookup = (
+                        ct_lookups >= MAX_CT_LOOKUPS
+                        or remaining_budget <= 0.0
+                    )
+
+                    normalized_url = self._normalize_url(
+                        url
+                    )
+
+                    try:
+                        parsed_url = urlparse(
+                            normalized_url
+                        )
+                        cache_key = (
+                            f"{parsed_url.scheme.lower()}://"
+                            f"{(parsed_url.hostname or '').lower().rstrip('.')}:"
+                            f"{parsed_url.port or (443 if parsed_url.scheme.lower() == 'https' else 80)}"
+                        )
+                    except Exception:
+                        cache_key = ""
+
+                    result = self.analyze_url(
+                        url=url,
+                        sender_headers=sender_headers,
+                        auth_results=auth_results,
+                        skip_ct_lookup=skip_ct_lookup,
+                        infrastructure_cache=(
+                            infrastructure_cache
+                            if cache_key
+                            else None
+                        ),
+                    )
+
+                    if not skip_ct_lookup:
+                        # Every actual CT lookup attempt consumes budget,
+                        # including timeouts and HTTP failures.
+                        ct_lookups += 1
+
+                    results.append(result)
+
+                except Exception as exc:
+                    results.append(
+                        self._failed_url_result(
+                            url,
+                            str(exc),
+                        )
+                    )
+        finally:
+            ct_log_service.fetch_ct_logs = orig_fetch_ct_logs
 
         limited_context = (
             self._is_limited_context(
@@ -665,6 +752,7 @@ class URLAnalyzer:
         sender_headers: Dict[str, Any] | None = None,
         auth_results: Dict[str, Any] | None = None,
         skip_ct_lookup: bool = False,
+        infrastructure_cache: Dict[str, Dict[str, Any]] | None = None,
     ) -> Dict[str, Any]:
 
         sender_headers = (
@@ -732,17 +820,16 @@ class URLAnalyzer:
         # ----------------------------------------------------
 
         try:
-
             inspection_data = (
                 self.inspection_service.inspect(
                     url,
                     skip_ct_lookup=skip_ct_lookup,
+                    infrastructure_cache=infrastructure_cache,
                 )
                 or {}
             )
 
         except Exception as exc:
-
             inspection_data = {
                 "analysis_status": "UNAVAILABLE",
                 "inspection_error": (
@@ -1178,9 +1265,27 @@ class URLAnalyzer:
 
         if (
             sender_registered_domain
-            and sender_registered_domain
-            != url_registered_domain
+            and sender_registered_domain != url_registered_domain
+            and url_registered_domain in self.ESP_TRACKING_DOMAINS
         ):
+            return "esp_tracking"
+
+        if (
+            sender_registered_domain
+            and sender_registered_domain != url_registered_domain
+        ):
+            brand_relationship = str(
+                self.evaluate_brand_relationship(
+                    inspection_data
+                )
+            ).upper()
+
+            if brand_relationship in {
+                "OFFICIAL",
+                "SUBDOMAIN_OF_OFFICIAL",
+            }:
+                return "official_third_party"
+
             return "misaligned"
 
         return "unknown"
@@ -2036,6 +2141,35 @@ class URLAnalyzer:
                     source="URLAnalyzer",
                     explanation=(
                         "URL registered domain aligns with the sender."
+                    ),
+                    confidence=0.90,
+                )
+            )
+
+        elif alignment == "esp_tracking":
+            evidence.append(
+                self._evidence(
+                    type_="ESP_DELEGATED_TRACKING",
+                    severity="INFO",
+                    direction="POSITIVE",
+                    source="URLAnalyzer",
+                    explanation=(
+                        "URL uses a recognized email-service-provider tracking domain."
+                    ),
+                    confidence=0.90,
+                )
+            )
+
+        elif alignment == "official_third_party":
+            evidence.append(
+                self._evidence(
+                    type_="OFFICIAL_THIRD_PARTY_RESOURCE",
+                    severity="INFO",
+                    direction="POSITIVE",
+                    source="URLAnalyzer",
+                    explanation=(
+                        "URL uses a domain recognized as an official "
+                        "third-party resource associated with the sender brand."
                     ),
                     confidence=0.90,
                 )

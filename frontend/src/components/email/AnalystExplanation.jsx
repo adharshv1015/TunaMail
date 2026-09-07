@@ -10,6 +10,7 @@ const SEVERITY_COLORS = {
 
 const EvidenceCard = ({ item }) => {
   const colorClass = SEVERITY_COLORS[item.severity] || SEVERITY_COLORS.INFO;
+  const evData = item?.evidence || item?.details || {};
 
   return (
     <div className={`p-3 rounded-lg border text-sm mb-2 ${colorClass}`}>
@@ -23,7 +24,28 @@ const EvidenceCard = ({ item }) => {
           )}%
         </span>
       </div>
-      <div className="mb-1"><span className="font-semibold">Source:</span> {item?.source || 'Unknown'}</div>
+
+      {item?.title && item.title !== item.type && (
+        <div className="font-bold text-xs mb-1.5 opacity-95">
+          {item.title}
+        </div>
+      )}
+
+      {(evData.claimed_brand || evData.sender_domain || evData.mismatched_url) && (
+        <div className="my-2 p-2 rounded bg-black/5 dark:bg-black/25 text-xs space-y-1 border border-current/10 font-mono">
+          {evData.claimed_brand && (
+            <div><span className="font-bold opacity-80">Claimed Brand:</span> <span className="font-semibold">{evData.claimed_brand}</span></div>
+          )}
+          {evData.sender_domain && (
+            <div><span className="font-bold opacity-80">Actual Sender Domain:</span> {evData.sender_domain}</div>
+          )}
+          {evData.mismatched_url && (
+            <div className="truncate"><span className="font-bold opacity-80">Referenced Link:</span> {evData.mismatched_url}</div>
+          )}
+        </div>
+      )}
+
+      <div className="mb-1 text-xs opacity-80"><span className="font-semibold">Source:</span> {item?.source || 'Unknown'}</div>
       {item?.observation && item.observation !== item.explanation && <div className="mb-1"><span className="font-semibold">Observation:</span> {String(item.observation)}</div>}
       {item?.explanation && <div><span className="font-semibold">Explanation:</span> {String(item.explanation)}</div>}
     </div>
@@ -34,8 +56,37 @@ const AnalystExplanation = ({ messageId, decision, explanation, sender }) => {
   const [expanded, setExpanded] = useState(false);
 
   const exp = explanation || decision?.explanation || {};
-  const negEv = exp.groups?.NEGATIVE_EVIDENCE || exp.negative_evidence || [];
-  const posEv = exp.groups?.POSITIVE_EVIDENCE || exp.positive_evidence || [];
+  const negEv = [...(exp.groups?.NEGATIVE_EVIDENCE || exp.negative_evidence || [])];
+  if (exp.groups) {
+    Object.entries(exp.groups).forEach(([grpKey, grpList]) => {
+      if (grpKey !== "NEGATIVE_EVIDENCE" && Array.isArray(grpList)) {
+        grpList.forEach((item) => {
+          if (
+            item.direction === "NEGATIVE" &&
+            !negEv.some((n) => n.title === item.title && n.source === item.source)
+          ) {
+            negEv.push(item);
+          }
+        });
+      }
+    });
+  }
+
+  const posEv = [...(exp.groups?.POSITIVE_EVIDENCE || exp.positive_evidence || [])];
+  if (exp.groups) {
+    Object.entries(exp.groups).forEach(([grpKey, grpList]) => {
+      if (grpKey !== "POSITIVE_EVIDENCE" && Array.isArray(grpList)) {
+        grpList.forEach((item) => {
+          if (
+            item.direction === "POSITIVE" &&
+            !posEv.some((p) => p.title === item.title && p.source === item.source)
+          ) {
+            posEv.push(item);
+          }
+        });
+      }
+    });
+  }
   const limitations = exp.groups?.CONTEXT_LIMITATIONS || exp.limitations || [];
   const confidenceFactors = exp.confidence_explanation ? [exp.confidence_explanation] : (exp.confidence_factors || []);
 

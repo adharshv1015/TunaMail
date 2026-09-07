@@ -26,6 +26,17 @@ class ContentAnalyzer:
     - Never treat authentication failure alone as impersonation.
     """
 
+    LEGITIMATE_INFRASTRUCTURE = {
+        "amazonaws.com",
+        "cloudfront.net",
+        "gstatic.com",
+        "googleapis.com",
+        "googleusercontent.com",
+        "azure.com",
+        "azureedge.net",
+        "windows.net",
+    }
+
     TRUSTED_ORGANIZATIONS = {
         "google": {
             "sender_domains": {
@@ -36,9 +47,6 @@ class ContentAnalyzer:
             "url_domains": {
                 "google.com",
                 "gmail.com",
-                "googleusercontent.com",
-                "gstatic.com",
-                "googleapis.com",
                 "accounts.google.com",
                 "myaccount.google.com",
                 "mail.google.com",
@@ -84,11 +92,12 @@ class ContentAnalyzer:
             "sender_domains": {
                 "amazon.com",
                 "amazon.in",
+                "amazon.co.uk",
             },
             "url_domains": {
                 "amazon.com",
                 "amazon.in",
-                "amazonaws.com",
+                "amazon.co.uk",
             },
         },
         "linkedin": {
@@ -1136,13 +1145,24 @@ class ContentAnalyzer:
                 if legitimate:
                     continue
 
-                # An unrelated sender using an organization's
-                # official-looking infrastructure can be
-                # suspicious, especially when the body claims
-                # the organization is contacting the user.
+                # An unrelated sender using an organization's official URL
+                # is only suspicious if the sender claims to be the organization
+                # or the message uses coercive/credential harvesting language.
+                sender_claims_brand = self._contains_brand_reference(
+                    sender,
+                    organization,
+                )
+
+                has_suspicious_intent = (
+                    self.contains_any(body, self.KEYWORDS["credential_request"])
+                    or self.contains_any(body, self.KEYWORDS["threat_language"])
+                    or self.contains_any(body, self.KEYWORDS["financial_request"])
+                )
+
                 if (
                     brand_mentioned
                     and not legitimate
+                    and (sender_claims_brand or has_suspicious_intent)
                 ):
 
                     return {
@@ -1151,9 +1171,9 @@ class ContentAnalyzer:
                         "relationships": relationships,
                         "confidence": 0.95,
                         "explanation": (
-                            f"The message references {organization} "
-                            "but the sender/domain relationship does "
-                            "not match a recognized legitimate organization relationship."
+                            f"The message references {organization.title()} "
+                            f"but the sender/domain relationship does "
+                            f"not match a recognized legitimate organization relationship."
                         ),
                     }
 
@@ -1332,6 +1352,14 @@ class ContentAnalyzer:
         )
 
         if not domain:
+            return False
+
+        # Legitimate cloud infrastructure, CDNs, and official multi-tenant domains
+        # must never be treated as fraudulent brand lookalikes.
+        if any(
+            self._is_same_or_subdomain(domain, infra)
+            for infra in self.LEGITIMATE_INFRASTRUCTURE
+        ):
             return False
 
         labels = domain.split(

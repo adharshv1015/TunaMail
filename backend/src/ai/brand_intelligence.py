@@ -24,8 +24,13 @@ class BrandIntelligence:
                 "subdomains": ["www.paypal.com", "history.paypal.com"],
             },
             "amazon": {
-                "domains": ["amazon.com", "amazon.co.uk", "amazon.ca", "aws.amazon.com"],
-                "subdomains": ["sellercentral.amazon.com"],
+                "domains": [
+                    "amazon.com",
+                    "amazon.co.uk",
+                    "amazon.ca",
+                    "aws.amazon.com",
+                    "amazonaws.com",
+                ],
             },
             "netflix": {
                 "domains": ["netflix.com"],

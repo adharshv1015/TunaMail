@@ -1,5 +1,6 @@
 import logging
 import re
+import time
 from typing import Any, Dict, List
 from urllib.parse import urlparse
 
@@ -38,6 +39,13 @@ class MTASTSService:
         "none",
     }
 
+    def __init__(self, cache_ttl_seconds: int = 3600):
+        self._cache: Dict[str, Dict[str, Any]] = {}
+        self.cache_ttl_seconds = cache_ttl_seconds
+
+    def clear_cache(self) -> None:
+        self._cache.clear()
+
     def analyze(self, domain: str) -> Dict[str, Any]:
         domain = self._normalize_domain(domain)
 
@@ -45,6 +53,13 @@ class MTASTSService:
             return self._unavailable(
                 "Invalid or empty domain."
             )
+
+        now = time.time()
+        cached = self._cache.get(domain)
+        if cached:
+            if now - cached.get("timestamp", 0) < self.cache_ttl_seconds:
+                return dict(cached["data"])
+            self._cache.pop(domain, None)
 
         dns_result = self._lookup_dns_policy(domain)
 
@@ -115,7 +130,7 @@ class MTASTSService:
         elif issues:
             severity = "MEDIUM"
 
-        return {
+        result = {
             "available": bool(
                 dns_result["available"]
                 or https_result["available"]
@@ -136,6 +151,13 @@ class MTASTSService:
                 else "MTA_STS_POLICY"
             ),
         }
+
+        self._cache[domain] = {
+            "data": dict(result),
+            "timestamp": now,
+        }
+
+        return result
 
     def _lookup_dns_policy(
         self,

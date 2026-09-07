@@ -103,22 +103,38 @@ function Accordion({ title, items, color, defaultOpen = false, icon = "ℹ️" }
 
       {isOpen && (
         <div className="p-4 space-y-3 border-t border-[var(--tm-border)] bg-[var(--tm-surface)]">
-          {items.map((item, index) => (
-            <div
-              key={index}
-              className={`flex gap-3 rounded-[8px] border p-3 text-[12px] leading-relaxed break-words [overflow-wrap:anywhere] ${bodyColor}`}
-            >
-              <div className="flex-1 min-w-0 space-y-1">
-                <div className="font-bold text-[13px]">{item.title}</div>
-                <div className="opacity-90">{formatEvidence(item.explanation)}</div>
-                {item.source && (
-                  <div className="text-[10px] font-mono opacity-60 pt-1">
-                    Source: {item.source}
-                  </div>
-                )}
+          {items.map((item, index) => {
+            const evData = item.evidence || item.details || {};
+            return (
+              <div
+                key={index}
+                className={`flex gap-3 rounded-[8px] border p-3 text-[12px] leading-relaxed break-words [overflow-wrap:anywhere] ${bodyColor}`}
+              >
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="font-bold text-[13px]">{item.title}</div>
+                  {(evData.claimed_brand || evData.sender_domain || evData.mismatched_url) && (
+                    <div className="my-1.5 p-2 rounded bg-black/5 dark:bg-black/20 text-[11px] space-y-0.5 border border-current/10 font-mono">
+                      {evData.claimed_brand && (
+                        <div><span className="font-bold opacity-75">Claimed Brand:</span> <span className="font-semibold">{evData.claimed_brand}</span></div>
+                      )}
+                      {evData.sender_domain && (
+                        <div><span className="font-bold opacity-75">Sending Domain:</span> {evData.sender_domain}</div>
+                      )}
+                      {evData.mismatched_url && (
+                        <div className="truncate"><span className="font-bold opacity-75">Referenced Link:</span> {evData.mismatched_url}</div>
+                      )}
+                    </div>
+                  )}
+                  <div className="opacity-90">{formatEvidence(item.explanation)}</div>
+                  {item.source && (
+                    <div className="text-[10px] font-mono opacity-60 pt-1">
+                      Source: {item.source}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -167,15 +183,45 @@ function SecurityReasoning({ reasoning, ai, explanation }) {
       agreement,
     } = explanation;
 
-    const hasNegative     = (groups.NEGATIVE_EVIDENCE?.length ?? 0) > 0;
-    const hasPositive     = (groups.POSITIVE_EVIDENCE?.length ?? 0) > 0;
+    // Ensure all unique negative evidence items across groups are available in negativeItems
+    const negativeItems = [...(groups.NEGATIVE_EVIDENCE || [])];
+    Object.entries(groups).forEach(([grpKey, grpList]) => {
+      if (grpKey !== "NEGATIVE_EVIDENCE" && Array.isArray(grpList)) {
+        grpList.forEach((item) => {
+          if (
+            item.direction === "NEGATIVE" &&
+            !negativeItems.some((n) => n.title === item.title && n.source === item.source)
+          ) {
+            negativeItems.push(item);
+          }
+        });
+      }
+    });
+
+    // Ensure all unique positive evidence items across groups are available in positiveItems
+    const positiveItems = [...(groups.POSITIVE_EVIDENCE || [])];
+    Object.entries(groups).forEach(([grpKey, grpList]) => {
+      if (grpKey !== "POSITIVE_EVIDENCE" && Array.isArray(grpList)) {
+        grpList.forEach((item) => {
+          if (
+            item.direction === "POSITIVE" &&
+            !positiveItems.some((p) => p.title === item.title && p.source === item.source)
+          ) {
+            positiveItems.push(item);
+          }
+        });
+      }
+    });
+
+    const hasNegative       = (negativeItems?.length ?? 0) > 0;
+    const hasPositive       = (positiveItems?.length ?? 0) > 0;
     const hasContradictions = (groups.CONTRADICTIONS?.length ?? 0) > 0;
-    const hasContext      = (groups.CONTEXT_LIMITATIONS?.length ?? 0) > 0;
-    const hasBehavioral   = (groups.BEHAVIORAL_FINDINGS?.length ?? 0) > 0;
-    const hasURL          = (groups.URL_FINDINGS?.length ?? 0) > 0;
-    const hasAuth         = (groups.AUTHENTICATION_FINDINGS?.length ?? 0) > 0;
-    const hasBrand        = (groups.BRAND_FINDINGS?.length ?? 0) > 0;
-    const hasSupporting   = (groups.SUPPORTING_EVIDENCE?.length ?? 0) > 0;
+    const hasContext        = (groups.CONTEXT_LIMITATIONS?.length ?? 0) > 0;
+    const hasBehavioral     = (groups.BEHAVIORAL_FINDINGS?.length ?? 0) > 0;
+    const hasURL            = (groups.URL_FINDINGS?.length ?? 0) > 0;
+    const hasAuth           = (groups.AUTHENTICATION_FINDINGS?.length ?? 0) > 0;
+    const hasBrand          = (groups.BRAND_FINDINGS?.length ?? 0) > 0;
+    const hasSupporting     = (groups.SUPPORTING_EVIDENCE?.length ?? 0) > 0;
 
     return (
       <section className="rounded-[16px] border border-[var(--tm-border)] bg-[var(--tm-surface)] p-6 shadow-sm mt-6">
@@ -205,14 +251,14 @@ function SecurityReasoning({ reasoning, ai, explanation }) {
           <div className="space-y-1">
             <Accordion
               title="Negative Evidence"
-              items={groups.NEGATIVE_EVIDENCE}
+              items={negativeItems}
               color="red"
               icon="⚠"
               defaultOpen={hasNegative}
             />
             <Accordion
               title="Positive Evidence"
-              items={groups.POSITIVE_EVIDENCE}
+              items={positiveItems}
               color="green"
               icon="✓"
               defaultOpen={hasPositive && !hasNegative}

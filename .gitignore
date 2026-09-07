@@ -13,6 +13,9 @@ desktop.ini
 *.swo
 *.swn
 *~
+*.bak
+*.backup
+*.old
 
 # ==============================
 # IDEs and Editors
@@ -32,6 +35,17 @@ desktop.ini
 feedback_backup/
 scratch/
 backend/scratch/
+
+# ==============================
+# AI Models & Training Backups
+# ==============================
+*.before_*.pkl
+*.backup.pkl
+*.pkl.bak
+backend/src/ai/models/*.before_*
+backend/src/ai/models/*.backup*
+backend/src/ai/models/*.bak
+backend/src/ai/models/*_backup.*
 
 # ==============================
 # Node.js & React (Frontend)
@@ -171,6 +185,12 @@ backend/*.json
 # ==============================
 # Test & Scratch Scripts
 # ==============================
+scratch/
+backend/scratch/
+**/scratch/
+**/scratch/**
+scratch*
+*scratch*
 backend/stage16_test.py
 backend/test_*.py
 backend/inspection_timing.py

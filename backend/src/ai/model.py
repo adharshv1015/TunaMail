@@ -2,6 +2,7 @@ import os
 import joblib
 import numpy as np
 from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import StandardScaler
 from .dataset import LABELS
 
 class LocalSecurityModel:
@@ -9,30 +10,54 @@ class LocalSecurityModel:
         self.model_path = model_path
         self.model = None
         self.is_trained = False
+        self.feature_scaler = StandardScaler()
+        self.scaler_fitted = False
         
         if self.model_path and os.path.exists(self.model_path):
             self.load()
             
-    def _prepare_inputs(self, X_tokens, X_features, vocab_size):
+    def _prepare_inputs(self, X_tokens, X_features, vocab_size, fit_scaler=False):
         """
-        Combines token IDs (Bag of Words) with structured features into a single matrix.
+        Combines Bag-of-Words token features with structured features.
+
+        The structured-feature scaler is fitted only during training and
+        reused unchanged during inference.
         """
+        structured_features = np.asarray(X_features, dtype=float)
+
+        if fit_scaler:
+            structured_features = self.feature_scaler.fit_transform(
+                structured_features
+            )
+            self.scaler_fitted = True
+        elif self.scaler_fitted:
+            structured_features = self.feature_scaler.transform(
+                structured_features
+            )
+
         X_combined = []
-        for tokens, features in zip(X_tokens, X_features):
-            # Create a Bag-of-Words vector
+
+        for index, tokens in enumerate(X_tokens):
             bow = np.zeros(vocab_size)
+
             for token_id in tokens:
                 if token_id < vocab_size:
                     bow[token_id] += 1
-            
-            # Combine BoW with structured features
-            combined = np.concatenate([bow, features])
+
+            combined = np.concatenate(
+                [bow, structured_features[index]]
+            )
             X_combined.append(combined)
-            
+
         return np.array(X_combined)
         
     def train(self, X_tokens, X_features, Y, vocab_size: int):
-        X_train = self._prepare_inputs(X_tokens, X_features, vocab_size)
+        X_train = self._prepare_inputs(
+            X_tokens,
+            X_features,
+            vocab_size,
+            fit_scaler=True,
+        )
         Y_train = np.array(Y)
         
         # Lightweight architecture suitable for local inference
@@ -62,7 +87,12 @@ class LocalSecurityModel:
             # Fallback if model isn't trained (e.g. fresh start without dataset)
             return "UNKNOWN", {label: 0.0 for label in LABELS}
             
-        X_input = self._prepare_inputs([token_ids], [features], vocab_size)
+        X_input = self._prepare_inputs(
+            [token_ids],
+            [features],
+            vocab_size,
+            fit_scaler=False,
+        )
         
         try:
             proba = self.model.predict_proba(X_input)[0]
@@ -81,14 +111,40 @@ class LocalSecurityModel:
         path = filepath or self.model_path
         if not path:
             return
-            
+
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
-        joblib.dump(self.model, path)
+
+        payload = {
+            "model": self.model,
+            "scaler": self.feature_scaler,
+            "scaler_fitted": self.scaler_fitted,
+        }
+
+        joblib.dump(payload, path)
         
     def load(self, filepath: str = None):
         path = filepath or self.model_path
         if not path:
             return
-            
-        self.model = joblib.load(path)
+
+        loaded = joblib.load(path)
+
+        if isinstance(loaded, dict) and "model" in loaded:
+            self.model = loaded["model"]
+            self.feature_scaler = loaded.get(
+                "scaler",
+                StandardScaler(),
+            )
+            self.scaler_fitted = bool(
+                loaded.get("scaler_fitted", False)
+            )
+        else:
+            # Legacy bare MLPClassifier artifact.
+            # It must be retrained before scaled inference is used.
+            self.model = loaded
+            self.feature_scaler = StandardScaler()
+            self.scaler_fitted = False
+            self.is_trained = False
+            return
+
         self.is_trained = True

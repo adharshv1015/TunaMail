@@ -1,38 +1,81 @@
 [
   {
     "id": "dev-001",
+    "label": "LEGITIMATE",
     "email": {
       "subject": "Monthly Newsletter",
       "from": "newsletter@example.com",
-      "body": "Here is our monthly newsletter. We hope you enjoy reading our updates. Visit our site to learn more.",
-      "headers": {
-        "Return-Path": "<newsletter@example.com>"
-      }
+      "body": "Here is our monthly newsletter. We hope you enjoy reading our updates. Visit our site to learn more. https://example.com/newsletter https://example.com/events https://example.com/blog"
     },
     "analysis": {
-      "authentication": { "spf": "pass", "dkim": "pass", "dmarc": "pass" },
-      "url": { "analysis": [] }
-    },
-    "label": "LEGITIMATE"
+      "authentication": {
+        "spf": "pass",
+        "dkim": "pass",
+        "dmarc": "pass"
+      },
+      "url": {
+        "analysis": [
+          {
+            "alignment": "aligned",
+            "email_alignment": "aligned",
+            "brand_relationship": "OFFICIAL",
+            "dns": {
+              "resolved": true
+            },
+            "tls": {
+              "certificate_valid": true
+            }
+          },
+          {
+            "alignment": "aligned",
+            "email_alignment": "aligned",
+            "brand_relationship": "OFFICIAL",
+            "dns": {
+              "resolved": true
+            },
+            "tls": {
+              "certificate_valid": true
+            }
+          },
+          {
+            "alignment": "aligned",
+            "email_alignment": "aligned",
+            "brand_relationship": "OFFICIAL",
+            "dns": {
+              "resolved": true
+            },
+            "tls": {
+              "certificate_valid": true
+            }
+          }
+        ]
+      }
+    }
   },
   {
     "id": "dev-002",
+    "label": "PHISHING",
     "email": {
       "subject": "URGENT: Verify your account immediately",
       "from": "security@paypal-update.com",
-      "body": "Your account has been suspended due to suspicious activity. Please click the link below to verify your account immediately.\nhttps://paypal-update.com/login",
-      "headers": {
-        "Return-Path": "<security@paypal-update.com>"
-      }
+      "body": "Your account has been suspended due to suspicious activity. Please click the link below to verify your account immediately. https://paypal-update.com/login"
     },
     "analysis": {
-      "authentication": { "spf": "pass", "dkim": "pass", "dmarc": "none" },
+      "authentication": {
+        "spf": "pass",
+        "dkim": "pass",
+        "dmarc": "none"
+      },
       "url": {
         "analysis": [
           {
             "brand_impersonation": true,
-            "dns": { "resolved": true },
-            "tls": { "certificate_valid": true }
+            "dns": {
+              "resolved": true
+            },
+            "tls": {
+              "certificate_valid": true
+            }
           }
         ]
       },
@@ -40,56 +83,178 @@
         "urgency": true,
         "credential_request": true
       }
-    },
-    "label": "PHISHING"
+    }
   },
   {
     "id": "dev-003",
+    "label": "LIKELY_LEGITIMATE",
     "email": {
       "subject": "Project update",
       "from": "colleague@company.com",
-      "body": "Hey, here is the project update. Let me know what you think.",
-      "headers": {
-        "Return-Path": "<colleague@company.com>"
-      }
+      "body": "Hey, here is the project update. Let me know what you think. https://company.com/project"
     },
     "analysis": {
-      "authentication": { "spf": "pass", "dkim": "pass", "dmarc": "pass" },
-      "url": { "analysis": [] }
-    },
-    "label": "LIKELY_LEGITIMATE"
-  },
-  {
-    "id": "dev-004",
-    "email": {
-      "subject": "Check this out",
-      "from": "unknown@random-domain.com",
-      "body": "https://random-domain.com/free-stuff",
-      "headers": {
-        "Return-Path": "<unknown@random-domain.com>"
-      }
-    },
-    "analysis": {
-      "authentication": { "spf": "none", "dkim": "none", "dmarc": "none" },
+      "authentication": {
+        "spf": "pass",
+        "dkim": "pass",
+        "dmarc": "pass"
+      },
       "url": {
         "analysis": [
           {
-            "dns": { "resolved": true }
+            "alignment": "aligned",
+            "email_alignment": "aligned",
+            "brand_relationship": "OFFICIAL",
+            "dns": {
+              "resolved": true
+            },
+            "tls": {
+              "certificate_valid": true
+            }
           }
         ]
       }
+    }
+  },
+  {
+    "id": "dev-004",
+    "label": "SUSPICIOUS",
+    "email": {
+      "subject": "Check this out",
+      "from": "unknown@random-domain.com",
+      "body": "https://random-domain.com/free-stuff"
     },
-    "label": "SUSPICIOUS"
+    "analysis": {
+      "authentication": {
+        "spf": "none",
+        "dkim": "none",
+        "dmarc": "none"
+      },
+      "url": {
+        "analysis": [
+          {
+            "dns": {
+              "resolved": true
+            }
+          }
+        ]
+      }
+    }
   },
   {
     "id": "dev-005",
+    "label": "UNKNOWN",
     "email": {
       "subject": "",
       "from": "no-reply@unknown.com",
-      "body": "",
-      "headers": {}
+      "body": ""
     },
-    "analysis": {},
-    "label": "UNKNOWN"
+    "analysis": {}
+  },
+  {
+    "id": "dev-006",
+    "label": "LEGITIMATE",
+    "email": {
+      "subject": "Your weekly account summary",
+      "from": "notifications@example.com",
+      "body": "Here is your weekly account summary. You can review your activity, visit our help center, or manage your preferences using the links below. https://example.com/account https://example.com/help https://example.com/preferences https://example.com/privacy"
+    },
+    "analysis": {
+      "authentication": {
+        "spf": "pass",
+        "dkim": "pass",
+        "dmarc": "pass"
+      },
+      "url": {
+        "analysis": [
+          {
+            "alignment": "aligned",
+            "email_alignment": "aligned",
+            "brand_relationship": "OFFICIAL",
+            "dns": {
+              "resolved": true
+            },
+            "tls": {
+              "certificate_valid": true
+            }
+          },
+          {
+            "alignment": "aligned",
+            "email_alignment": "aligned",
+            "brand_relationship": "OFFICIAL",
+            "dns": {
+              "resolved": true
+            },
+            "tls": {
+              "certificate_valid": true
+            }
+          },
+          {
+            "alignment": "aligned",
+            "email_alignment": "aligned",
+            "brand_relationship": "OFFICIAL",
+            "dns": {
+              "resolved": true
+            },
+            "tls": {
+              "certificate_valid": true
+            }
+          },
+          {
+            "alignment": "aligned",
+            "email_alignment": "aligned",
+            "brand_relationship": "OFFICIAL",
+            "dns": {
+              "resolved": true
+            },
+            "tls": {
+              "certificate_valid": true
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "dev-007",
+    "label": "LIKELY_LEGITIMATE",
+    "email": {
+      "subject": "Service notification",
+      "from": "updates@service.example.com",
+      "body": "This is your regular service notification. No action is required. You can review the latest information and documentation here. https://service.example.com/updates https://service.example.com/docs"
+    },
+    "analysis": {
+      "authentication": {
+        "spf": "pass",
+        "dkim": "pass",
+        "dmarc": "pass"
+      },
+      "url": {
+        "analysis": [
+          {
+            "alignment": "aligned",
+            "email_alignment": "aligned",
+            "brand_relationship": "OFFICIAL",
+            "dns": {
+              "resolved": true
+            },
+            "tls": {
+              "certificate_valid": true
+            }
+          },
+          {
+            "alignment": "aligned",
+            "email_alignment": "aligned",
+            "brand_relationship": "OFFICIAL",
+            "dns": {
+              "resolved": true
+            },
+            "tls": {
+              "certificate_valid": true
+            }
+          }
+        ]
+      }
+    }
   }
 ]

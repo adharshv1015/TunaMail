@@ -408,33 +408,74 @@ def process_single_message(
             "trust": trust_analysis,
         }
 
-        # URL Page Intelligence — fetch and analyze for ALL emails (up to 5 URLs)
-        # Budget-guarded: skip if time is already tight
+        # 6. Local AI Reasoning Gate
+        #
+        # Local AI is prioritized before optional network-heavy page
+        # inspection. This ensures the core reasoning engine receives
+        # enough time to run even when URL/WHOIS intelligence consumes
+        # most of the analysis budget.
+        if tracker.is_over_budget():
+            tracker.record_timeout(
+                "LocalAI",
+                reason="Analysis budget exceeded before AI inference",
+            )
+            ai_analysis = {
+                "enabled": False,
+                "reasoning_state": "INSUFFICIENT_EVIDENCE",
+                "confidence": 0.0,
+                "reasoning_summary": (
+                    "Local AI analysis skipped due to timeout."
+                ),
+                "recommended_classification": "UNKNOWN",
+            }
+        else:
+            ai_analysis = safe_analyze(
+                "LocalAI",
+                msg_id,
+                analyze_email_with_ai,
+                tracker,
+                parsed,
+                existing_analysis,
+            )
+
+        existing_analysis["ai"] = ai_analysis
+
+        # 7. URL Page Intelligence
+        #
+        # Page inspection is additive network intelligence. It runs only
+        # when the remaining analysis budget permits it, after the core
+        # Local AI reasoning has already been completed.
         url_page_intelligence = {}
         url_items = url_analysis.get("analysis", [])
-        urls_to_inspect = [item.get("url") for item in url_items if item.get("url")][:5]
-
-        emit_progress(
-            progress_callback,
-            "Inspecting linked pages",
-            65,
-            "Analyzing webpage intelligence for detected URLs..."
-        )
+        urls_to_inspect = [
+            item.get("url")
+            for item in url_items
+            if item.get("url")
+        ][:5]
 
         if urls_to_inspect and not tracker.is_over_budget():
             from src.services.url_inspection_service import URLInspectionService
             from src.analyzers.page_phishing_analyzer import PagePhishingAnalyzer
+
             page_phishing_analyzer = PagePhishingAnalyzer()
 
             with tracker.measure("URLPageInspection"):
-                url_page_intelligence = URLInspectionService.inspect_urls(urls_to_inspect, msg_id)
+                url_page_intelligence = URLInspectionService.inspect_urls(
+                    urls_to_inspect,
+                    msg_id,
+                )
 
-            # Enrich each URL analysis item with page phishing analysis
             for item in url_items:
                 item_url = item.get("url", "")
                 page_data = url_page_intelligence.get(item_url)
+
                 if page_data is not None:
-                    item["page_analysis"] = page_phishing_analyzer.analyze(page_data, item_url)
+                    item["page_analysis"] = (
+                        page_phishing_analyzer.analyze(
+                            page_data,
+                            item_url,
+                        )
+                    )
                 else:
                     item["page_analysis"] = {
                         "available": False,
@@ -444,38 +485,17 @@ def process_single_message(
                     }
         else:
             if tracker.is_over_budget():
-                tracker.record_timeout("URLPageInspection", reason="Analysis budget exceeded before page inspection")
+                tracker.record_timeout(
+                    "URLPageInspection",
+                    reason=(
+                        "Analysis budget exceeded before page inspection"
+                    ),
+                )
+
             if urls_to_inspect:
                 url_page_intelligence["_status"] = "SKIPPED_TIMEOUT"
-            for item in url_items:
-                item["page_analysis"] = {
-                    "available": False,
-                    "status": "NOT_ANALYZED",
-                    "indicators": [],
-                    "page_risk_score": None,
-                }
 
         existing_analysis["url_page_intelligence"] = url_page_intelligence
-
-        emit_progress(
-            progress_callback,
-            "Running Local AI reasoning",
-            74,
-            "Performing contextual reasoning over the collected evidence..."
-        )
-
-        # Timeout check before expensive AI
-        if tracker.is_over_budget():
-            tracker.record_timeout("LocalAI", reason="Analysis budget exceeded before AI inference")
-            ai_analysis = {
-                "enabled": False,
-                "reasoning_state": "INSUFFICIENT_EVIDENCE",
-                "confidence": 0.0,
-                "reasoning_summary": "Local AI analysis skipped due to timeout.",
-                "recommended_classification": "UNKNOWN"
-            }
-        else:
-            ai_analysis = safe_analyze("LocalAI", msg_id, analyze_email_with_ai, tracker, parsed, existing_analysis)
 
         historical_evidence = analyzers["verdict_store"].get_historical_evidence(msg_id, parsed, url_analysis)
        
@@ -519,6 +539,27 @@ def process_single_message(
             are_result,
             conflict_result,
         )
+        print("\n=== PRODUCTION DECISION TRACE: AFTER FUSION ===")
+        print("ARE verdict:", are_result.get("verdict"))
+        print("ARE detail:", are_result.get("detail_verdict"))
+        print("ARE risk:", are_result.get("risk_score"))
+        print("ARE confidence:", are_result.get("confidence"))
+        print("ARE rules:", are_result.get("rules_triggered"))
+
+        print("AI classification:", ai_analysis.get("recommended_classification"))
+        print("AI predicted:", ai_analysis.get("predicted_class"))
+        print("AI reasoning:", ai_analysis.get("reasoning_state"))
+        print("AI confidence:", ai_analysis.get("confidence"))
+
+        print("CONFLICT verdict:", conflict_result.get("verdict"))
+        print("CONFLICT risk:", conflict_result.get("risk_score"))
+        print("CONFLICT confidence:", conflict_result.get("confidence"))
+
+        print("FUSED verdict:", decision_result.get("verdict"))
+        print("FUSED detail:", decision_result.get("detail_verdict"))
+        print("FUSED risk:", decision_result.get("risk_score"))
+        print("FUSED confidence:", decision_result.get("confidence"))
+        
         emit_progress(
             progress_callback,
             "Applying security safeguards",
@@ -551,7 +592,12 @@ def process_single_message(
         ].validate(
             decision_result
         )
-
+        print("\n=== PRODUCTION DECISION TRACE: AFTER CONSISTENCY ===")
+        print("verdict:", decision_result.get("verdict"))
+        print("detail:", decision_result.get("detail_verdict"))
+        print("risk:", decision_result.get("risk_score"))
+        print("confidence:", decision_result.get("confidence"))
+        
         # Then run the deterministic safety architecture that was
         # previously only used by normalize_message_response().
         decision_result = finalize_intelligence(
@@ -559,6 +605,13 @@ def process_single_message(
             final_analysis,
             decision_result,
         )
+        print("\n=== PRODUCTION DECISION TRACE: AFTER FINALIZATION ===")
+        print("verdict:", decision_result.get("verdict"))
+        print("detail:", decision_result.get("detail_verdict"))
+        print("risk:", decision_result.get("risk_score"))
+        print("confidence:", decision_result.get("confidence"))
+        print("full decision:", decision_result)
+        print("=== END PRODUCTION DECISION TRACE ===\n")
 
         with tracker.measure("LocalLearning"):
             analyzers["learner"].learn(parsed, existing_analysis, decision_result.get("verdict", "UNKNOWN"))

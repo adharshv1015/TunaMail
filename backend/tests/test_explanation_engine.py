@@ -561,9 +561,37 @@ def test_low_confidence_explanation():
     assert "25" in result["confidence_explanation"]
 
 
+def test_21_impersonation_with_passing_auth_and_safe_urls():
+    """Passing auth + safe URLs + content impersonation -> NEGATIVE_EVIDENCE populated and primary reason set"""
+    decision = _decision("PHISHING", 100, 70, "MALICIOUS_EVIDENCE")
+    decision["structured_evidence"] = [{
+        "type": "BRAND_IMPERSONATION",
+        "severity": "HIGH",
+        "direction": "NEGATIVE",
+        "source": "ContentAnalyzer",
+        "explanation": "Possible impersonation detected.",
+    }]
+    analysis = _analysis(
+        auth=_auth("pass", "pass", "pass"),
+        urls=[_url_item(f"example{i}.com", 0) for i in range(5)],
+        content={"impersonation": True, "analysis_status": "AVAILABLE"},
+        conflict={"conflict_state": "CONFLICTING_EVIDENCE"},
+    )
+    analysis["reasoning"] = {
+        "behavioral": ["Possible impersonation", "Limited context: URL page inspection was skipped or unavailable."]
+    }
+    result = run_and_assert_immutable(analysis, decision)
+    neg_types = {e["type"] for e in result["groups"]["NEGATIVE_EVIDENCE"]}
+    assert "BRAND_IMPERSONATION" in neg_types
+    assert len(result["groups"]["NEGATIVE_EVIDENCE"]) >= 1
+    assert result["agreement"]["negative_sources"] >= 1
+    assert "impersonation" in result["primary_reason"].lower()
+
+
 # ---------------------------------------------------------------------------
 # Run all tests
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+

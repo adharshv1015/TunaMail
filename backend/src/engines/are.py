@@ -136,28 +136,26 @@ class AnalyticalReasoningEngine:
 
     @staticmethod
     def _normalize_direction(value):
-        value = str(value or "NEUTRAL").upper().strip()
+        if value is None:
+            return "NEUTRAL"
 
-        if value not in {
-            "POSITIVE",
-            "NEGATIVE",
-            "NEUTRAL",
-        }:
+        value = getattr(value, "value", value)
+        value = str(value).upper().strip()
+
+        if value not in {"POSITIVE", "NEGATIVE", "NEUTRAL"}:
             return "NEUTRAL"
 
         return value
 
     @staticmethod
     def _normalize_severity(value):
-        value = str(value or "INFO").upper().strip()
+        if value is None:
+            return "INFO"
 
-        if value not in {
-            "INFO",
-            "LOW",
-            "MEDIUM",
-            "HIGH",
-            "CRITICAL",
-        }:
+        value = getattr(value, "value", value)
+        value = str(value).upper().strip()
+
+        if value not in {"INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"}:
             return "INFO"
 
         return value
@@ -1295,8 +1293,6 @@ class AnalyticalReasoningEngine:
 
             elif alignment == "aligned":
 
-                score -= 10
-
                 evidence["positive"].append(
                     "URL domain is aligned with sender."
                 )
@@ -1395,8 +1391,6 @@ class AnalyticalReasoningEngine:
             if tls.get(
                 "certificate_valid"
             ) is True:
-
-                score -= 5
 
                 evidence["positive"].append(
                     "TLS certificate validated successfully."
