@@ -160,14 +160,25 @@ class EvidenceCollector:
 
                 # Redirects
                 redirects = u.get("redirects", {})
-                if redirects.get("external_domain_change"):
+                page_intel = u.get("page_analysis", {})
+                threat = u.get("threat_intelligence", {})
+                has_redirect_issue = (
+                    redirects.get("has_issues", False)
+                    or threat.get("detections", 0) > 0
+                    or u.get("dns", {}).get("private_ip_detected", False)
+                    or page_intel.get("forms", {}).get("password_fields", 0) > 0
+                    or page_intel.get("has_credential_form", False)
+                    or page_intel.get("has_fake_error", False)
+                    or (u.get("tls") and u.get("tls", {}).get("certificate_valid") is False)
+                )
+                if (redirects.get("external_domain_change") or redirects.get("detected")) and has_redirect_issue:
                     evidence_items.append(EvidenceItem(
                         category=EvidenceCategory.URL,
-                        type="suspicious_redirect",
-                        severity=EvidenceSeverity.HIGH,
+                        type="malicious_redirect",
+                        severity=EvidenceSeverity.CRITICAL,
                         direction=EvidenceDirection.NEGATIVE,
                         source="url_analyzer",
-                        explanation=f"Suspicious external redirect chain starting at {domain}"
+                        explanation=f"Malicious external redirect chain starting at {domain}"
                     ))
 
                 # Threat intel
@@ -227,16 +238,18 @@ class EvidenceCollector:
                 explanation="Email contains urgent language."
             ))
             
-        if ThreatPatterns.match_credential_harvesting(body) or content.get("credential_request"):
-            evidence_items.append(EvidenceItem(
-                category=EvidenceCategory.CONTENT,
-                type="credential_request",
-                severity=EvidenceSeverity.MEDIUM,
-                direction=EvidenceDirection.NEGATIVE,
-                source="content_analyzer",
-                explanation="Email contains a credential request or login prompt.",
-                confidence=0.85
-            ))
+        if content.get("credential_request"):
+            evidence_items.append(
+                EvidenceItem(
+                    category=EvidenceCategory.CONTENT,
+                    type="credential_request",
+                    severity=EvidenceSeverity.MEDIUM,
+                    direction=EvidenceDirection.NEGATIVE,
+                    source="content_analyzer",
+                    explanation="Email contains a credential request or login prompt.",
+                    confidence=0.85,
+                )
+            )
 
         if ThreatPatterns.match_financial_request(body) or content.get("financial_request"):
             evidence_items.append(EvidenceItem(

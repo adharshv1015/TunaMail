@@ -77,9 +77,6 @@ class DecisionValidator:
     }
 
     STRONG_NEGATIVE_TYPES = {
-        "DOMAIN_MISMATCH",
-        "URL_DOMAIN_MISMATCH",
-        "SUSPICIOUS_REDIRECT",
         "HOMOGRAPH_DOMAIN",
         "PUNYCODE_DOMAIN",
         "HOSTNAME_MISMATCH",
@@ -92,7 +89,6 @@ class DecisionValidator:
         "CAMPAIGN_ANOMALY",
         "TRUST_HISTORY_CONFLICT",
         "ADVERSARIAL_INDICATOR",
-        "NEW_DOMAIN",
     }
 
     CONTRADICTION_TYPES = {

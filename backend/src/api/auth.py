@@ -22,8 +22,10 @@ def login(request: Request):
         "code_verifier": code_verifier
     })
     
-    # Attach session to browser cookie
+    # Attach session to browser cookie (also backup state and verifier in signed cookie across reloads)
     request.session["session_id"] = session_id
+    request.session["oauth_state"] = state
+    request.session["code_verifier"] = code_verifier
 
     return RedirectResponse(auth_url)
 
@@ -34,15 +36,24 @@ def callback(request: Request):
     session_id = request.session.get("session_id")
     
     # Retrieve server-side session
-    server_session = session_manager.get_session(session_id)
-    if not server_session:
+    server_session = session_manager.get_session(session_id) if session_id else None
+    
+    # Recover state and PKCE verifier (from server session or signed session cookie across reloads)
+    expected_state = (server_session.get("oauth_state") if server_session else None) or request.session.get("oauth_state")
+    code_verifier = (server_session.get("code_verifier") if server_session else None) or request.session.get("code_verifier")
+    
+    if not expected_state or not code_verifier:
         raise HTTPException(status_code=401, detail="Session expired or invalid")
         
-    expected_state = server_session.get("oauth_state")
-    code_verifier = server_session.get("code_verifier")
-    
+    if not server_session:
+        session_id = session_manager.create_session({
+            "oauth_state": expected_state,
+            "code_verifier": code_verifier
+        })
+        request.session["session_id"] = session_id
+        
     # Constant-time comparison to mitigate timing attacks
-    if not expected_state or not returned_state or not secrets.compare_digest(expected_state, returned_state):
+    if not returned_state or not secrets.compare_digest(expected_state, returned_state):
         raise HTTPException(status_code=401, detail="Invalid state parameter")
 
     # Exchange code for credentials using the PKCE verifier
@@ -67,6 +78,10 @@ def callback(request: Request):
         "authenticated": True,
         "oauth_state": None # Clear state
     })
+    
+    # Clear temporary oauth state from cookie session
+    request.session.pop("oauth_state", None)
+    request.session.pop("code_verifier", None)
     
     # Update browser cookie
     request.session["session_id"] = new_session_id

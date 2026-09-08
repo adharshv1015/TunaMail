@@ -29,7 +29,7 @@ MAX_ANALYSIS_CACHE_ENTRIES = int(os.environ.get("MAX_ANALYSIS_CACHE_ENTRIES", "5
 # Increment this whenever the intelligence pipeline changes significantly.
 # Cache entries from a previous version will be automatically invalidated.
 # Note: For historical safety persistence, see SAFE_VERDICT_VERSION in verdict_store.py
-ANALYSIS_VERSION = "15.1"
+ANALYSIS_VERSION = "15.4"
 
 
 def _content_fingerprint(parsed_email: dict) -> str:
@@ -61,6 +61,20 @@ def _content_fingerprint(parsed_email: dict) -> str:
     return hashlib.sha256(
         json.dumps(key_data, sort_keys=True).encode()
     ).hexdigest()
+
+
+def is_incomplete_analysis(data: Any) -> bool:
+    """Return True if an analysis was incomplete (e.g. AI was skipped or timed out)."""
+    if not isinstance(data, dict):
+        return False
+    analysis = data.get("analysis") if "analysis" in data else data
+    if not isinstance(analysis, dict):
+        return False
+    ai = analysis.get("ai")
+    if isinstance(ai, dict):
+        if ai.get("enabled") is False or "timeout" in str(ai.get("reasoning_summary", "")).lower():
+            return True
+    return False
 
 
 class AnalysisCache:
@@ -123,6 +137,13 @@ class AnalysisCache:
                 logger.debug("AnalysisCache: fingerprint/version mismatch for %s — invalidated", message_id)
                 return None
 
+            # Check if cached analysis was incomplete (e.g. AI skipped or timed out)
+            if is_incomplete_analysis(entry["data"]):
+                del self._cache[message_id]
+                self._misses += 1
+                logger.debug("AnalysisCache: incomplete inspection for %s — invalidated for complete run", message_id)
+                return None
+
             entry["last_accessed"] = time.time()
             self._hits += 1
             logger.debug("AnalysisCache: HIT for message %s", message_id)
@@ -166,6 +187,10 @@ class AnalysisCache:
                 return None
             # Check analysis version
             if entry.get("analysis_version") != ANALYSIS_VERSION:
+                del self._cache[message_id]
+                return None
+            # Check for incomplete AI inspection
+            if is_incomplete_analysis(entry["data"]):
                 del self._cache[message_id]
                 return None
             return entry["data"]

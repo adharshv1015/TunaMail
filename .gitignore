@@ -1,44 +1,67 @@
-# ==============================
-# Global & OS Files
-# ==============================
+# ==============================================================================
+# TunaMail Unified .gitignore
+# ==============================================================================
+
+# ==============================================================================
+# 1. Operating System Files
+# ==============================================================================
+# macOS
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
+
+# Windows
 Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
 desktop.ini
-*.swp
-*.swo
-*.swn
+$RECYCLE.BIN/
+
+# Linux
 *~
 *.bak
 *.backup
 *.old
+*.swp
+*.swo
+*.swn
 
-# ==============================
-# IDEs and Editors
-# ==============================
+# ==============================================================================
+# 2. Editors & IDEs
+# ==============================================================================
 .idea/
 .vscode/
+!.vscode/extensions.json
+*.code-workspace
 .settings/
 .classpath
 .project
 .cursor/
+.windsurf/
+.claude/
+.aider*
+*.sublime-project
+*.sublime-workspace
 
-# ==============================
-# AI Agents & Tools
-# ==============================
+# ==============================================================================
+# 3. AI Agents & Local Scratch Directories
+# ==============================================================================
 .gemini/
 .agents/
 feedback_backup/
 scratch/
 backend/scratch/
+**/scratch/
+**/scratch/**
+scratch*
+*scratch*
 
-# ==============================
-# AI Models & Training Backups
-# ==============================
+# ==============================================================================
+# 4. Machine Learning & Model Checkpoints
+# ==============================================================================
 *.before_*.pkl
 *.backup.pkl
 *.pkl.bak
@@ -47,91 +70,54 @@ backend/src/ai/models/*.backup*
 backend/src/ai/models/*.bak
 backend/src/ai/models/*_backup.*
 
-# ==============================
-# Node.js & React (Frontend)
-# ==============================
+# ==============================================================================
+# 5. Frontend & Node.js (Vite, React, Vanilla)
+# ==============================================================================
 node_modules/
 frontend/node_modules/
 dist/
 frontend/dist/
 dist-ssr/
+frontend/dist-ssr/
 build/
 .npm/
 .vite/
 frontend/.vite/
+vite.config.*.timestamp-*
 *.tsbuildinfo
+.eslintcache
+.parcel-cache/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
 *.local
 
-# ==============================
-# Python & FastAPI (Backend)
-# ==============================
+# ==============================================================================
+# 6. Python & FastAPI Backend
+# ==============================================================================
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.pyd
 .Python
-build/
 develop-eggs/
-dist/
-downloads/
 eggs/
 .eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
+
+# Typing & Linting Caches
 .mypy_cache/
 .ruff_cache/
 backend/.mypy_cache/
 backend/.ruff_cache/
 
-# ==============================
-# Virtual Environments
-# ==============================
-.env
-.venv/
-venv/
-ENV/
-env/
-env.bak/
-venv.bak/
-backend/.venv/
-pip-log.txt
-pip-delete-this-directory.txt
-
-# ==============================
-# Environment Variables & Secrets
-# ==============================
-.env
-.env.*
-!.env.example
-!backend/.env.example
-backend/.env
-backend/.env.*
-# Ignore all credentials, token, and certificate files
-*credentials*.json
-*token*.json
-*.pem
-*.key
-*.crt
-*.cert
-# Except explicit client secrets we might need as templates
-!backend/client_secret.json
-
-# ==============================
-# Pytest / Coverage
-# ==============================
+# Pytest & Coverage
 .pytest_cache/
 backend/.pytest_cache/
 htmlcov/
@@ -142,16 +128,47 @@ coverage.xml
 .tox/
 .nox/
 
-# ==============================
-# Logs
-# ==============================
-*.log
-logs/
-backend/logs/
+# ==============================================================================
+# 7. Virtual Environments
+# ==============================================================================
+.venv/
+backend/.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+pip-log.txt
+pip-delete-this-directory.txt
 
-# ==============================
-# Data and SQLite
-# ==============================
+# ==============================================================================
+# 8. Environment Variables & Secrets
+# ==============================================================================
+.env
+.env.*
+!.env.example
+!backend/.env.example
+backend/.env
+backend/.env.*
+
+# Certificates, Keys & Secrets
+*.pem
+*.key
+*.crt
+*.cert
+*.pfx
+*.p12
+*credentials*.json
+*token*.json
+
+# Templates & Schemas Kept Intact
+!backend/client_secret.json
+!backend/openapi_test.json
+
+# ==============================================================================
+# 9. Databases & Persistence (SQLite / WAL)
+# ==============================================================================
+*.sqlite
 *.sqlite3
 *.sqlite3-journal
 *.sqlite3-wal
@@ -162,39 +179,56 @@ backend/logs/
 *.db-shm
 data/
 backend/data/*.db*
-backend/data/*.sqlite3*
-backend/data/*.json
+backend/data/*.sqlite*
 backend/intelligence/*.db*
+backend/intelligence/*.sqlite*
 backend/intelligence/*.json
-# Keep the directory and seed files
+
+# Keep DB seed files and directory placeholders
 !backend/data/.gitkeep
 !backend/data/seed_*.json
 
-# ==============================
-# File Uploads / Outputs
-# ==============================
+# ==============================================================================
+# 10. Logs & Diagnostic Traces
+# ==============================================================================
+*.log
+logs/
+backend/logs/
+
+# ==============================================================================
+# 11. Browser Testing & Automation Artifacts (Playwright)
+# ==============================================================================
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+.playwright/
+
+# ==============================================================================
+# 12. File Uploads, Test Emails & Artifacts
+# ==============================================================================
 backend/uploads/
 backend/reports/
 backend/test_certs/
 *.eml
-*.txt
-backend/*.json
-!backend/openapi_test.json
-!backend/client_secret.json
+backend/*.eml
+backend/output*.json
+backend.zip
 
-# ==============================
-# Test & Scratch Scripts
-# ==============================
-scratch/
-backend/scratch/
-**/scratch/
-**/scratch/**
-scratch*
-*scratch*
+# Prevent ignoring critical configuration files
+!requirements.txt
+!requirements*.txt
+!backend/requirements.txt
+!backend/requirements*.txt
+!package.json
+!package-lock.json
+!frontend/package.json
+!frontend/package-lock.json
+
+# Test & Scratch Runner Scripts
 backend/stage16_test.py
 backend/test_*.py
 backend/inspection_timing.py
 backend/phishing_test.eml
 backend/private_ip_test.eml
-backend/output*.json
-backend.zip
+backend/test_email.txt

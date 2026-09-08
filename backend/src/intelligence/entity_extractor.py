@@ -65,10 +65,14 @@ class EntityExtractor:
                     ips.append(ip)
 
             redirects = item.get("redirects", {})
-            for r_url in redirects.get("chain", []):
+            for r_item in redirects.get("chain", []):
                 try:
                     from urllib.parse import urlparse
-                    h = urlparse(r_url).hostname or ""
+                    if isinstance(r_item, dict):
+                        target = r_item.get("to") or r_item.get("url") or r_item.get("from") or ""
+                    else:
+                        target = str(r_item)
+                    h = urlparse(target).hostname or ""
                     if h and h not in redirect_domains:
                         redirect_domains.append(h)
                 except Exception:

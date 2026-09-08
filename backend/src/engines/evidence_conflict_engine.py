@@ -41,10 +41,7 @@ class EvidenceConflictEngine:
     }
 
     STRONG_TYPES = {
-        "DOMAIN_MISMATCH",
-        "URL_DOMAIN_MISMATCH",
         "SUSPICIOUS_URL",
-        "SUSPICIOUS_REDIRECT",
         "HOMOGRAPH_DOMAIN",
         "PUNYCODE_DOMAIN",
         "HOSTNAME_MISMATCH",
@@ -57,7 +54,6 @@ class EvidenceConflictEngine:
         "CAMPAIGN_ANOMALY",
         "TRUST_HISTORY_CONFLICT",
         "ADVERSARIAL_INDICATOR",
-        "NEW_DOMAIN",
     }
 
     CONTRADICTION_TYPES = {
@@ -495,26 +491,40 @@ class EvidenceConflictEngine:
                 or {}
             )
 
-            if redirects.get(
-                "external_domain_change"
-            ):
+            threat_intel = url_item.get("threat_intelligence", {}) or {}
+            dns_info = url_item.get("dns", {}) or {}
+            tls_info = url_item.get("tls", {}) or {}
+            page_intel = url_item.get("page_analysis", {}) or {}
 
-                has_suspicious_url = True
+            redirect_has_issues = (
+                redirects.get("has_issues", False)
+                or threat_intel.get("detections", 0) > 0
+                or dns_info.get("private_ip_detected", False)
+                or page_intel.get("forms", {}).get("password_fields", 0) > 0
+                or page_intel.get("has_credential_form", False)
+                or page_intel.get("has_fake_error", False)
+                or (tls_info.get("certificate_valid") is False or bool(tls_info.get("policy_violation")))
+                or url_item.get("punycode", False)
+            )
 
-                evidence_list.append(
-                    self._evidence(
-                        type_="SUSPICIOUS_REDIRECT",
-                        signal="external_domain_change",
-                        value=True,
-                        direction="NEGATIVE",
-                        severity="HIGH",
-                        source="URLInspector",
-                        explanation=(
-                            "The URL redirects to another external domain."
-                        ),
-                        confidence=0.90,
+            if redirects.get("external_domain_change") or redirects.get("detected"):
+                if redirect_has_issues:
+                    has_suspicious_url = True
+
+                    evidence_list.append(
+                        self._evidence(
+                            type_="MALICIOUS_REDIRECT",
+                            signal="malicious_redirect",
+                            value=True,
+                            direction="NEGATIVE",
+                            severity="CRITICAL",
+                            source="URLInspector",
+                            explanation=(
+                                "The URL redirect chain leads to an unsafe destination with security issues."
+                            ),
+                            confidence=0.95,
+                        )
                     )
-                )
 
             # -----------------------------------------------
             # TLS
@@ -990,12 +1000,12 @@ class EvidenceConflictEngine:
                         signal="domain_age",
                         value=domain,
                         direction="NEGATIVE",
-                        severity="MEDIUM",
+                        severity="LOW",
                         source="WhoisAnalyzer",
                         explanation=(
                             f"Domain {domain} appears newly registered."
                         ),
-                        confidence=0.80,
+                        confidence=0.70,
                     )
                 )
 

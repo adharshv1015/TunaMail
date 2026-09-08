@@ -71,6 +71,7 @@ class URLWorker:
         if (
             word_count < cls.MIN_VISIBLE_TEXT
             and forms_count == 0
+            and BrowserFetcher.is_available()
         ):
             logger.info(
                 "Insufficient content for %s in Stage A, "
@@ -82,7 +83,7 @@ class URLWorker:
                 url
             )
 
-            if browser_result:
+            if browser_result and browser_result.get("browser", {}).get("rendered"):
 
                 merged_result = dict(
                     result

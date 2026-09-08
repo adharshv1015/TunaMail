@@ -29,10 +29,7 @@ class DecisionFusionEngine:
     }
 
     STRONG_NEGATIVE_TYPES = {
-        "DOMAIN_MISMATCH",
-        "URL_DOMAIN_MISMATCH",
         "SUSPICIOUS_URL",
-        "SUSPICIOUS_REDIRECT",
         "HOMOGRAPH_DOMAIN",
         "PUNYCODE_DOMAIN",
         "HOSTNAME_MISMATCH",
@@ -45,7 +42,6 @@ class DecisionFusionEngine:
         "CAMPAIGN_ANOMALY",
         "TRUST_HISTORY_CONFLICT",
         "ADVERSARIAL_INDICATOR",
-        "NEW_DOMAIN",
     }
 
     POSITIVE_TYPES = {

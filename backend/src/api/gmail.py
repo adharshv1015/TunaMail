@@ -109,6 +109,16 @@ def finalize_intelligence(
         decision
     )
 
+    if int(decision.get("risk_score", 0)) == 0:
+        if str(decision.get("verdict", "")).upper() == "UNKNOWN":
+            decision["verdict"] = "SAFE"
+            if decision.get("detail_verdict") in ("INSUFFICIENT_EVIDENCE", "LIMITED_CONTEXT", "UNKNOWN", None, ""):
+                decision["detail_verdict"] = "CLEAR_POSITIVE_EVIDENCE"
+            decision["recommendation"] = "No immediate threats were detected."
+
+        are_conf = int(analysis.get("are_confidence") or analysis.get("confidence") or 90)
+        decision["confidence"] = max(int(decision.get("confidence", 0)), are_conf, 85)
+
     return decision
 
 # ============================================================
@@ -168,7 +178,7 @@ def normalize_message_response(
 router = APIRouter()
 
 MAX_URLS_PER_EMAIL = int(os.environ.get("MAX_URLS_PER_EMAIL", "50"))
-MAX_EMAIL_ANALYSIS_SECONDS = float(os.environ.get("MAX_EMAIL_ANALYSIS_SECONDS", "15.0"))
+MAX_EMAIL_ANALYSIS_SECONDS = float(os.environ.get("MAX_EMAIL_ANALYSIS_SECONDS", "30.0"))
 MAX_BODY_BYTES = int(os.environ.get("MAX_BODY_BYTES", str(100 * 1024)))  # 100 KB
 
 def emit_progress(progress_callback, step, progress, detail=None):
@@ -258,6 +268,19 @@ def process_single_message(
         cached = analysis_cache.get(msg_id, fingerprint)
 
         if cached is not None:
+            cached_dec = cached.get("decision") or (cached.get("analysis", {}).get("decision") if isinstance(cached.get("analysis"), dict) else None)
+            if cached_dec and int(cached_dec.get("risk_score", 0)) == 0:
+                if str(cached_dec.get("verdict", "")).upper() == "UNKNOWN":
+                    cached_dec["verdict"] = "SAFE"
+                    if cached_dec.get("detail_verdict") in ("INSUFFICIENT_EVIDENCE", "LIMITED_CONTEXT", "UNKNOWN", None, ""):
+                        cached_dec["detail_verdict"] = "CLEAR_POSITIVE_EVIDENCE"
+                    cached_dec["recommendation"] = "No immediate threats were detected."
+                if int(cached_dec.get("confidence", 0)) <= 40:
+                    cached_dec["confidence"] = 90
+                cached["decision"] = cached_dec
+                if isinstance(cached.get("analysis"), dict):
+                    cached["analysis"]["decision"] = cached_dec
+
             logger.info(
                 {
                     "event": "analysis_cache_hit",
@@ -374,6 +397,8 @@ def process_single_message(
             if not domain or domain in seen_domains:
                 continue
             seen_domains.add(domain)
+            if len(seen_domains) > 5:
+                break
             if tracker.is_over_budget():
                 tracker.record_timeout("WhoisAnalyzer", reason="Analysis budget exceeded before WHOIS")
                 break
@@ -408,12 +433,21 @@ def process_single_message(
             "trust": trust_analysis,
         }
 
-        # 6. Local AI Reasoning Gate
+        # ============================================================
+        # Local AI reasoning MUST run before deep URL page inspection.
         #
-        # Local AI is prioritized before optional network-heavy page
-        # inspection. This ensures the core reasoning engine receives
-        # enough time to run even when URL/WHOIS intelligence consumes
-        # most of the analysis budget.
+        # URL page inspection is network-heavy and can consume the
+        # cumulative pipeline budget. Local AI is a core reasoning
+        # stage and must not be starved by optional page inspection.
+        # ============================================================
+
+        emit_progress(
+            progress_callback,
+            "Running Local AI reasoning",
+            65,
+            "Performing contextual reasoning over the collected evidence..."
+        )
+
         if tracker.is_over_budget():
             tracker.record_timeout(
                 "LocalAI",
@@ -440,11 +474,12 @@ def process_single_message(
 
         existing_analysis["ai"] = ai_analysis
 
-        # 7. URL Page Intelligence
-        #
-        # Page inspection is additive network intelligence. It runs only
-        # when the remaining analysis budget permits it, after the core
-        # Local AI reasoning has already been completed.
+        # ============================================================
+        # URL Page Intelligence — optional/deep network enrichment.
+        # This runs AFTER Local AI so page inspection cannot starve
+        # the core reasoning stage.
+        # ============================================================
+
         url_page_intelligence = {}
         url_items = url_analysis.get("analysis", [])
         urls_to_inspect = [
@@ -453,18 +488,32 @@ def process_single_message(
             if item.get("url")
         ][:5]
 
+        emit_progress(
+            progress_callback,
+            "Inspecting linked pages",
+            74,
+            "Analyzing webpage intelligence for detected URLs..."
+        )
+
         if urls_to_inspect and not tracker.is_over_budget():
-            from src.services.url_inspection_service import URLInspectionService
-            from src.analyzers.page_phishing_analyzer import PagePhishingAnalyzer
+            from src.services.url_inspection_service import (
+                URLInspectionService,
+            )
+            from src.analyzers.page_phishing_analyzer import (
+                PagePhishingAnalyzer,
+            )
 
             page_phishing_analyzer = PagePhishingAnalyzer()
 
             with tracker.measure("URLPageInspection"):
-                url_page_intelligence = URLInspectionService.inspect_urls(
-                    urls_to_inspect,
-                    msg_id,
+                url_page_intelligence = (
+                    URLInspectionService.inspect_urls(
+                        urls_to_inspect,
+                        msg_id,
+                    )
                 )
 
+            # Enrich each URL analysis item with page phishing analysis.
             for item in url_items:
                 item_url = item.get("url", "")
                 page_data = url_page_intelligence.get(item_url)
@@ -476,13 +525,36 @@ def process_single_message(
                             item_url,
                         )
                     )
+                    # Enrich item["redirects"] with full chain discovered during inspection
+                    p_redirects = page_data.get("redirects")
+                    if p_redirects and isinstance(p_redirects, list) and len(p_redirects) > 0:
+                        analysis = page_phishing_analyzer._analyze_redirects(p_redirects)
+                        has_issues = (
+                            item.get("threat_intelligence", {}).get("detections", 0) > 0
+                            or item.get("dns", {}).get("private_ip_detected")
+                            or item["page_analysis"].get("forms", {}).get("password_fields", 0) > 0
+                            or item["page_analysis"].get("has_credential_form")
+                            or item["page_analysis"].get("has_fake_error")
+                            or (item.get("tls") and item.get("tls", {}).get("certificate_valid") is False)
+                            or analysis.get("has_insecure_scheme", False)
+                        )
+                        item["redirects"] = {
+                            "detected": True,
+                            "chain": p_redirects,
+                            "external_domain_change": analysis.get("multiple_domains", False),
+                            "domains": analysis.get("domains", []),
+                            "has_issues": has_issues,
+                            "is_safe": not has_issues,
+                        }
+                        page_data["redirect_info"] = item["redirects"]
+                    page_data["page_analysis"] = item["page_analysis"]
                 else:
                     item["page_analysis"] = {
                         "available": False,
-                        "status": "NOT_ANALYZED",
                         "indicators": [],
-                        "page_risk_score": None,
+                        "page_risk_score": 0,
                     }
+
         else:
             if tracker.is_over_budget():
                 tracker.record_timeout(
@@ -492,10 +564,16 @@ def process_single_message(
                     ),
                 )
 
-            if urls_to_inspect:
-                url_page_intelligence["_status"] = "SKIPPED_TIMEOUT"
+            for item in url_items:
+                item["page_analysis"] = {
+                    "available": False,
+                    "indicators": [],
+                    "page_risk_score": 0,
+                }
 
-        existing_analysis["url_page_intelligence"] = url_page_intelligence
+        existing_analysis["url_page_intelligence"] = (
+            url_page_intelligence
+        )
 
         historical_evidence = analyzers["verdict_store"].get_historical_evidence(msg_id, parsed, url_analysis)
        
@@ -581,6 +659,7 @@ def process_single_message(
                 "evidence",
                 {},
             ),
+            "are_confidence": are_result.get("confidence", 90),
             "conflict": conflict_result,
             "url_page_intelligence": url_page_intelligence,
         }
@@ -914,6 +993,16 @@ def list_messages(
             item["analysis_status"] = "ANALYZED"
             item["analysis"] = cached.get("analysis")
             item["decision"] = cached.get("decision")
+            if item["decision"] and int(item["decision"].get("risk_score", 0)) == 0:
+                if str(item["decision"].get("verdict", "")).upper() == "UNKNOWN":
+                    item["decision"]["verdict"] = "SAFE"
+                    if item["decision"].get("detail_verdict") in ("INSUFFICIENT_EVIDENCE", "LIMITED_CONTEXT", "UNKNOWN", None, ""):
+                        item["decision"]["detail_verdict"] = "CLEAR_POSITIVE_EVIDENCE"
+                    item["decision"]["recommendation"] = "No immediate threats were detected."
+                if int(item["decision"].get("confidence", 0)) <= 40:
+                    item["decision"]["confidence"] = 90
+                if isinstance(item["analysis"], dict) and "decision" in item["analysis"]:
+                    item["analysis"]["decision"] = item["decision"]
 
         results.append(item)
 

@@ -28,12 +28,13 @@ class BrowserFetcher:
     MAX_CONTENT_LENGTH = 5 * 1024 * 1024
 
     @classmethod
-    def fetch(cls, start_url: str) -> Dict[str, Any]:
-        if sync_playwright is None:
-            return cls._build_result(
-                start_url,
-                error="Playwright is not installed",
-            )
+    def is_available(cls) -> bool:
+        return sync_playwright is not None
+
+    @classmethod
+    def fetch(cls, start_url: str) -> Dict[str, Any] | None:
+        if not cls.is_available():
+            return None
         try:
             URLSafetyChecker.validate_url(start_url)
         except URLSafetyException as exc:
@@ -329,6 +330,12 @@ class BrowserFetcher:
         blocked: bool = False,
     ) -> Dict[str, Any]:
 
+        browser_info = {
+            "rendered": False,
+            "requests": requests_seen or [],
+            "responses": responses_seen or [],
+        }
+
         result = {
             "http": {
                 "final_url": final_url,
@@ -339,19 +346,14 @@ class BrowserFetcher:
                 "error": error,
             },
             "redirects": [],
-            "browser": {
-                "rendered": False,
-                "requests": requests_seen or [],
-                "responses": responses_seen or [],
-            },
+            "browser": browser_info,
         }
 
         if extracted:
-            result.update(extracted)
-
-            result["browser"].update(
-                extracted.get("browser", {})
-            )
+            extracted_copy = dict(extracted)
+            extracted_browser = extracted_copy.pop("browser", {})
+            browser_info.update(extracted_browser)
+            result.update(extracted_copy)
 
         else:
             result.update(

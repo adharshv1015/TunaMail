@@ -20,9 +20,6 @@ CRITICAL_NEGATIVE_TYPES = {
 }
 
 STRONG_NEGATIVE_TYPES = {
-    "DOMAIN_MISMATCH",
-    "URL_DOMAIN_MISMATCH",
-    "SUSPICIOUS_REDIRECT",
     "HOMOGRAPH_DOMAIN",
     "PUNYCODE_DOMAIN",
     "HOSTNAME_MISMATCH",
@@ -35,7 +32,6 @@ STRONG_NEGATIVE_TYPES = {
     "CAMPAIGN_ANOMALY",
     "TRUST_HISTORY_CONFLICT",
     "ADVERSARIAL_INDICATOR",
-    "NEW_DOMAIN",
 }
 
 CONTRADICTION_TYPES = {
@@ -275,7 +271,7 @@ def _collect_legacy_evidence(
         ),
         "domain mismatch": (
             "DOMAIN_MISMATCH",
-            "HIGH",
+            "LOW",
         ),
         "suspicious url": (
             "SUSPICIOUS_URL",
@@ -291,7 +287,7 @@ def _collect_legacy_evidence(
         ),
         "newly registered domain": (
             "NEW_DOMAIN",
-            "MEDIUM",
+            "LOW",
         ),
     }
 

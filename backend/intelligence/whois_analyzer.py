@@ -88,9 +88,9 @@ class WhoisAnalyzer:
     
                     if age_days >= 3650:
                         result["age_category"] = "very_old"
-                    elif age_days >= 1095:
-                        result["age_category"] = "established"
                     elif age_days >= 365:
+                        result["age_category"] = "established"
+                    elif age_days >= 90:
                         result["age_category"] = "recent"
                     elif age_days >= 0:
                         result["age_category"] = "new"

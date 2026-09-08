@@ -126,10 +126,20 @@ class ThreatGraph:
                     add_edge(f"domain:{url_domain}", f"ip:{ip}", "resolves_to")
 
             # Redirects
-            for r_url in item.get("redirects", {}).get("chain", []):
-                add_node(f"url:{r_url}", r_url[:80], "URL", {"role": "redirect"})
-                if url_val:
-                    add_edge(f"url:{url_val}", f"url:{r_url}", "redirects_to")
+            for r_item in item.get("redirects", {}).get("chain", []):
+                if isinstance(r_item, dict):
+                    r_target = r_item.get("to") or r_item.get("url") or r_item.get("from") or ""
+                    r_source = r_item.get("from") or url_val
+                elif isinstance(r_item, str):
+                    r_target = r_item
+                    r_source = url_val
+                else:
+                    continue
+
+                if r_target:
+                    add_node(f"url:{r_target}", str(r_target)[:80], "URL", {"role": "redirect", "url": r_target})
+                    if r_source:
+                        add_edge(f"url:{r_source}", f"url:{r_target}", "redirects_to")
 
             # Brand impersonation
             br = item.get("brand_relationship", "")

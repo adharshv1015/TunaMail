@@ -495,22 +495,36 @@ class TrustEngine:
                 or {}
             )
 
-            if redirects.get(
-                "external_domain_change"
-            ):
+            threat_intel = item.get("threat_intelligence", {}) or {}
+            dns_info = item.get("dns", {}) or {}
+            tls_info = item.get("tls", {}) or {}
+            page_intel = item.get("page_analysis", {}) or {}
+
+            redirect_has_issues = (
+                redirects.get("has_issues", False)
+                or threat_intel.get("detections", 0) > 0
+                or dns_info.get("private_ip_detected", False)
+                or page_intel.get("forms", {}).get("password_fields", 0) > 0
+                or page_intel.get("has_credential_form", False)
+                or page_intel.get("has_fake_error", False)
+                or (tls_info.get("certificate_valid") is False or bool(tls_info.get("policy_violation")))
+                or item.get("punycode", False)
+            )
+
+            if (redirects.get("external_domain_change") or redirects.get("detected")) and redirect_has_issues:
 
                 suspicious_url_count += 1
 
                 structured_evidence.append(
                     self._evidence(
-                        type_="SUSPICIOUS_REDIRECT",
-                        severity="HIGH",
+                        type_="MALICIOUS_REDIRECT",
+                        severity="CRITICAL",
                         direction="NEGATIVE",
                         source="TrustEngine",
                         explanation=(
-                            f"URL redirects to another external domain."
+                            f"URL redirects to an unsafe destination."
                         ),
-                        confidence=0.90,
+                        confidence=0.95,
                     )
                 )
 

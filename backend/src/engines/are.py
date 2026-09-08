@@ -48,9 +48,7 @@ class AnalyticalReasoningEngine:
     }
 
     STRONG_NEGATIVE_TYPES = {
-        "DOMAIN_MISMATCH",
         "SUSPICIOUS_URL",
-        "SUSPICIOUS_REDIRECT",
         "HOMOGRAPH_DOMAIN",
         "PUNYCODE_DOMAIN",
         "HOSTNAME_MISMATCH",
@@ -925,6 +923,9 @@ class AnalyticalReasoningEngine:
         # 3. URL ANALYSIS
         # =====================================================
 
+        seen_misaligned_domains = set()
+        total_misalignment_penalty = 0
+
         for url in (
             url_analysis.get(
                 "analysis",
@@ -1272,24 +1273,35 @@ class AnalyticalReasoningEngine:
 
             if alignment == "misaligned":
 
-                score += 15
+                url_domain = str(url.get("domain") or "").strip().lower()
 
-                evidence["network"].append(
-                    "URL domain misaligned with sender: "
-                    f"{url.get('domain', '')}"
-                )
+                if url_domain and url_domain not in seen_misaligned_domains:
+                    seen_misaligned_domains.add(url_domain)
 
-                structured_evidence.append({
-                    "type": "DOMAIN_MISMATCH",
-                    "severity": "HIGH",
-                    "direction": "NEGATIVE",
-                    "source": "URLAnalyzer",
-                    "explanation": (
-                        "URL domain is misaligned "
-                        "with the sender."
-                    ),
-                    "confidence": 0.90,
-                })
+                    evidence["network"].append(
+                        "URL domain misaligned with sender: "
+                        f"{url.get('domain', '')}"
+                    )
+
+                    structured_evidence.append({
+                        "type": "DOMAIN_MISMATCH",
+                        "severity": "LOW",
+                        "direction": "NEGATIVE",
+                        "source": "URLAnalyzer",
+                        "explanation": (
+                            "URL domain is misaligned "
+                            "with the sender."
+                        ),
+                        "confidence": 0.90,
+                    })
+
+                    # If sender passed authentication or is a trusted sender, external URLs
+                    # (e.g. CDNs, app stores, social media) are expected and do not add risk points.
+                    # For unauthenticated senders, cap misalignment penalty at 15 points total.
+                    if not (auth_fully_passed or trusted_sender_context):
+                        if total_misalignment_penalty < 15:
+                            score += 5
+                            total_misalignment_penalty += 5
 
             elif alignment == "aligned":
 
@@ -1351,33 +1363,45 @@ class AnalyticalReasoningEngine:
                 {},
             ) or {}
 
-            if (
-                redirects.get(
-                    "external_domain_change"
-                )
-                and not self._is_trusted_url_domain(
-                    url
-                )
-            ):
+            threat_intel = url.get("threat_intelligence", {}) or {}
+            dns_info = url.get("dns", {}) or {}
+            tls_info = url.get("tls", {}) or {}
+            page_intel = url.get("page_analysis", {}) or {}
 
-                score += 20
+            redirect_has_issues = (
+                redirects.get("has_issues", False)
+                or threat_intel.get("detections", 0) > 0
+                or dns_info.get("private_ip_detected", False)
+                or page_intel.get("forms", {}).get("password_fields", 0) > 0
+                or page_intel.get("has_credential_form", False)
+                or page_intel.get("has_fake_error", False)
+                or (tls_info.get("certificate_valid") is False or bool(tls_info.get("policy_violation")))
+                or url.get("punycode", False)
+            )
 
-                evidence["network"].append(
-                    "Suspicious external redirect chain: "
-                    f"{url.get('domain', '')}"
-                )
+            if redirects.get("external_domain_change") or redirects.get("detected"):
+                if redirect_has_issues:
+                    score += 40
 
-                structured_evidence.append({
-                    "type": "SUSPICIOUS_REDIRECT",
-                    "severity": "HIGH",
-                    "direction": "NEGATIVE",
-                    "source": "URLInspector",
-                    "explanation": (
-                        "URL redirects to an external "
-                        "domain."
-                    ),
-                    "confidence": 0.90,
-                })
+                    evidence["network"].append(
+                        "Malicious redirect chain detected: "
+                        f"{url.get('domain', '')} leads to unsafe destination"
+                    )
+
+                    structured_evidence.append({
+                        "type": "MALICIOUS_REDIRECT",
+                        "severity": "CRITICAL",
+                        "direction": "NEGATIVE",
+                        "source": "URLInspector",
+                        "explanation": (
+                            "URL redirect chain leads to a destination with security issues."
+                        ),
+                        "confidence": 0.95,
+                    })
+                else:
+                    evidence["positive"].append(
+                        f"Redirect chain for {url.get('domain', '')} verified safe."
+                    )
 
             # -------------------------------------------------
             # TLS
@@ -1533,13 +1557,25 @@ class AnalyticalReasoningEngine:
 
             elif age_category == "new":
 
-                score += self._safe_number(
-                    whois_rules.get(
-                        "new_domain",
-                        15,
-                    ),
-                    15,
+                is_safe_sender = bool(auth_fully_passed or trusted_sender_context)
+                domain_has_malice = any(
+                    isinstance(item, dict)
+                    and item.get("direction") == "NEGATIVE"
+                    and item.get("severity") in {"HIGH", "CRITICAL"}
+                    and domain in str(item.get("explanation", ""))
+                    for item in structured_evidence
                 )
+
+                if not is_safe_sender and domain_has_malice:
+                    score += self._safe_number(
+                        whois_rules.get(
+                            "new_domain",
+                            15,
+                        ),
+                        15,
+                    )
+                elif not is_safe_sender:
+                    score += 5
 
                 evidence["network"].append(
                     "Newly registered domain detected: "
@@ -1548,25 +1584,26 @@ class AnalyticalReasoningEngine:
 
                 structured_evidence.append({
                     "type": "NEW_DOMAIN",
-                    "severity": "MEDIUM",
+                    "severity": "LOW",
                     "direction": "NEGATIVE",
                     "source": "WhoisAnalyzer",
                     "explanation": (
                         f"Newly registered domain: "
                         f"{domain}"
                     ),
-                    "confidence": 0.80,
+                    "confidence": 0.70,
                 })
 
             elif age_category == "recent":
 
-                score += self._safe_number(
-                    whois_rules.get(
-                        "recent_domain",
+                if not (auth_fully_passed or trusted_sender_context):
+                    score += self._safe_number(
+                        whois_rules.get(
+                            "recent_domain",
+                            5,
+                        ),
                         5,
-                    ),
-                    5,
-                )
+                    )
 
                 evidence["network"].append(
                     "Recently registered domain: "
@@ -1582,7 +1619,7 @@ class AnalyticalReasoningEngine:
                         f"Recently registered domain: "
                         f"{domain}"
                     ),
-                    "confidence": 0.70,
+                    "confidence": 0.60,
                 })
 
         # =====================================================
@@ -1924,16 +1961,14 @@ class AnalyticalReasoningEngine:
             isinstance(url_page_intelligence, dict)
             and url_page_intelligence.get("_status") == "SKIPPED_TIMEOUT"
         )
-        any_url_not_analyzed = any(
-            isinstance(u, dict)
-            and (
-                u.get("page_analysis", {}).get("status") == "NOT_ANALYZED"
-                or (u.get("page_analysis", {}).get("available") is False and page_inspection_skipped)
-            )
-            for u in url_items
+        # NOT_ANALYZED is expected when Gmail intentionally limits deep
+        # page inspection to the configured top-N URLs. It should not by
+        # itself downgrade the entire email to LIMITED_CONTEXT.
+        #
+        # Only an actual page-inspection skip/timeout is degraded context.
+        degraded_page_inspection = bool(
+            page_inspection_skipped
         )
-
-        degraded_page_inspection = bool(page_inspection_skipped or any_url_not_analyzed)
 
         limited_context = bool(
             url_analysis.get(
@@ -2072,9 +2107,8 @@ class AnalyticalReasoningEngine:
                         or {}
                     )
 
-                    if security.get(
-                        "error"
-                    ):
+                    err = str(security.get("error") or "")
+                    if err and "Playwright" not in err:
 
                         evidence["network"].append(
                             f"Page fetch failed/blocked "

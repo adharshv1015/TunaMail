@@ -616,29 +616,77 @@ class PagePhishingAnalyzer:
             )
         )
 
+        # Check if the page or redirect chain has any security issues
+        security_block = page_data.get("security", {}) or {}
+        has_security_violation = (
+            security_block.get("blocked", False)
+            or bool(security_block.get("error"))
+        )
+        threat_intel = page_data.get("threat_intelligence", {}) or {}
+        has_threat_intel_detection = threat_intel.get("detections", 0) > 0
+        tls = page_data.get("tls", {}) or {}
+        tls_issue = bool(
+            tls.get("violation")
+            or tls.get("policy_violation")
+            or tls.get("certificate_valid") is False
+        )
+        brand_data = page_data.get("brand", {}) or {}
+        domain_match = brand_data.get("domain_match")
+
+        redirect_has_issues = (
+            has_credential_form
+            or has_fake_error
+            or has_security_violation
+            or has_threat_intel_detection
+            or tls_issue
+            or (domain_match is False and has_credential_solicitation)
+            or redirect_analysis.get("has_insecure_scheme", False)
+        )
+
         if redirect_analysis[
             "multiple_domains"
         ]:
 
-            detail = (
-                "URL passed through "
-                f"{redirect_analysis['hop_count']} "
-                "redirect hop(s) across "
-                f"{redirect_analysis['domain_count']} "
-                "different domains."
-            )
+            if redirect_has_issues:
+                detail = (
+                    "URL passed through "
+                    f"{redirect_analysis['hop_count']} "
+                    "redirect hop(s) across "
+                    f"{redirect_analysis['domain_count']} "
+                    "different domains with security threat detected."
+                )
 
-            self._add_indicator(
-                indicators,
-                structured_evidence,
-                type_="MULTI_DOMAIN_REDIRECT",
-                severity="MEDIUM",
-                detail=detail,
-                confidence=0.82,
-                score=15,
-            )
+                self._add_indicator(
+                    indicators,
+                    structured_evidence,
+                    type_="MALICIOUS_REDIRECT",
+                    severity="CRITICAL",
+                    detail=detail,
+                    confidence=0.90,
+                    score=35,
+                )
 
-            risk_score += 15
+                risk_score += 35
+                final_page_intent = "MALICIOUS_REDIRECT"
+
+            else:
+                detail = (
+                    "URL passed through "
+                    f"{redirect_analysis['hop_count']} "
+                    "redirect hop(s) across "
+                    f"{redirect_analysis['domain_count']} "
+                    "different domains (verified safe)."
+                )
+
+                self._add_indicator(
+                    indicators,
+                    structured_evidence,
+                    type_="MULTI_DOMAIN_REDIRECT",
+                    severity="INFO",
+                    detail=detail,
+                    confidence=0.82,
+                    score=0,
+                )
 
         # ====================================================
         # 10. Page/brand relationship
@@ -1080,6 +1128,21 @@ class PagePhishingAnalyzer:
         )
 
     @staticmethod
+    def _registered_domain(hostname: str) -> str:
+        if not hostname:
+            return ""
+        try:
+            import tldextract
+            ext = tldextract.extract(hostname)
+            reg = getattr(ext, "top_domain_under_public_suffix", None) or getattr(ext, "registered_domain", None)
+            return reg or hostname
+        except Exception:
+            parts = hostname.split(".")
+            if len(parts) >= 2:
+                return ".".join(parts[-2:])
+            return hostname
+
+    @staticmethod
     def _analyze_redirects(
         redirects: Any,
     ) -> Dict[str, Any]:
@@ -1092,10 +1155,14 @@ class PagePhishingAnalyzer:
                 "hop_count": 0,
                 "domain_count": 0,
                 "domains": [],
+                "hostnames": [],
                 "multiple_domains": False,
+                "has_insecure_scheme": False,
             }
 
-        domains = set()
+        hostnames = set()
+        registered_domains = set()
+        has_insecure_scheme = False
 
         for hop in redirects:
 
@@ -1123,24 +1190,30 @@ class PagePhishingAnalyzer:
                 if not hop_url:
                     continue
 
-                try:
-                    hostname = (
-                        urlsplit(
-                            hop_url
-                        ).hostname
-                        or ""
-                    )
+                if hop_url.lower().startswith("http://"):
+                    has_insecure_scheme = True
 
+                try:
+                    parsed_hop = urlsplit(hop_url)
                     hostname = (
-                        hostname.lower()
-                        .lstrip("www.")
-                        .strip(".")
-                    )
+                        parsed_hop.hostname
+                        or ""
+                    ).lower().strip(".")
+
+                    if hostname.startswith("www."):
+                        hostname = hostname[4:]
 
                     if hostname:
-                        domains.add(
+                        hostnames.add(
                             hostname
                         )
+                        reg = PagePhishingAnalyzer._registered_domain(
+                            hostname
+                        )
+                        if reg:
+                            registered_domains.add(reg)
+                        else:
+                            registered_domains.add(hostname)
 
                 except (
                     ValueError,
@@ -1148,19 +1221,24 @@ class PagePhishingAnalyzer:
                 ):
                     continue
 
+        primary_domains = registered_domains if registered_domains else hostnames
+        multiple_domains = len(primary_domains) > 1
+
         return {
             "hop_count": len(
                 redirects
             ),
             "domain_count": len(
-                domains
+                primary_domains
             ),
             "domains": sorted(
-                domains
+                primary_domains
             ),
-            "multiple_domains": (
-                len(domains) > 1
+            "hostnames": sorted(
+                hostnames
             ),
+            "multiple_domains": multiple_domains,
+            "has_insecure_scheme": has_insecure_scheme,
         }
 
     @staticmethod

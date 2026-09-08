@@ -118,11 +118,37 @@ class URLAnalyzer:
 
         "dropbox.com",
         "cloudflare.com",
+
+        # CDNs and infrastructure
+        "cloudfront.net",
+        "akamaihd.net",
+        "akamaized.net",
+        "fastly.net",
+        "azureedge.net",
+        "edgesuite.net",
+        "w3.org",
+
+        # Mobile deep link and app store attribution
+        "onelink.me",
+        "app.link",
+        "branch.io",
+        "adjust.com",
+        "smart.link",
     }
 
     ESP_TRACKING_DOMAINS = {
         "sendgrid.net",
         "sendgrid.com",
+        "mailchimp.com",
+        "list-manage.com",
+        "mcsv.net",
+        "hubspot.com",
+        "createsend.com",
+        "salesforce.com",
+        "exacttarget.com",
+        "cmail19.com",
+        "cmail20.com",
+        "mandrillapp.com",
     }
 
     SHORTENERS = {
@@ -721,6 +747,18 @@ class URLAnalyzer:
             if not self._is_http_url(
                 url
             ):
+                continue
+
+            # Skip XML/HTML doctype and namespace schema declarations (not clickable links)
+            lowered_url = url.lower()
+            if any(ns in lowered_url for ns in (
+                "w3.org/1999/xhtml",
+                "w3.org/tr/xhtml",
+                "w3.org/2000/svg",
+                "schemas.microsoft.com",
+                "openxmlformats.org",
+                "schema.org",
+            )):
                 continue
 
             # Normalize host casing while preserving the rest
@@ -1546,11 +1584,88 @@ class URLAnalyzer:
 
         found = []
 
-        for word in (
-            self.SUSPICIOUS_KEYWORDS
-        ):
+        # Security-sensitive URL keywords are only meaningful when
+        # they appear as a standalone path/query token or as part
+        # of a credential/account action. Avoid substring-only
+        # matches
+        # such as /verify-certificate on an established sender domain.
+        suspicious_contexts = {
+            "login",
+            "signin",
+            "sign-in",
+            "authenticate",
+            "password",
+            "credential",
+            "account",
+            "unlock",
+            "suspended",
+            "validation",
+            "confirm",
+            "update",
+            "secure",
+            "verify",
+        }
 
-            if word in decoded_url:
+        parsed = urlparse(
+            decoded_url
+        )
+
+        path_and_query = (
+            f"{parsed.path}?{parsed.query}"
+            if parsed.query
+            else parsed.path
+        )
+
+        normalized_path = path_and_query.replace(
+            "_",
+            "-"
+        )
+
+        # Split URL components into meaningful tokens.
+        tokens = {
+            token
+            for token in re.split(
+                r"[^a-z0-9]+",
+                normalized_path,
+            )
+            if token
+        }
+
+        for word in self.SUSPICIOUS_KEYWORDS:
+
+            normalized_word = word.replace(
+                "_",
+                "-"
+            )
+
+            # Exact token match.
+            if normalized_word in tokens:
+
+                # A standalone "verify" is not enough by itself.
+                # Require an account/credential/authentication context
+                # before treating it as suspicious.
+                if normalized_word == "verify":
+
+                    contextual_tokens = (
+                        tokens
+                        & {
+                            "account",
+                            "password",
+                            "credential",
+                            "login",
+                            "signin",
+                            "sign-in",
+                            "authenticate",
+                            "authentication",
+                            "unlock",
+                            "suspended",
+                            "confirm",
+                        }
+                    )
+
+                    if not contextual_tokens:
+                        continue
+
                 found.append(
                     word
                 )
@@ -2179,7 +2294,7 @@ class URLAnalyzer:
             evidence.append(
                 self._evidence(
                     type_="DOMAIN_MISMATCH",
-                    severity="HIGH",
+                    severity="LOW",
                     direction="NEGATIVE",
                     source="URLAnalyzer",
                     explanation=(

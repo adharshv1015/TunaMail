@@ -32,7 +32,18 @@ class ContradictionEngine:
             if threats > 0 or u.get("punycode"):
                 has_cred_harvesting_url = True
             
-            if u.get("redirects", {}).get("external_domain_change"):
+            redirects = u.get("redirects", {})
+            page_intel = u.get("page_analysis", {})
+            has_redirect_issue = (
+                redirects.get("has_issues", False)
+                or threats > 0
+                or u.get("dns", {}).get("private_ip_detected", False)
+                or page_intel.get("forms", {}).get("password_fields", 0) > 0
+                or page_intel.get("has_credential_form", False)
+                or page_intel.get("has_fake_error", False)
+                or (u.get("tls") and u.get("tls", {}).get("certificate_valid") is False)
+            )
+            if (redirects.get("external_domain_change") or redirects.get("detected")) and has_redirect_issue:
                 has_suspicious_redirect = True
 
             # Basic heuristic for "official-looking" (if it hasn't been flagged as fake)

@@ -1,13 +1,217 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tunamail-frontend</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#FAF7F2" />
+  <title>TunaMail — Email Security Operations</title>
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%231B3B6F'/><path d='M50 17l27 10v21c0 18-11 29-27 35C34 77 23 66 23 48V27z' fill='%23212936'/><path d='M39 49l7 7 15-17' fill='none' stroke='%23EFEAE1' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+
+<body>
+  <div class="app-shell">
+    <!-- Command bar -->
+    <header class="topbar">
+      <div class="brand-container">
+        <div class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2.1"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3 20 6v5.8c0 4.7-2.8 7.7-8 9.2-5.2-1.5-8-4.5-8-9.2V6z" />
+            <path d="m8.4 12 2.3 2.3 4.9-5" />
+          </svg>
+        </div>
+        <div class="brand-copy">
+          <div class="brand-title">Tuna<span>Mail</span></div>
+          <div class="brand-subtitle">Email Security Operations</div>
+        </div>
+        <span class="brand-badge">PROTECTED</span>
+      </div>
+
+
+      <div class="topbar-actions">
+        <div class="status-pill" id="connStatusPill">
+          <div class="status-dot" id="connStatusDot"></div>
+          <span id="connStatusText">Checking Gmail...</span>
+        </div>
+        <button class="btn-auth" id="btnAuthAction"><span>Disconnect</span></button>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <!-- Mail navigator -->
+      <aside class="inbox-sidebar">
+        <div class="inbox-header">
+          <div>
+            <div class="section-kicker">MAILBOX</div>
+            <div class="inbox-header-title">
+              <span>Inbox</span>
+              <span class="inbox-count-pill" id="emailCountPill">0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="inbox-search-container">
+          <div class="search-row">
+            <div class="search-input-wrapper">
+              <span class="search-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-4-4" />
+                </svg>
+              </span>
+              <input type="text" class="search-input" id="searchInput" placeholder="Quick search loaded messages…"
+                autocomplete="off" />
+              <button class="search-clear hidden" id="btnClearSearch" title="Clear search">×</button>
+            </div>
+            <button class="btn-refresh-inbox" id="btnRefresh" title="Refresh Inbox" aria-label="Refresh Inbox">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="search-toggles-row">
+            <button type="button" class="search-toggle-btn" id="btnToggleAdvanced">
+              <span class="toggle-label">📡 Advanced Gmail Search</span>
+              <span class="toggle-arrow" id="advArrow">▼</span>
+            </button>
+            <button type="button" class="search-toggle-btn" id="btnToggleFilters">
+              <span class="toggle-label">⚙️ Filters &amp; Sort</span>
+              <span class="toggle-arrow" id="filtersArrow">▼</span>
+            </button>
+          </div>
+
+          <div class="server-search-active-bar hidden" id="serverSearchActiveBar">
+            <span>📡 Gmail Search active</span>
+            <button type="button" class="btn-clear-server-search" id="btnClearServerSearch">Clear</button>
+          </div>
+        </div>
+
+        <div class="advanced-search-panel hidden" id="advancedSearchPanel">
+          <div class="adv-search-header">
+            <div>
+              <div class="section-kicker">QUERY BUILDER</div>
+              <span class="adv-search-title">Advanced Gmail Search</span>
+            </div>
+            <button type="button" class="btn-adv-close" id="btnCloseAdvanced">×</button>
+          </div>
+
+          <form id="advancedSearchForm" class="adv-search-form">
+            <p class="adv-search-desc">Searches your entire Gmail mailbox (server-side)</p>
+            <div class="adv-fields-grid">
+              <div class="adv-field"><label for="advSender">From (sender)</label><input type="text" id="advSender"
+                  placeholder="security@example.com" /></div>
+              <div class="adv-field"><label for="advSubject">Subject</label><input type="text" id="advSubject"
+                  placeholder="Verification…" /></div>
+              <div class="adv-field"><label for="advKeyword">Keyword / domain</label><input type="text" id="advKeyword"
+                  placeholder="password, invoice…" /></div>
+              <div class="adv-field"><label for="advDomain">URL / domain</label><input type="text" id="advDomain"
+                  placeholder="example.com" /></div>
+              <div class="adv-field"><label for="advAfter">After date</label><input type="date" id="advAfter" /></div>
+              <div class="adv-field"><label for="advBefore">Before date</label><input type="date" id="advBefore" /></div>
+            </div>
+            <div class="adv-actions">
+              <button type="submit" class="btn-adv-search">Search Gmail</button>
+              <button type="button" class="btn-adv-reset" id="btnResetAdvanced">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="filters-sort-panel hidden" id="filtersSortPanel">
+          <div class="filters-section">
+            <p class="filters-section-title">Inbox Fetch</p>
+            <div class="filters-grid">
+              <div class="adv-field">
+                <label for="advPeriod">Time scope</label>
+                <select id="advPeriod" class="filter-select">
+                  <option value="recent">Any Time</option>
+                  <option value="month">Last 30 Days</option>
+                  <option value="year">Last Year</option>
+                </select>
+              </div>
+              <div class="adv-field">
+                <label for="advLimit">Max fetch</label>
+                <select id="advLimit" class="filter-select">
+                  <option value="10">10 messages</option>
+                  <option value="25" selected>25 messages</option>
+                  <option value="50">50 messages</option>
+                  <option value="100">100 messages</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="filters-section">
+            <p class="filters-section-title">Local Filters &amp; Sort</p>
+            <div class="quick-filters-row">
+              <button class="filter-chip active" data-filter="all">All</button>
+              <button class="filter-chip" data-filter="safe">Safe</button>
+              <button class="filter-chip" data-filter="phishing">Phishing</button>
+            </div>
+            <div class="filters-grid">
+              <div class="adv-field">
+                <label for="advStatus">Security Status</label>
+                <select id="advStatus" class="filter-select">
+                  <option value="ALL">All Status</option>
+                  <option value="SAFE">Safe / Clean</option>
+                  <option value="SUSPICIOUS">Suspicious</option>
+                  <option value="PHISHING">Phishing</option>
+                  <option value="UNANALYZED">Unanalyzed</option>
+                </select>
+              </div>
+              <div class="adv-field">
+                <label for="advSort">Sort By</label>
+                <select id="advSort" class="filter-select">
+                  <option value="NEWEST">Newest First</option>
+                  <option value="OLDEST">Oldest First</option>
+                  <option value="RISK_HIGH">Highest Risk</option>
+                  <option value="RISK_LOW">Lowest Risk</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="gmail-tabs-nav" id="gmailTabsNav">
+          <button class="gmail-tab active" data-category="primary">
+            <span class="gmail-tab-icon">◉</span><span class="gmail-tab-label">Primary</span><span
+              class="gmail-tab-count" id="countPrimary">0</span>
+          </button>
+          <button class="gmail-tab" data-category="promotions">
+            <span class="gmail-tab-icon">◇</span><span class="gmail-tab-label">Promotions</span><span
+              class="gmail-tab-count" id="countPromotions">0</span>
+          </button>
+          <button class="gmail-tab" data-category="social">
+            <span class="gmail-tab-icon">◎</span><span class="gmail-tab-label">Social</span><span
+              class="gmail-tab-count" id="countSocial">0</span>
+          </button>
+          <button class="gmail-tab" data-category="updates">
+            <span class="gmail-tab-icon">△</span><span class="gmail-tab-label">Updates</span><span
+              class="gmail-tab-count" id="countUpdates">0</span>
+          </button>
+          <button class="gmail-tab" data-category="all">
+            <span class="gmail-tab-icon">▦</span><span class="gmail-tab-label">All</span><span class="gmail-tab-count"
+              id="countAll">0</span>
+          </button>
+        </div>
+
+        <div class="inbox-list" id="inboxList"></div>
+      </aside>
+
+      <!-- Security analysis canvas -->
+      <section class="analysis-area" id="analysisArea"></section>
+    </main>
+  </div>
+
+  <div id="modalContainer" class="modal-overlay hidden"></div>
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+
 </html>

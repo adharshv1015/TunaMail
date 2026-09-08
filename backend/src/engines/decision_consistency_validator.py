@@ -19,8 +19,6 @@ class DecisionConsistencyValidator:
         "SUSPICIOUS_URL",
         "HOMOGRAPH_DOMAIN",
         "PUNYCODE_DOMAIN",
-        "SUSPICIOUS_REDIRECT",
-        "DOMAIN_MISMATCH",
         "HOSTNAME_MISMATCH",
     }
 
