@@ -1,10 +1,12 @@
 /**
  * TunaMail - Single Unified Frontend Application
  * Pure Vanilla JavaScript Architecture
- * Communicates with FastAPI backend on http://localhost:8000
+ * Communicates with FastAPI backend via Vite proxy or direct http://127.0.0.1:8000
  */
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (window.location.port === "5173" || window.location.port === "4173")
+  ? ""
+  : "http://127.0.0.1:8000";
 
 /* ==========================================================================
    Application State
@@ -89,11 +91,24 @@ function escapeHtml(str) {
 }
 
 function showToast(message, type = "info") {
+  let text = message;
+  if (message instanceof Error) {
+    text = message.message;
+  } else if (message && typeof message === "object") {
+    if (Array.isArray(message)) {
+      text = message.map((item) => (item && (item.msg || item.message || JSON.stringify(item))) || String(item)).join(", ");
+    } else {
+      text = message.message || message.detail || message.msg || JSON.stringify(message);
+    }
+  } else {
+    text = String(text ?? "");
+  }
+
   const toast = document.createElement("div");
   toast.className = `toast ${type}`;
   toast.innerHTML = `
     <span>${type === "success" ? "✓" : type === "error" ? "⚠️" : "ℹ️"}</span>
-    <span>${escapeHtml(message)}</span>
+    <span>${escapeHtml(text)}</span>
   `;
   dom.toastContainer.appendChild(toast);
   setTimeout(() => {
@@ -160,6 +175,10 @@ async function logout() {
 }
 
 async function fetchInboxMessages(customQuery = null) {
+  if (!state.isConnected) {
+    renderEmptyState("Please connect your Gmail account to inspect emails.");
+    return;
+  }
   dom.btnRefresh.classList.add("spin-animation");
   try {
     const params = new URLSearchParams();
@@ -178,9 +197,17 @@ async function fetchInboxMessages(customQuery = null) {
       if (customQuery.before) params.set("before", customQuery.before);
     }
 
-    const res = await fetch(`${API_BASE}/gmail/messages?${params.toString()}`, {
-      credentials: "include",
-    });
+    let res;
+    try {
+      res = await fetch(`${API_BASE}/gmail/messages?${params.toString()}`, {
+        credentials: "include",
+      });
+    } catch (networkErr) {
+      console.error("Network error fetching inbox:", networkErr);
+      showToast("Backend connection interrupted. Please ensure the server is running on port 8000.", "error");
+      return;
+    }
+
     if (res.status === 401) {
       state.isConnected = false;
       updateAuthUI();
@@ -188,11 +215,28 @@ async function fetchInboxMessages(customQuery = null) {
       showToast("Session expired. Please reconnect Gmail.", "warn");
       return;
     }
-    if (!res.ok) throw new Error("Failed to fetch messages");
+
+    if (!res.ok) {
+      let detail = `Failed to fetch messages (${res.status})`;
+      try {
+        const errJson = await res.json();
+        detail = errJson.detail || errJson.message || detail;
+      } catch (_) {}
+      showToast(detail, "error");
+      return;
+    }
+
     const data = await res.json();
     state.messages = Array.isArray(data) ? data : data.messages || [];
-    updateCategoryCounts();
-    filterAndRenderInbox();
+
+    try {
+      updateCategoryCounts();
+      filterAndRenderInbox();
+    } catch (renderErr) {
+      console.error("Render inbox error:", renderErr);
+      showToast("Error rendering email list in UI.", "error");
+    }
+
     const hasServerQuery = customQuery && Object.keys(customQuery).length > 0;
     if (dom.serverSearchActiveBar) {
       dom.serverSearchActiveBar.classList.toggle("hidden", !hasServerQuery);
@@ -201,18 +245,8 @@ async function fetchInboxMessages(customQuery = null) {
       showToast(`Loaded ${state.messages.length} email(s) from Gmail search`, "info");
     }
   } catch (err) {
-    console.error("Fetch inbox error:", err);
-    try {
-      const auth = await checkAuthStatus();
-      if (!auth.authenticated) {
-        state.isConnected = false;
-        updateAuthUI();
-        renderEmptyState("Your Gmail session has expired. Please click 'Connect Gmail' at the top right to reconnect.");
-        showToast("Session expired. Please click 'Connect Gmail'.", "warn");
-        return;
-      }
-    } catch (_) {}
-    showToast("Backend connection interrupted. Please ensure the server is running.", "error");
+    console.error("Fetch inbox unexpected error:", err);
+    showToast(err.message || "An unexpected error occurred while loading emails.", "error");
   } finally {
     setTimeout(() => dom.btnRefresh.classList.remove("spin-animation"), 500);
   }
@@ -295,25 +329,59 @@ async function fetchSingleMessage(id) {
   return await res.json();
 }
 
-async function unlockPDFFile(messageId, password) {
+async function unlockPDFFile(messageId, password, attachmentId = null) {
   try {
+    const payload = { password };
+    if (attachmentId) payload.attachment_id = attachmentId;
+
     const res = await fetch(`${API_BASE}/gmail/message/${messageId}/unlock-pdf`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify(payload),
     });
+
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || "Failed to unlock PDF");
+      let detail = `Failed to unlock PDF (${res.status})`;
+      try {
+        const err = await res.json();
+        if (typeof err.detail === "string") {
+          detail = err.detail;
+        } else if (Array.isArray(err.detail)) {
+          detail = err.detail.map((d) => d.msg || d.message || JSON.stringify(d)).join(", ");
+        } else if (err.detail && typeof err.detail === "object") {
+          detail = err.detail.message || err.detail.detail || JSON.stringify(err.detail);
+        } else if (err.message) {
+          detail = err.message;
+        }
+      } catch (_) {}
+      throw new Error(detail);
     }
+
     const data = await res.json();
+    if (data.status === "INVALID_PASSWORD") {
+      showToast("Incorrect password. Decryption failed.", "error");
+      return;
+    }
+
     showToast("PDF unlocked and re-analyzed successfully!", "success");
-    state.selectedMessageData = data;
-    renderAnalysisArea();
+
+    const updated = data.message || (data.id ? data : null);
+    if (updated) {
+      state.selectedMessageData = updated;
+      updateMessageInInbox(messageId, updated);
+      renderAnalysisArea();
+    } else {
+      fetchSingleMessage(messageId).then((fullMsg) => {
+        state.selectedMessageData = fullMsg;
+        updateMessageInInbox(messageId, fullMsg);
+        renderAnalysisArea();
+      }).catch(() => {});
+    }
+
     hideModal();
   } catch (err) {
-    showToast(err.message, "error");
+    showToast(err.message || "Failed to unlock PDF", "error");
   }
 }
 
@@ -451,6 +519,10 @@ function setupEventListeners() {
 
   // Refresh emails
   dom.btnRefresh.addEventListener("click", () => {
+    if (!state.isConnected) {
+      showToast("Please connect your Gmail account first.", "info");
+      return;
+    }
     fetchInboxMessages(state.serverSearchParams);
   });
 
@@ -715,7 +787,7 @@ function renderInboxList() {
             <span class="verdict-tag ${verdictClass}">${verdictText}</span>
             <span class="score-tag">Risk: ${riskScore}</span>
             ${(() => {
-          const itemAtts = extractMessageAttachments(msg, msg.analysis);
+          const itemAtts = extractMessageAttachments(msg, msg.analysis || {});
           return itemAtts.length > 0
             ? `<span class="score-tag" style="background: rgba(43,76,126,0.08); color: var(--tm-primary); border-color: rgba(43,76,126,0.2); font-weight: 700;">📎 ${itemAtts.length} ${itemAtts.length === 1 ? "file" : "files"}</span>`
             : "";
@@ -976,8 +1048,9 @@ function formatFileSize(bytes) {
   return `${(bytes / 1048576).toFixed(1)} MB`;
 }
 
-function extractMessageAttachments(msg = {}, analysis = {}) {
+function extractMessageAttachments(msg = {}, rawAnalysis = {}) {
   if (!msg) return [];
+  const analysis = rawAnalysis || {};
   const attModule = (analysis && (analysis.attachment || analysis.attachments)) || {};
   const list = [];
   const seenFilenames = new Set();
@@ -1026,7 +1099,7 @@ function extractMessageAttachments(msg = {}, analysis = {}) {
     msg.attachment?.files,
     attModule.attachments,
     attModule.files,
-    analysis.attachments_list,
+    analysis?.attachments_list,
   ];
 
   for (const src of directSources) {
@@ -1107,7 +1180,8 @@ function extractMessageAttachments(msg = {}, analysis = {}) {
 /* ==========================================================================
    TIER 2: Unified Security Inspector & Forensic Studio
    ========================================================================== */
-function renderUnifiedSecurityStudio(msg, analysis) {
+function renderUnifiedSecurityStudio(msg, rawAnalysis) {
+  const analysis = rawAnalysis || msg?.analysis || {};
   const tab = state.inspectorTab || "sender";
   const auth = analysis.authentication || {};
   const trust = analysis.trust || {};
@@ -1644,17 +1718,21 @@ function renderAttachmentsTab(arg1 = {}, arg2 = {}) {
     ${renderRiskDistBar(factors, risk)}
 
     ${hasEncryptedPDF
-      ? `
+      ? (() => {
+        const encPdf = files.find((f) => f.is_encrypted_pdf);
+        const encAttId = encPdf?.attachmentId || "";
+        return `
       <div style="background: var(--risk-suspicious-bg); border: 1px solid var(--risk-suspicious-border); border-radius: 12px; padding: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
         <div>
           <div style="font-size: 0.85rem; font-weight: 800; color: var(--risk-suspicious-text);">🔒 Password-Protected PDF Detected</div>
           <div style="font-size: 0.75rem; color: var(--tm-text-secondary); margin-top: 0.15rem;">Unlock with password to allow deep inspection of internal streams and macros.</div>
         </div>
-        <button class="btn-modal-submit" id="btnOpenUnlockModal" data-id="${escapeHtml(messageId)}">
+        <button class="btn-modal-submit" id="btnOpenUnlockModal" data-id="${escapeHtml(messageId)}" data-attachment-id="${escapeHtml(encAttId)}">
           Unlock PDF
         </button>
       </div>
-    `
+    `;
+      })()
       : ""
     }
 
@@ -1998,13 +2076,14 @@ function attachDetailEventListeners(messageId) {
   const btnUnlock = document.getElementById("btnOpenUnlockModal");
   if (btnUnlock) {
     btnUnlock.addEventListener("click", () => {
-      showUnlockModal(messageId);
+      const attId = btnUnlock.getAttribute("data-attachment-id") || null;
+      showUnlockModal(messageId, attId);
     });
   }
 }
 
 /* Encrypted PDF Unlock Modal */
-function showUnlockModal(messageId) {
+function showUnlockModal(messageId, attachmentId = null) {
   dom.modalContainer.innerHTML = `
     <div class="modal-box">
       <div class="modal-title">🔒 Unlock Encrypted PDF</div>
@@ -2030,7 +2109,7 @@ function showUnlockModal(messageId) {
       showToast("Please enter a password", "error");
       return;
     }
-    unlockPDFFile(messageId, pw);
+    unlockPDFFile(messageId, pw, attachmentId);
   });
 }
 

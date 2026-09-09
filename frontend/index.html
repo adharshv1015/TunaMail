@@ -36,7 +36,7 @@
           <div class="status-dot" id="connStatusDot"></div>
           <span id="connStatusText">Checking Gmail...</span>
         </div>
-        <button class="btn-auth" id="btnAuthAction"><span>Disconnect</span></button>
+        <button class="btn-auth login-btn" id="btnAuthAction"><span>Connect Gmail</span></button>
       </div>
     </header>
 
@@ -70,7 +70,8 @@
             <button class="btn-refresh-inbox" id="btnRefresh" title="Refresh Inbox" aria-label="Refresh Inbox">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                <path
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </button>
           </div>
@@ -113,7 +114,8 @@
               <div class="adv-field"><label for="advDomain">URL / domain</label><input type="text" id="advDomain"
                   placeholder="example.com" /></div>
               <div class="adv-field"><label for="advAfter">After date</label><input type="date" id="advAfter" /></div>
-              <div class="adv-field"><label for="advBefore">Before date</label><input type="date" id="advBefore" /></div>
+              <div class="adv-field"><label for="advBefore">Before date</label><input type="date" id="advBefore" />
+              </div>
             </div>
             <div class="adv-actions">
               <button type="submit" class="btn-adv-search">Search Gmail</button>

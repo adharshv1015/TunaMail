@@ -265,6 +265,13 @@ class AttachmentAnalyzer:
                 }
         except Exception as e:
             logger.error(f"Error scanning encrypted PDF {filename}: {e}")
+            err_str = str(e).lower()
+            if "wrong password" in err_str or "password is incorrect" in err_str or "cannot decrypt" in err_str:
+                return {
+                    "status": "INVALID_PASSWORD",
+                    "evidence": evidence,
+                    "structured_evidence": structured_evidence
+                }
             return {
                 "status": "ERROR",
                 "message": str(e)

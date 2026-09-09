@@ -950,15 +950,23 @@ def list_messages(
     # Retrieve lightweight metadata list from Gmail
     # ----------------------------------------------------------------
     connector = GmailConnector(credentials)
-    response = connector.list_messages(
-        period=period,
-        max_results=limit,
-        page_token=page_token if page_token else None,
-        query=constructed_query,
-    )
+    try:
+        response = connector.list_messages(
+            period=period,
+            max_results=limit,
+            page_token=page_token if page_token else None,
+            query=constructed_query,
+        )
+    except Exception as exc:
+        err_msg = str(exc).lower()
+        if any(tok in err_msg for tok in ["invalid_grant", "token", "unauthorized", "expired", "401"]):
+            session_manager.update_session(session_id, {"authenticated": False, "credentials": None})
+            raise HTTPException(status_code=401, detail="Gmail session expired. Please reconnect Gmail.")
+        logger.error(f"Failed to fetch messages from Gmail: {exc}", exc_info=True)
+        raise HTTPException(status_code=502, detail=f"Gmail API error: {exc}")
 
-    raw_messages = response["messages"]
-    next_page_token = response["next_page_token"]
+    raw_messages = response.get("messages", [])
+    next_page_token = response.get("next_page_token")
 
     # ----------------------------------------------------------------
     # For each message, fetch lightweight metadata (no full body).
@@ -993,16 +1001,30 @@ def list_messages(
             item["analysis_status"] = "ANALYZED"
             item["analysis"] = cached.get("analysis")
             item["decision"] = cached.get("decision")
-            if item["decision"] and int(item["decision"].get("risk_score", 0)) == 0:
-                if str(item["decision"].get("verdict", "")).upper() == "UNKNOWN":
-                    item["decision"]["verdict"] = "SAFE"
-                    if item["decision"].get("detail_verdict") in ("INSUFFICIENT_EVIDENCE", "LIMITED_CONTEXT", "UNKNOWN", None, ""):
-                        item["decision"]["detail_verdict"] = "CLEAR_POSITIVE_EVIDENCE"
-                    item["decision"]["recommendation"] = "No immediate threats were detected."
-                if int(item["decision"].get("confidence", 0)) <= 40:
-                    item["decision"]["confidence"] = 90
-                if isinstance(item["analysis"], dict) and "decision" in item["analysis"]:
-                    item["analysis"]["decision"] = item["decision"]
+            if item["decision"]:
+                risk_raw = item["decision"].get("risk_score")
+                try:
+                    risk_num = int(risk_raw) if risk_raw is not None else 0
+                except (ValueError, TypeError):
+                    risk_num = 0
+
+                if risk_num == 0:
+                    if str(item["decision"].get("verdict", "")).upper() == "UNKNOWN":
+                        item["decision"]["verdict"] = "SAFE"
+                        if item["decision"].get("detail_verdict") in ("INSUFFICIENT_EVIDENCE", "LIMITED_CONTEXT", "UNKNOWN", None, ""):
+                            item["decision"]["detail_verdict"] = "CLEAR_POSITIVE_EVIDENCE"
+                        item["decision"]["recommendation"] = "No immediate threats were detected."
+
+                    conf_raw = item["decision"].get("confidence")
+                    try:
+                        conf_num = int(conf_raw) if conf_raw is not None else 0
+                    except (ValueError, TypeError):
+                        conf_num = 0
+
+                    if conf_num <= 40:
+                        item["decision"]["confidence"] = 90
+                    if isinstance(item["analysis"], dict) and "decision" in item["analysis"]:
+                        item["analysis"]["decision"] = item["decision"]
 
         results.append(item)
 
@@ -1048,7 +1070,7 @@ def get_message(
     return process_single_message(connector, message_id, is_batch=False)
 
 class UnlockPDFRequest(BaseModel):
-    attachment_id: str
+    attachment_id: str | None = None
     password: str
 
 @router.post("/message/{message_id}/unlock-pdf")
@@ -1075,8 +1097,54 @@ def unlock_pdf(
 
     connector = GmailConnector(credentials)
     
+    attachment_id = payload.attachment_id
+    if not attachment_id:
+        # 1. Search cached analysis attachments
+        from src.services.analysis_cache import analysis_cache, get_analysis_fingerprint
+        cached = analysis_cache.get_by_message_id(message_id)
+        if cached and isinstance(cached, dict):
+            files = (
+                cached.get("analysis", {}).get("attachment", {}).get("files", [])
+                or cached.get("attachments", [])
+            )
+            for f in files:
+                if isinstance(f, dict) and f.get("attachmentId"):
+                    fname = (f.get("filename") or "").lower()
+                    if fname.endswith(".pdf") or f.get("is_encrypted_pdf"):
+                        attachment_id = f["attachmentId"]
+                        break
+            if not attachment_id:
+                for f in files:
+                    if isinstance(f, dict) and f.get("attachmentId"):
+                        attachment_id = f["attachmentId"]
+                        break
+
+        # 2. Fallback to raw Gmail message payload
+        if not attachment_id:
+            try:
+                full_msg = connector.get_message(message_id)
+                from src.connectors.gmail_parser import GmailParser
+                parser = GmailParser()
+                parsed_atts = parser.extract_attachments(full_msg.get("payload", {}))
+                for att in parsed_atts:
+                    fname = (att.get("filename") or "").lower()
+                    mtype = (att.get("mimeType") or "").lower()
+                    if att.get("attachmentId") and (fname.endswith(".pdf") or "pdf" in mtype):
+                        attachment_id = att["attachmentId"]
+                        break
+                if not attachment_id and parsed_atts:
+                    attachment_id = parsed_atts[0].get("attachmentId")
+            except Exception as e:
+                logger.warning(f"Failed to inspect message payload for attachments: {e}")
+
+    if not attachment_id:
+        raise HTTPException(
+            status_code=400,
+            detail="No encrypted PDF attachment found in this message to unlock."
+        )
+
     try:
-        raw_attachment = connector.get_attachment(message_id, payload.attachment_id)
+        raw_attachment = connector.get_attachment(message_id, attachment_id)
         data = raw_attachment.get("data", "")
         import base64
         file_bytes = base64.urlsafe_b64decode(data)
@@ -1092,9 +1160,15 @@ def unlock_pdf(
         raise HTTPException(status_code=400, detail="Attachment exceeds maximum scan size")
 
     analyzer = AttachmentAnalyzer()
-    # Provide a placeholder filename since we are only statically scanning the bytes
     result = analyzer.analyze_encrypted_pdf(file_bytes, "unlocked.pdf", payload.password)
     
+    if result.get("status") == "INVALID_PASSWORD":
+        raise HTTPException(status_code=400, detail="Incorrect password. Decryption failed.")
+    elif result.get("status") == "ERROR":
+        raise HTTPException(status_code=400, detail=result.get("message", "Failed to decrypt PDF."))
+    elif result.get("status") != "SUCCESS" and result.get("status") != "ALREADY_DECRYPTED":
+        raise HTTPException(status_code=400, detail=f"Unable to unlock PDF: {result.get('status', 'Unknown error')}")
+
     if result.get("status") == "SUCCESS":
         from src.services.analysis_cache import analysis_cache, get_analysis_fingerprint
         cached = analysis_cache.get_by_message_id(message_id)
@@ -1106,7 +1180,7 @@ def unlock_pdf(
             if "structured_evidence" in attachments:
                 attachments["structured_evidence"] = [
                     ev for ev in attachments["structured_evidence"]
-                    if ev.get("type") != "PDF_ENCRYPTED"
+                    if ev.get("type") != "PDF_ENCRYPTED" and ev.get("indicator") != "PDF_ENCRYPTED"
                 ]
             if "evidence" in attachments:
                 attachments["evidence"] = [
@@ -1118,6 +1192,11 @@ def unlock_pdf(
                 attachments["structured_evidence"].extend(result["structured_evidence"])
             if "evidence" in attachments and result.get("evidence"):
                 attachments["evidence"].extend(result["evidence"])
+
+            # Mark files as decrypted
+            for f in attachments.get("files", []):
+                if isinstance(f, dict):
+                    f["is_encrypted_pdf"] = False
                 
             decision = analysis.get("decision", {})
             from src.engines.decision_fusion_guard import enforce_deterministic_priority
@@ -1125,10 +1204,6 @@ def unlock_pdf(
             
             # Do not convert UNKNOWN to SAFE merely because the risk score is low.
             # UNKNOWN must remain UNKNOWN when evidence is insufficient or degraded.
-            #
-            # Re-run the complete deterministic decision architecture after removing
-            # PDF_ENCRYPTED so the result is governed by the same safety rules as the
-            # main production analysis path.
             parsed = cached
             decision = finalize_intelligence(
                 parsed,
@@ -1143,5 +1218,6 @@ def unlock_pdf(
             analysis_cache.set(message_id, fingerprint, cached)
             
             result["new_decision"] = decision
-            
+            result["message"] = cached
+
     return result
