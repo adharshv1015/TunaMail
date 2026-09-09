@@ -4,20 +4,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#FAF7F2" />
+  <meta name="theme-color" content="#0d1322" />
   <title>TunaMail — Email Security Operations</title>
   <link rel="icon" type="image/svg+xml"
-    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%231B3B6F'/><path d='M50 17l27 10v21c0 18-11 29-27 35C34 77 23 66 23 48V27z' fill='%23212936'/><path d='M39 49l7 7 15-17' fill='none' stroke='%23EFEAE1' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236366F1'/><path d='M50 17l27 10v21c0 18-11 29-27 35C34 77 23 66 23 48V27z' fill='%231E293B'/><path d='M39 49l7 7 15-17' fill='none' stroke='%2338BDF8' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
   <link rel="stylesheet" href="./style.css" />
 </head>
 
 <body>
   <div class="app-shell">
-    <!-- Command bar -->
-    <header class="topbar">
-      <div class="brand-container">
+    <!-- Command bar / Navigation Bar -->
+    <header class="top-navigation header-navigation topbar navigation-bar navbar" role="banner">
+      <div class="brand-container brand-logo">
         <div class="brand-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2.1"
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2"
             stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 3 20 6v5.8c0 4.7-2.8 7.7-8 9.2-5.2-1.5-8-4.5-8-9.2V6z" />
             <path d="m8.4 12 2.3 2.3 4.9-5" />
@@ -30,6 +30,11 @@
         <span class="brand-badge">PROTECTED</span>
       </div>
 
+      <nav class="nav-links navigation-links navbar-links">
+        <a href="#inbox" class="nav-link navbar-link active"><span class="nav-dot"></span>Inbox</a>
+        <a href="#dashboard" class="nav-link navbar-link"><span class="nav-dot"></span>Dashboard</a>
+        <a href="#settings" class="nav-link navbar-link"><span class="nav-dot"></span>Settings</a>
+      </nav>
 
       <div class="topbar-actions">
         <div class="status-pill" id="connStatusPill">
@@ -206,8 +211,115 @@
       </aside>
 
       <!-- Security analysis canvas -->
-      <section class="analysis-area" id="analysisArea"></section>
+      <section class="analysis-area" id="analysisArea">
+        <div class="hero-section hero" id="hero">
+          <div class="hero-glow-orb" aria-hidden="true"></div>
+          <div class="hero-header-tag">
+            <span class="pulse-indicator"></span>
+            <span>Intelligent Threat Mitigation Platform</span>
+          </div>
+          <h1 class="headline hero-headline title">TunaMail Email Security Operations</h1>
+          <p class="subtext hero-subtext subtitle">AI-powered phishing detection, multi-engine DNS &amp; header verification, and real-time behavioral intelligence.</p>
+          <div class="hero-cta-group">
+            <button type="button" class="action-button main-cta primary-cta hero-cta" id="heroBtnConnect" onclick="document.getElementById('btnAuthAction')?.click()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+              <span>Connect Gmail Mailbox</span>
+            </button>
+            <span class="hero-badge-pill">🛡️ Zero-Knowledge Local Analysis</span>
+          </div>
+        </div>
+
+        <div class="main-content dashboard-grid cards-overview">
+          <div class="card card-standard content-card interactive-card" type="standard" data-type="standard">
+            <div class="card-icon-bubble bubble-cyan">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+            <div class="card-content-wrap">
+              <h3 class="card-header title">Multi-Vector Heuristics</h3>
+              <p class="card-body card-text body">Deep inspection across SPF, DKIM, DMARC alignments, suspicious sender domains, and spoofed display names.</p>
+            </div>
+            <div class="card-footer-action">
+              <span class="secondary-badge badge">Standard Protection</span>
+              <span class="card-hint-text">Auto-scanning on fetch</span>
+            </div>
+          </div>
+
+          <div class="card card-critical-focus critical-focus card-highlighted highlight-card card-featured featured-card interactive-card" type="critical-focus" data-type="critical-focus">
+            <div class="card-icon-bubble bubble-purple">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+            </div>
+            <div class="card-content-wrap">
+              <h3 class="card-header title">Deep Neural LLM Engine</h3>
+              <p class="card-body card-text body">Real-time semantic intent reasoning, urgency detection, and credential theft analysis via Gemini Flash models.</p>
+            </div>
+            <div class="card-footer-action">
+              <button type="button" class="btn action-button glow-button" onclick="document.getElementById('btnRefresh')?.click()">
+                <span>Scan Mailbox Now</span>
+                <span class="btn-icon">→</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="card card-emerald content-card interactive-card" type="emerald">
+            <div class="card-icon-bubble bubble-emerald">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <div class="card-content-wrap">
+              <h3 class="card-header title">Real-Time Threat Defenses</h3>
+              <p class="card-body card-text body">High-precision sandbox file scanning, hash tracking, and automated sender reputation profiling.</p>
+            </div>
+            <div class="card-footer-action">
+              <span class="badge safe-badge">Active Engine</span>
+              <span class="card-hint-text">100% telemetry encrypted</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="interactive-elements form-controls components ui-components">
+          <div class="interactive-bar-header">
+            <span class="interactive-bar-title">Interactive Threat Filter &amp; Search</span>
+            <span class="interactive-bar-sub">Filter messages or query indicators instantly</span>
+          </div>
+          <div class="interactive-bar-body">
+            <div class="input-fields form-group">
+              <span class="input-icon">🔍</span>
+              <input type="text" class="input-field form-control" placeholder="Search security indicators, sender IPs, target URLs, domain MX..." oninput="const si = document.getElementById('searchInput'); if (si) { si.value = this.value; si.dispatchEvent(new Event('input')); }" />
+            </div>
+            <div class="badges badge-container">
+              <button type="button" class="badge-chip chip-all active" onclick="document.querySelector('.filter-chip[data-filter=\'all\']')?.click(); document.querySelectorAll('.badge-chip').forEach(b => b.classList.remove('active')); this.classList.add('active');">All Messages</button>
+              <button type="button" class="badge-chip chip-safe" onclick="document.querySelector('.filter-chip[data-filter=\'safe\']')?.click(); document.querySelectorAll('.badge-chip').forEach(b => b.classList.remove('active')); this.classList.add('active');">🟢 Safe</button>
+              <button type="button" class="badge-chip chip-warning" onclick="document.getElementById('advStatus').value='SUSPICIOUS'; document.getElementById('advancedSearchForm')?.dispatchEvent(new Event('submit')); document.querySelectorAll('.badge-chip').forEach(b => b.classList.remove('active')); this.classList.add('active');">🟡 Suspicious</button>
+              <button type="button" class="badge-chip chip-danger" onclick="document.querySelector('.filter-chip[data-filter=\'phishing\']')?.click(); document.querySelectorAll('.badge-chip').forEach(b => b.classList.remove('active')); this.classList.add('active');">🔴 Phishing Alert</button>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
+
+    <!-- Webpage Footer -->
+    <footer class="footer page-footer" role="contentinfo">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <div class="brand-title small">Tuna<span>Mail</span></div>
+          <p class="footer-tagline">Autonomous Multi-Vector Email Threat Intelligence</p>
+        </div>
+        <div class="footer-links">
+          <a href="#docs" class="footer-link">Documentation</a>
+          <a href="#privacy" class="footer-link">Zero-Knowledge Policy</a>
+          <a href="#api" class="footer-link">API Status</a>
+        </div>
+        <p class="footer-text text">&copy; 2026 TunaMail. High-Fidelity Security Mesh.</p>
+      </div>
+    </footer>
   </div>
 
   <div id="modalContainer" class="modal-overlay hidden"></div>
