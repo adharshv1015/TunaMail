@@ -503,9 +503,17 @@ class EvidenceConflictEngine:
                 or page_intel.get("forms", {}).get("password_fields", 0) > 0
                 or page_intel.get("has_credential_form", False)
                 or page_intel.get("has_fake_error", False)
-                or (tls_info.get("certificate_valid") is False or bool(tls_info.get("policy_violation")))
                 or url_item.get("punycode", False)
+                or (tls_info.get("certificate_valid") is False and tls_info.get("certificate_present") is True)
             )
+
+            is_recognized_safe = (
+                redirects.get("is_safe", False)
+                or url_item.get("brand_relationship") in ("OFFICIAL_DOMAIN", "OFFICIAL_SUBDOMAIN", "AFFILIATED", "OFFICIAL_THIRD_PARTY")
+                or any(e.get("type") in ("OFFICIAL_THIRD_PARTY_RESOURCE", "OFFICIAL_BRAND_SUBDOMAIN", "ESP_TRACKING_DOMAIN") for e in url_item.get("structured_evidence", []))
+            )
+            if is_recognized_safe and threat_intel.get("detections", 0) == 0 and not page_intel.get("has_credential_form") and not dns_info.get("private_ip_detected"):
+                redirect_has_issues = False
 
             if redirects.get("external_domain_change") or redirects.get("detected"):
                 if redirect_has_issues:

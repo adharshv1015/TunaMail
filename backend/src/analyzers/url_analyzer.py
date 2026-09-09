@@ -431,11 +431,20 @@ class URLAnalyzer:
                 )
             )
 
+        url_risk_score = 0
+        if any(r.get("brand_impersonation") for r in results):
+            url_risk_score = max(url_risk_score, 75)
+        if any(r.get("has_strong_negative_evidence") for r in results):
+            url_risk_score = max(url_risk_score, 70)
+        if any(r.get("reputation") == "MALICIOUS" for r in results):
+            url_risk_score = max(url_risk_score, 85)
+
         return {
             "analysis_status": "AVAILABLE",
             "urls": urls,
             "count": len(urls),
             "analysis": results,
+            "risk_score": url_risk_score,
             "limited_context": limited_context,
             "link_only": limited_context,
             "structured_evidence": (

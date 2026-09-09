@@ -322,6 +322,14 @@ def _collect_legacy_evidence(
             if not matched_type:
                 continue
 
+            if matched_type == "MALICIOUS_REDIRECT":
+                url_data = analysis.get("url") or analysis.get("urls") or {}
+                if url_data.get("risk_score", 0) == 0 and not any(
+                    (u.get("reputation") == "MALICIOUS" or u.get("threat_intelligence", {}).get("detections", 0) > 0)
+                    for u in url_data.get("analysis", []) if isinstance(u, dict)
+                ):
+                    continue
+
             output.append(
                 {
                     "type": matched_type,
@@ -512,6 +520,18 @@ def _finalize(
     if not decision.get("detail_verdict"):
         decision["detail_verdict"] = "UNKNOWN"
 
+    # Synchronize recommendation with finalized verdict
+    current_rec = str(decision.get("recommendation") or "")
+    if verdict in {"SAFE", "VERIFIED LEGITIMATE", "LIKELY LEGITIMATE", "LOW RISK"}:
+        if not current_rec or "Report or delete" in current_rec or "Do not interact" in current_rec or "Exercise caution" in current_rec:
+            decision["recommendation"] = "Verified sender, safe links, and no malicious content detected. Safe to read, click links, and reply."
+    elif verdict == "SUSPICIOUS":
+        if not current_rec or "Report or delete" in current_rec or "Do not interact" in current_rec:
+            decision["recommendation"] = "This message contains unusual signals. Exercise caution before clicking links or downloading files."
+    elif verdict in {"PHISHING", "HIGH RISK"}:
+        if not current_rec:
+            decision["recommendation"] = "High risk of phishing or credential extortion detected. Do not interact with this email. Report or delete it immediately."
+
     return decision
 
 
@@ -606,6 +626,26 @@ def enforce_deterministic_priority(
     )
 
     # --------------------------------------------------------
+    # RULE 0
+    # Consistency validator verified absence of malice.
+    # --------------------------------------------------------
+
+    if decision.get("detail_verdict") in ("CLEAR_POSITIVE_EVIDENCE", "INSUFFICIENT_EVIDENCE") and decision.get("verdict") in ("SAFE", "SUSPICIOUS"):
+        url_data = analysis.get("url") or analysis.get("urls") or {}
+        att_data = analysis.get("attachment") or analysis.get("attachments") or {}
+        has_real_critical = (
+            url_data.get("risk_score", 0) >= 60
+            or att_data.get("risk_score", 0) >= 60
+            or any(
+                item["type"] in ("MALICIOUS_ATTACHMENT", "EXECUTABLE_ATTACHMENT", "KNOWN_MALICIOUS_URL")
+                for item in critical
+                if not str(item.get("source", "")).startswith("legacy")
+            )
+        )
+        if not has_real_critical:
+            return _finalize(decision)
+
+    # --------------------------------------------------------
     # RULE 1
     # Critical malicious evidence ALWAYS wins.
     # --------------------------------------------------------
@@ -676,6 +716,29 @@ def enforce_deterministic_priority(
     # --------------------------------------------------------
 
     if has_strong:
+        url_data = analysis.get("url") or analysis.get("urls") or {}
+        att_data = analysis.get("attachment") or analysis.get("attachments") or {}
+        auth_data = analysis.get("authentication") or {}
+        spf_pass = str(auth_data.get("spf", "")).lower() == "pass"
+        dkim_pass = str(auth_data.get("dkim", "")).lower() == "pass"
+        url_items = url_data.get("analysis") if isinstance(url_data.get("analysis"), list) else []
+        has_bad_urls = any(
+            isinstance(u, dict) and (u.get("reputation") == "MALICIOUS" or (u.get("risk_score", 0) >= 50))
+            for u in url_items
+        ) or url_data.get("risk_score", 0) >= 40
+        has_bad_att = att_data.get("risk_score", 0) >= 40
+
+        if spf_pass and dkim_pass and not has_bad_urls and not has_bad_att and not has_critical:
+            # Authenticated sender with zero malicious links or malware attachments (e.g. job alert/newsletter mentioning hiring brands)
+            decision["verdict"] = "SAFE"
+            decision["detail_verdict"] = "CLEAR_POSITIVE_EVIDENCE"
+            decision["risk_score"] = 0
+            decision["confidence"] = max(confidence, 85)
+            decision["recommendation"] = (
+                "Verified sender, safe links, and no malicious content detected. "
+                "Safe to read, click links, and reply."
+            )
+            return _finalize(decision)
 
         if risk_score >= 80:
             decision["verdict"] = "PHISHING"
@@ -737,6 +800,28 @@ def enforce_deterministic_priority(
             )
 
         elif has_strong:
+            url_data = analysis.get("url") or analysis.get("urls") or {}
+            att_data = analysis.get("attachment") or analysis.get("attachments") or {}
+            auth_data = analysis.get("authentication") or {}
+            spf_pass = str(auth_data.get("spf", "")).lower() == "pass"
+            dkim_pass = str(auth_data.get("dkim", "")).lower() == "pass"
+            url_items = url_data.get("analysis") if isinstance(url_data.get("analysis"), list) else []
+            has_bad_urls = any(
+                isinstance(u, dict) and (u.get("reputation") == "MALICIOUS" or (u.get("risk_score", 0) >= 50))
+                for u in url_items
+            ) or url_data.get("risk_score", 0) >= 40
+            has_bad_att = att_data.get("risk_score", 0) >= 40
+
+            if spf_pass and dkim_pass and not has_bad_urls and not has_bad_att and not has_critical:
+                decision["verdict"] = "SAFE"
+                decision["detail_verdict"] = "CLEAR_POSITIVE_EVIDENCE"
+                decision["risk_score"] = 0
+                decision["confidence"] = max(confidence, 85)
+                decision["recommendation"] = (
+                    "Verified sender, safe links, and no malicious content detected. "
+                    "Safe to read, click links, and reply."
+                )
+                return _finalize(decision)
 
             if risk_score >= 80:
                 decision["verdict"] = "PHISHING"

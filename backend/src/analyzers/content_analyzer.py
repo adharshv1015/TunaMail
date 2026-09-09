@@ -110,7 +110,22 @@ class ContentAnalyzer:
                 "lnkd.in",
             },
         },
+        "sbi": {
+            "sender_domains": {
+                "sbi.co.in",
+                "communications.sbi.co.in",
+                "statebankofindia.com",
+                "sbi.com",
+            },
+            "url_domains": {
+                "sbi.co.in",
+                "onlinesbi.sbi",
+                "onlinesbi.com",
+            },
+        },
     }
+
+    COMMON_PLATFORMS = {"google", "apple", "linkedin", "facebook", "twitter", "instagram", "youtube"}
 
     KEYWORDS = {
         "urgency": [
@@ -1158,11 +1173,16 @@ class ContentAnalyzer:
                     or self.contains_any(body, self.KEYWORDS["threat_language"])
                     or self.contains_any(body, self.KEYWORDS["financial_request"])
                 )
+                
+                # If it's a common platform (like Google or Apple), merely linking to it 
+                # (even with suspicious intent) shouldn't flag impersonation unless the sender claims to be them.
+                is_common_platform = organization in self.COMMON_PLATFORMS
+                impersonating_intent = sender_claims_brand or (has_suspicious_intent and not is_common_platform)
 
                 if (
                     brand_mentioned
                     and not legitimate
-                    and (sender_claims_brand or has_suspicious_intent)
+                    and impersonating_intent
                 ):
 
                     return {

@@ -13,7 +13,7 @@ class URLHistoryTracker:
             # Reconstruct without query and fragment
             sanitized = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
             return sanitized
-        except:
+        except Exception:
             return url
 
     def track_urls(self, urls: list, sender: str, domain: str):

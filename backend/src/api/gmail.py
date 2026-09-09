@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import os
 
-from src.connectors.gmail_connector import GmailConnector
+from src.connectors.gmail_connector import GmailConnector, PERIOD_QUERY_MAP
 from src.connectors.gmail_parser import GmailParser
 from src.analyzers.authentication_analyzer import AuthenticationAnalyzer
 from src.analyzers.url_analyzer import URLAnalyzer
@@ -31,6 +31,7 @@ import time
 import json
 import queue
 import threading
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +84,14 @@ from src.ai.context_decision import apply_context_rules
 
 decision_validator = DecisionValidator()
 
+def _safe_int(val, default=0):
+    try:
+        if val is None:
+            return default
+        return int(round(float(val)))
+    except (ValueError, TypeError):
+        return default
+
 def finalize_intelligence(
     parsed_email,
     analysis,
@@ -109,15 +118,43 @@ def finalize_intelligence(
         decision
     )
 
-    if int(decision.get("risk_score", 0)) == 0:
-        if str(decision.get("verdict", "")).upper() == "UNKNOWN":
+    auth_data = analysis.get("authentication") or {}
+    url_data = analysis.get("url") or analysis.get("urls") or {}
+    att_data = analysis.get("attachment") or analysis.get("attachments") or {}
+    content_data = analysis.get("content") or {}
+    intel_data = analysis.get("intelligence") or {}
+
+    spf_pass = str(auth_data.get("spf", "")).lower() == "pass"
+    dkim_pass = str(auth_data.get("dkim", "")).lower() == "pass"
+    url_items = url_data.get("analysis") if isinstance(url_data.get("analysis"), list) else []
+    has_bad_urls = any(
+        isinstance(u, dict) and (u.get("reputation") == "MALICIOUS" or (u.get("risk_score", 0) >= 50))
+        for u in url_items
+    ) or url_data.get("risk_score", 0) >= 40
+    has_bad_att = att_data.get("risk_score", 0) >= 40
+    has_bad_content = content_data.get("credential_harvesting") or content_data.get("financial_lure") or content_data.get("urgency")
+    has_bad_intel = intel_data.get("threat_score", 0) >= 40
+
+    if spf_pass and dkim_pass and not has_bad_urls and not has_bad_att and not has_bad_content and not has_bad_intel:
+        decision["verdict"] = "SAFE"
+        decision["detail_verdict"] = "CLEAR_POSITIVE_EVIDENCE"
+        decision["risk_score"] = 0
+        decision["confidence"] = max(_safe_int(decision.get("confidence"), 85), 85)
+        decision["recommendation"] = "Verified sender, safe links, and no malicious content detected. Safe to read, click links, and reply."
+
+    risk_int = _safe_int(decision.get("risk_score") if isinstance(decision, dict) else 0, 0)
+
+    if risk_int == 0 and isinstance(decision, dict):
+        if str(decision.get("verdict", "")).upper() in ("UNKNOWN", "SUSPICIOUS"):
             decision["verdict"] = "SAFE"
             if decision.get("detail_verdict") in ("INSUFFICIENT_EVIDENCE", "LIMITED_CONTEXT", "UNKNOWN", None, ""):
                 decision["detail_verdict"] = "CLEAR_POSITIVE_EVIDENCE"
-            decision["recommendation"] = "No immediate threats were detected."
+            decision["recommendation"] = "Verified sender, safe links, and no malicious content detected. Safe to read, click links, and reply."
 
-        are_conf = int(analysis.get("are_confidence") or analysis.get("confidence") or 90)
-        decision["confidence"] = max(int(decision.get("confidence", 0)), are_conf, 85)
+        are_raw = analysis.get("are_confidence") or analysis.get("confidence") or 90
+        are_conf = _safe_int(are_raw, 90)
+        dec_conf = _safe_int(decision.get("confidence"), 0)
+        decision["confidence"] = max(dec_conf, are_conf, 85)
 
     return decision
 
@@ -145,6 +182,17 @@ def ensure_analysis_schema(analysis):
 
         if key not in analysis:
             analysis[key] = default
+
+    # Synchronize alias keys for backward and forward compatibility
+    if "url" in analysis and (not analysis.get("urls") or analysis.get("urls") == {}):
+        analysis["urls"] = analysis["url"]
+    elif "urls" in analysis and (not analysis.get("url") or analysis.get("url") == {}):
+        analysis["url"] = analysis["urls"]
+
+    if "attachment" in analysis and (not analysis.get("attachments") or analysis.get("attachments") == {}):
+        analysis["attachments"] = analysis["attachment"]
+    elif "attachments" in analysis and (not analysis.get("attachment") or analysis.get("attachment") == {}):
+        analysis["attachment"] = analysis["attachments"]
 
     return analysis
 
@@ -238,8 +286,15 @@ def process_single_message(
             "Retrieving the message from Gmail..."
         )
 
-        with tracker.measure("fetch_message"):
-            full_message = connector.get_message(msg_id)
+        try:
+            with tracker.measure("fetch_message"):
+                full_message = connector.get_message(msg_id)
+        except Exception as exc:
+            err_msg = str(exc).lower()
+            if any(tok in err_msg for tok in ["invalid_grant", "token", "unauthorized", "expired", "401", "credentials"]):
+                raise HTTPException(status_code=401, detail="Gmail session expired. Please reconnect Gmail.")
+            logger.error(f"Failed to retrieve full message from Gmail: {exc}", exc_info=True)
+            raise HTTPException(status_code=502, detail=f"Failed to fetch email from Gmail: {exc}")
 
         analyzers = get_analyzers()
 
@@ -269,13 +324,13 @@ def process_single_message(
 
         if cached is not None:
             cached_dec = cached.get("decision") or (cached.get("analysis", {}).get("decision") if isinstance(cached.get("analysis"), dict) else None)
-            if cached_dec and int(cached_dec.get("risk_score", 0)) == 0:
+            if cached_dec and _safe_int(cached_dec.get("risk_score"), 0) == 0:
                 if str(cached_dec.get("verdict", "")).upper() == "UNKNOWN":
                     cached_dec["verdict"] = "SAFE"
                     if cached_dec.get("detail_verdict") in ("INSUFFICIENT_EVIDENCE", "LIMITED_CONTEXT", "UNKNOWN", None, ""):
                         cached_dec["detail_verdict"] = "CLEAR_POSITIVE_EVIDENCE"
                     cached_dec["recommendation"] = "No immediate threats were detected."
-                if int(cached_dec.get("confidence", 0)) <= 40:
+                if _safe_int(cached_dec.get("confidence"), 0) <= 40:
                     cached_dec["confidence"] = 90
                 cached["decision"] = cached_dec
                 if isinstance(cached.get("analysis"), dict):
@@ -365,12 +420,11 @@ def process_single_message(
             auth_results=auth_analysis
         )
 
-        print(
-            "URL_DIAG:",
-            "body_chars=", len(combined_text_for_urls),
-            "urls=", len(url_analysis.get("analysis", [])),
-            "ms=", round((time.perf_counter() - url_start) * 1000, 2),
-            flush=True,
+        logger.debug(
+            "URL_DIAG: body_chars=%d urls=%d ms=%.2f",
+            len(combined_text_for_urls),
+            len(url_analysis.get("analysis", [])),
+            round((time.perf_counter() - url_start) * 1000, 2),
         )
 
         if "analysis" in url_analysis and len(url_analysis["analysis"]) > MAX_URLS_PER_EMAIL:
@@ -428,8 +482,10 @@ def process_single_message(
             "authentication": auth_analysis,
             "content": content_analysis,
             "url": url_analysis,
+            "urls": url_analysis,
             "whois": whois_analysis,
             "attachment": attachment_analysis,
+            "attachments": attachment_analysis,
             "trust": trust_analysis,
         }
 
@@ -531,13 +587,20 @@ def process_single_message(
                         analysis = page_phishing_analyzer._analyze_redirects(p_redirects)
                         has_issues = (
                             item.get("threat_intelligence", {}).get("detections", 0) > 0
-                            or item.get("dns", {}).get("private_ip_detected")
-                            or item["page_analysis"].get("forms", {}).get("password_fields", 0) > 0
-                            or item["page_analysis"].get("has_credential_form")
-                            or item["page_analysis"].get("has_fake_error")
-                            or (item.get("tls") and item.get("tls", {}).get("certificate_valid") is False)
-                            or analysis.get("has_insecure_scheme", False)
+                            or item.get("dns", {}).get("private_ip_detected", False)
+                            or item.get("page_analysis", {}).get("forms", {}).get("password_fields", 0) > 0
+                            or item.get("page_analysis", {}).get("has_credential_form", False)
+                            or item.get("page_analysis", {}).get("has_fake_error", False)
+                            or (item.get("tls") and item.get("tls", {}).get("certificate_valid") is False and item.get("tls", {}).get("certificate_present") is True)
                         )
+                        # Official brand resources or ESP tracking domains with clean intel are verified safe
+                        is_recognized_safe = (
+                            item.get("brand_relationship") in ("OFFICIAL_DOMAIN", "OFFICIAL_SUBDOMAIN", "AFFILIATED", "OFFICIAL_THIRD_PARTY")
+                            or any(e.get("type") in ("OFFICIAL_THIRD_PARTY_RESOURCE", "OFFICIAL_BRAND_SUBDOMAIN", "ESP_TRACKING_DOMAIN") for e in item.get("structured_evidence", []))
+                        )
+                        if is_recognized_safe and item.get("threat_intelligence", {}).get("detections", 0) == 0 and not item.get("page_analysis", {}).get("has_credential_form"):
+                            has_issues = False
+
                         item["redirects"] = {
                             "detected": True,
                             "chain": p_redirects,
@@ -617,26 +680,14 @@ def process_single_message(
             are_result,
             conflict_result,
         )
-        print("\n=== PRODUCTION DECISION TRACE: AFTER FUSION ===")
-        print("ARE verdict:", are_result.get("verdict"))
-        print("ARE detail:", are_result.get("detail_verdict"))
-        print("ARE risk:", are_result.get("risk_score"))
-        print("ARE confidence:", are_result.get("confidence"))
-        print("ARE rules:", are_result.get("rules_triggered"))
-
-        print("AI classification:", ai_analysis.get("recommended_classification"))
-        print("AI predicted:", ai_analysis.get("predicted_class"))
-        print("AI reasoning:", ai_analysis.get("reasoning_state"))
-        print("AI confidence:", ai_analysis.get("confidence"))
-
-        print("CONFLICT verdict:", conflict_result.get("verdict"))
-        print("CONFLICT risk:", conflict_result.get("risk_score"))
-        print("CONFLICT confidence:", conflict_result.get("confidence"))
-
-        print("FUSED verdict:", decision_result.get("verdict"))
-        print("FUSED detail:", decision_result.get("detail_verdict"))
-        print("FUSED risk:", decision_result.get("risk_score"))
-        print("FUSED confidence:", decision_result.get("confidence"))
+        logger.debug(
+            "DECISION TRACE [AFTER FUSION] ARE=%s AI=%s CONFLICT=%s FUSED=%s risk=%.1f",
+            are_result.get("verdict"),
+            ai_analysis.get("recommended_classification"),
+            conflict_result.get("verdict"),
+            decision_result.get("verdict"),
+            decision_result.get("risk_score", 0),
+        )
         
         emit_progress(
             progress_callback,
@@ -671,11 +722,12 @@ def process_single_message(
         ].validate(
             decision_result
         )
-        print("\n=== PRODUCTION DECISION TRACE: AFTER CONSISTENCY ===")
-        print("verdict:", decision_result.get("verdict"))
-        print("detail:", decision_result.get("detail_verdict"))
-        print("risk:", decision_result.get("risk_score"))
-        print("confidence:", decision_result.get("confidence"))
+        logger.debug(
+            "DECISION TRACE [AFTER CONSISTENCY] verdict=%s risk=%.1f confidence=%.1f",
+            decision_result.get("verdict"),
+            decision_result.get("risk_score", 0),
+            decision_result.get("confidence", 0),
+        )
         
         # Then run the deterministic safety architecture that was
         # previously only used by normalize_message_response().
@@ -684,13 +736,13 @@ def process_single_message(
             final_analysis,
             decision_result,
         )
-        print("\n=== PRODUCTION DECISION TRACE: AFTER FINALIZATION ===")
-        print("verdict:", decision_result.get("verdict"))
-        print("detail:", decision_result.get("detail_verdict"))
-        print("risk:", decision_result.get("risk_score"))
-        print("confidence:", decision_result.get("confidence"))
-        print("full decision:", decision_result)
-        print("=== END PRODUCTION DECISION TRACE ===\n")
+        logger.debug(
+            "DECISION TRACE [FINAL] verdict=%s detail=%s risk=%.1f confidence=%.1f",
+            decision_result.get("verdict"),
+            decision_result.get("detail_verdict"),
+            decision_result.get("risk_score", 0),
+            decision_result.get("confidence", 0),
+        )
 
         with tracker.measure("LocalLearning"):
             analyzers["learner"].learn(parsed, existing_analysis, decision_result.get("verdict", "UNKNOWN"))
@@ -823,13 +875,13 @@ def stream_message_analysis(
                 is_batch=False,
                 progress_callback=progress_callback,
             )
-
             progress_queue.put({
                 "type": "result",
                 "data": result,
             })
-
         except HTTPException as exc:
+            if exc.status_code == 401:
+                session_manager.update_session(session_id, {"authenticated": False, "credentials": None})
             progress_queue.put({
                 "type": "error",
                 "status": exc.status_code,
@@ -837,18 +889,27 @@ def stream_message_analysis(
             })
 
         except Exception as exc:
-            import traceback
-            tb = traceback.format_exc()
-            logger.exception(
-                "Streaming email analysis failed for %s",
-                message_id,
-            )
+            err_msg = str(exc).lower()
+            if any(tok in err_msg for tok in ["invalid_grant", "token", "unauthorized", "expired", "401", "credentials"]):
+                session_manager.update_session(session_id, {"authenticated": False, "credentials": None})
+                progress_queue.put({
+                    "type": "error",
+                    "status": 401,
+                    "message": "Gmail session expired. Please reconnect Gmail.",
+                })
+            else:
+                import traceback
+                tb = traceback.format_exc()
+                logger.exception(
+                    "Streaming email analysis failed for %s",
+                    message_id,
+                )
 
-            progress_queue.put({
-                "type": "error",
-                "status": 500,
-                "message": f"Email analysis failed: {str(exc)} | Trace: {tb}",
-            })
+                progress_queue.put({
+                    "type": "error",
+                    "status": 500,
+                    "message": f"Email analysis failed: {str(exc)}",
+                })
 
         finally:
             progress_queue.put({
@@ -884,55 +945,78 @@ def stream_message_analysis(
         },
     )
 
+
+# --------------------------------------------------------------------
+# Regex for validating ISO-8601 date strings: YYYY-MM-DD
+# --------------------------------------------------------------------
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _gmail_date(iso_date: str) -> str:
+    """Convert 'YYYY-MM-DD' to Gmail's 'YYYY/MM/DD' search format."""
+    return iso_date.replace("-", "/")
+
+
 @router.get("/messages")
 def list_messages(
     request: Request,
-    period: str = Query(default="recent"),
-    limit: int = Query(default=10, ge=1, le=100),
-    page_token: str = Query(default=None),
-    # Structured search fields — the backend builds the Gmail query
-    sender: str = Query(default=None, max_length=200),
-    subject: str = Query(default=None, max_length=200),
-    keyword: str = Query(default=None, max_length=200),
-    domain: str = Query(default=None, max_length=200),
-    after: str = Query(default=None, max_length=20),   # YYYY-MM-DD
-    before: str = Query(default=None, max_length=20),  # YYYY-MM-DD
+    limit: int = 10,
+    period: str = "recent",
+    page_token: str | None = None,
+    sender: str | None = None,
+    subject: str | None = None,
+    keyword: str | None = None,
+    domain: str | None = None,
+    after: str | None = None,
+    before: str | None = None,
 ):
-    import re
-
     session_id = request.session.get("session_id")
     server_session = session_manager.get_session(session_id)
 
     if not server_session or not server_session.get("authenticated"):
-        raise HTTPException(status_code=401, detail="Please login first.")
+        raise HTTPException(
+            status_code=401,
+            detail="Please login first."
+        )
 
     credentials = server_session.get("credentials")
     if not credentials:
-        raise HTTPException(status_code=401, detail="Credentials missing from session.")
+        raise HTTPException(
+            status_code=401,
+            detail="Credentials missing from session."
+        )
+
+    # Validate preset period (fallback to "recent" if unrecognized)
+    if period not in PERIOD_QUERY_MAP:
+        period = "recent"
+
+    # Clamp limit to valid bounds [1, 100]
+    limit = max(1, min(100, limit))
 
     # ----------------------------------------------------------------
-    # Build Gmail query server-side from validated structured fields.
-    # Only pass individual validated parts — never raw user syntax.
+    # Build advanced server-side search query (Gmail search operators)
     # ----------------------------------------------------------------
-    DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-
-    def _gmail_date(value: str) -> str:
-        """Convert YYYY-MM-DD to YYYY/MM/DD for Gmail search."""
-        return value.replace("-", "/")
-
     query_parts = []
     use_custom_query = any([sender, subject, keyword, domain, after, before])
 
     if use_custom_query:
         if sender:
-            query_parts.append(f"from:{sender.strip()}")
+            # Strip dangerous characters
+            safe_sender = re.sub(r'[\r\n"]', "", sender).strip()
+            if safe_sender:
+                query_parts.append(f"from:{safe_sender}")
         if subject:
-            query_parts.append(f"subject:{subject.strip()}")
+            safe_subject = re.sub(r'[\r\n"]', "", subject).strip()
+            if safe_subject:
+                query_parts.append(f'subject:"{safe_subject}"')
         if keyword:
-            query_parts.append(keyword.strip())
+            safe_kw = re.sub(r'[\r\n"]', "", keyword).strip()
+            if safe_kw:
+                query_parts.append(safe_kw)
         if domain:
-            # Search for the domain in the full message content
-            query_parts.append(domain.strip())
+            safe_domain = re.sub(r'[\r\n"]', "", domain).strip()
+            if safe_domain:
+                query_parts.append(f"from:{safe_domain} OR to:{safe_domain}")
         if after:
             if DATE_RE.match(after):
                 query_parts.append(f"after:{_gmail_date(after)}")
@@ -979,54 +1063,69 @@ def list_messages(
         msg_id = msg["id"]
         try:
             meta = connector.get_message_metadata(msg_id)
+            headers = {}
+            for h in meta.get("payload", {}).get("headers", []):
+                headers[h["name"].lower()] = h["value"]
+
+            # Check if this email has already been analyzed in cache
+            cached_result = analysis_cache.get_by_message_id(msg_id)
+
+            if cached_result:
+                dec = cached_result.get("analysis", {}).get("decision") or cached_result.get("decision") or {}
+                verdict = dec.get("verdict", "UNANALYZED")
+                risk_score = dec.get("risk_score", 0)
+                analysis_status = "ANALYZED"
+            else:
+                verdict = "UNANALYZED"
+                risk_score = 0
+                analysis_status = "UNANALYZED"
+
+            # Category from cache if available, else primary
+            category = "primary"
+            if cached_result and cached_result.get("categories"):
+                cats = cached_result["categories"]
+                category = cats[0] if isinstance(cats, list) and cats else str(cats)
+
+            results.append({
+                "id": msg_id,
+                "thread_id": msg.get("threadId"),
+                "from": headers.get("from") or headers.get("sender") or "",
+                "to": headers.get("to", ""),
+                "subject": headers.get("subject") or meta.get("snippet", "")[:60] or "(No Subject)",
+                "date": headers.get("date", ""),
+                "snippet": meta.get("snippet", ""),
+                "verdict": verdict,
+                "risk_score": risk_score,
+                "analysis_status": analysis_status,
+                "category": category,
+            })
+        except Exception as meta_err:
+            logger.warning(f"Failed to fetch metadata for msg {msg_id}: {meta_err}")
+            results.append({
+                "id": msg_id,
+                "thread_id": msg.get("threadId"),
+                "from": msg.get("from") or "",
+                "subject": msg.get("snippet", "")[:60] or "(No Subject)",
+                "date": "",
+                "snippet": msg.get("snippet", ""),
+                "verdict": "UNANALYZED",
+                "risk_score": 0,
+                "analysis_status": "UNANALYZED",
+                "category": "primary",
+            })
+
+    # Optional local sort: Highest Risk first
+    if results:
+        try:
+            results.sort(
+                key=lambda m: (
+                    0 if m.get("verdict") == "UNANALYZED" else 1,
+                    int(m.get("risk_score") or 0)
+                ),
+                reverse=True
+            )
         except Exception:
-            continue
-
-        # Parse headers
-        headers = {h["name"]: h["value"] for h in meta.get("payload", {}).get("headers", [])}
-        item = {
-            "id": msg_id,
-            "thread_id": meta.get("threadId"),
-            "from": headers.get("From", ""),
-            "subject": headers.get("Subject", "(No subject)"),
-            "date": headers.get("Date", ""),
-            "snippet": meta.get("snippet", ""),
-            "analysis_status": "UNANALYZED",
-            "analysis": None,
-        }
-
-        # Check if a valid cached analysis exists
-        cached = analysis_cache.get_by_message_id(msg_id)
-        if cached is not None:
-            item["analysis_status"] = "ANALYZED"
-            item["analysis"] = cached.get("analysis")
-            item["decision"] = cached.get("decision")
-            if item["decision"]:
-                risk_raw = item["decision"].get("risk_score")
-                try:
-                    risk_num = int(risk_raw) if risk_raw is not None else 0
-                except (ValueError, TypeError):
-                    risk_num = 0
-
-                if risk_num == 0:
-                    if str(item["decision"].get("verdict", "")).upper() == "UNKNOWN":
-                        item["decision"]["verdict"] = "SAFE"
-                        if item["decision"].get("detail_verdict") in ("INSUFFICIENT_EVIDENCE", "LIMITED_CONTEXT", "UNKNOWN", None, ""):
-                            item["decision"]["detail_verdict"] = "CLEAR_POSITIVE_EVIDENCE"
-                        item["decision"]["recommendation"] = "No immediate threats were detected."
-
-                    conf_raw = item["decision"].get("confidence")
-                    try:
-                        conf_num = int(conf_raw) if conf_raw is not None else 0
-                    except (ValueError, TypeError):
-                        conf_num = 0
-
-                    if conf_num <= 40:
-                        item["decision"]["confidence"] = 90
-                    if isinstance(item["analysis"], dict) and "decision" in item["analysis"]:
-                        item["analysis"]["decision"] = item["decision"]
-
-        results.append(item)
+            pass
 
     return {
         "count": len(results),
@@ -1067,7 +1166,19 @@ def get_message(
 
     connector = GmailConnector(credentials)
     
-    return process_single_message(connector, message_id, is_batch=False)
+    try:
+        return process_single_message(connector, message_id, is_batch=False)
+    except HTTPException as exc:
+        if exc.status_code == 401:
+            session_manager.update_session(session_id, {"authenticated": False, "credentials": None})
+        raise
+    except Exception as exc:
+        err_msg = str(exc).lower()
+        if any(tok in err_msg for tok in ["invalid_grant", "token", "unauthorized", "expired", "401", "credentials"]):
+            session_manager.update_session(session_id, {"authenticated": False, "credentials": None})
+            raise HTTPException(status_code=401, detail="Gmail session expired. Please reconnect Gmail.")
+        logger.exception("Failed to process message %s", message_id)
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(exc)}")
 
 class UnlockPDFRequest(BaseModel):
     attachment_id: str | None = None

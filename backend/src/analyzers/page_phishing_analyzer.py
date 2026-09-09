@@ -626,9 +626,8 @@ class PagePhishingAnalyzer:
         has_threat_intel_detection = threat_intel.get("detections", 0) > 0
         tls = page_data.get("tls", {}) or {}
         tls_issue = bool(
-            tls.get("violation")
-            or tls.get("policy_violation")
-            or tls.get("certificate_valid") is False
+            tls.get("certificate_valid") is False
+            and tls.get("certificate_present") is True
         )
         brand_data = page_data.get("brand", {}) or {}
         domain_match = brand_data.get("domain_match")
@@ -638,9 +637,8 @@ class PagePhishingAnalyzer:
             or has_fake_error
             or has_security_violation
             or has_threat_intel_detection
-            or tls_issue
             or (domain_match is False and has_credential_solicitation)
-            or redirect_analysis.get("has_insecure_scheme", False)
+            or (tls_issue and has_threat_intel_detection)
         )
 
         if redirect_analysis[

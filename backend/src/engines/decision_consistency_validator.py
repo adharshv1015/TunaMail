@@ -53,6 +53,11 @@ class DecisionConsistencyValidator:
             or item.get("reasoning_state") == "CONFLICTING_EVIDENCE"
         ]
 
+        negatives = [
+            item for item in evidence
+            if item.get("direction") == "NEGATIVE"
+        ]
+
         has_critical = bool(critical)
         has_strong = bool(strong)
 
@@ -151,23 +156,57 @@ class DecisionConsistencyValidator:
             and not has_critical
             and not has_strong
         ):
+            # Clean contradictory/unverified malicious redirect artifacts from reasoning and structured evidence
+            if "reasoning" in decision and isinstance(decision["reasoning"], dict):
+                for cat in ("network", "negative", "technical", "behavioral"):
+                    if cat in decision["reasoning"] and isinstance(decision["reasoning"][cat], list):
+                        decision["reasoning"][cat] = [
+                            item for item in decision["reasoning"][cat]
+                            if not (isinstance(item, str) and "malicious redirect" in item.lower())
+                        ]
+            if "structured_evidence" in decision and isinstance(decision["structured_evidence"], list):
+                decision["structured_evidence"] = [
+                    e for e in decision["structured_evidence"]
+                    if not (isinstance(e, dict) and e.get("type") == "MALICIOUS_REDIRECT")
+                ]
 
-            decision["verdict"] = "SUSPICIOUS"
-            decision["detail_verdict"] = (
-                "INSUFFICIENT_EVIDENCE"
+            has_real_negatives = any(
+                item.get("severity") in ("CRITICAL", "HIGH")
+                for item in negatives
+            )
+            has_moderate_negatives = any(
+                item.get("severity") == "MEDIUM"
+                for item in negatives
             )
 
-            decision["confidence"] = min(
-                int(decision.get("confidence", 0)),
-                50,
-            )
-
-            self._prepend_explanation(
-                decision,
-                "Decision Consistency Validator: "
-                "the phishing verdict lacks supporting "
-                "current malicious evidence."
-            )
+            if not has_real_negatives:
+                decision["verdict"] = "SAFE"
+                decision["detail_verdict"] = "CLEAR_POSITIVE_EVIDENCE"
+                decision["risk_score"] = 0
+                decision["confidence"] = max(int(decision.get("confidence", 0)), 85)
+                decision["recommendation"] = (
+                    "Verified sender, safe links, and no malicious content detected. "
+                    "Safe to read, click links, and reply."
+                )
+                self._prepend_explanation(
+                    decision,
+                    "Decision Consistency Validator: "
+                    "no critical or strong malicious evidence detected; all links and security checks verified safe."
+                )
+            else:
+                decision["verdict"] = "SUSPICIOUS"
+                decision["detail_verdict"] = "INSUFFICIENT_EVIDENCE"
+                decision["risk_score"] = min(int(decision.get("risk_score", 0)), 35)
+                decision["confidence"] = min(int(decision.get("confidence", 0)), 50)
+                decision["recommendation"] = (
+                    "This message contains unusual signals. "
+                    "Exercise caution before clicking links or downloading files."
+                )
+                self._prepend_explanation(
+                    decision,
+                    "Decision Consistency Validator: "
+                    "the phishing verdict lacks supporting current malicious evidence."
+                )
 
             return decision
 

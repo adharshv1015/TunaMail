@@ -161,7 +161,7 @@ class PatternEngine:
     _BEC_KW = re.compile(r'\b(ceo|president|executive|on behalf|confidential|do not discuss|vendor change|new banking)\b', re.I)
     _EXEC_KW = re.compile(r'\b(ceo|cfo|vp |director|president|chairman|founder)\b', re.I)
     _MFA_KW = re.compile(r'\b(mfa|two.?factor|authenticator|push notification|approve login|otp|one.?time)\b', re.I)
-    _DELIVERY_KW = re.compile(r'\b(delivery|shipment|package|parcel|tracking|courier|fedex|ups|dhl|usps)\b', re.I)
+    _DELIVERY_KW = re.compile(r'\b(parcel tracking|shipment tracking|courier delivery|fedex|ups|dhl|usps|postal service|undelivered package|shipping fee|customs duty|package held|delivery address)\b', re.I)
     _SUPPORT_KW = re.compile(r'\b(tech support|helpdesk|call us|support team|your computer|virus detected|microsoft support|apple support|windows)\b', re.I)
     _BRAND_KW = re.compile(r'\b(google|microsoft|apple|paypal|amazon|linkedin|facebook|instagram|dropbox|netflix)\b', re.I)
     _LOGIN_URL = re.compile(r'(login|signin|secure|verify|account|auth|password)', re.I)
@@ -179,6 +179,21 @@ class PatternEngine:
         """
         if existing_analysis is None:
             existing_analysis = {}
+
+        auth = existing_analysis.get("authentication", {})
+        spf_pass = (auth.get("spf") or "").lower() == "pass"
+        dkim_pass = (auth.get("dkim") or "").lower() == "pass"
+        url_analysis = existing_analysis.get("url", {})
+        has_bad_urls = any(
+            item.get("reputation") in ("MALICIOUS", "SUSPICIOUS") or item.get("brand_impersonation")
+            for item in url_analysis.get("analysis", [])
+        )
+        content = existing_analysis.get("content", {})
+        has_content_threat = bool(content.get("credential_harvesting")) or bool(content.get("financial_lure"))
+
+        # If email is cleanly authenticated with zero bad URLs and zero malicious content, suppress pattern false positives
+        if (spf_pass and dkim_pass) and not has_bad_urls and not has_content_threat:
+            return []
 
         signals = self._extract_signals(parsed_email, existing_analysis, entities)
         detected = []
@@ -215,7 +230,9 @@ class PatternEngine:
         attachment = existing_analysis.get("attachment", {})
 
         # Auth signals
-        auth_fail = not (auth.get("spf") == "pass" and auth.get("dkim") == "pass")
+        spf_pass = (auth.get("spf") or "").lower() == "pass"
+        dkim_pass = (auth.get("dkim") or "").lower() == "pass"
+        auth_fail = not spf_pass and not dkim_pass and bool(auth.get("spf") or auth.get("dkim"))
 
         # URL signals
         url_brand_impersonation = any(
@@ -223,7 +240,7 @@ class PatternEngine:
             for item in url_analysis.get("analysis", [])
         )
         url_mismatch = any(
-            item.get("email_alignment") == "misaligned"
+            item.get("email_alignment") == "misaligned" and item.get("reputation") in ("MALICIOUS", "SUSPICIOUS")
             for item in url_analysis.get("analysis", [])
         )
         url_login_lookalike = any(

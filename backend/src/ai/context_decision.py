@@ -81,6 +81,15 @@ def calculate_positive_evidence(analysis):
     }
 
 
+def _safe_int(val, default=0):
+    try:
+        if val is None:
+            return default
+        return int(round(float(val)))
+    except (ValueError, TypeError):
+        return default
+
+
 def apply_context_rules(
     parsed_email,
     analysis,
@@ -100,18 +109,14 @@ def apply_context_rules(
     decision["context"] = context
     decision["positive_evidence"] = positive
 
-    risk = int(
-        decision.get(
-            "risk_score",
-            0,
-        )
+    risk = _safe_int(
+        decision.get("risk_score"),
+        0,
     )
 
-    confidence = int(
-        decision.get(
-            "confidence",
-            0,
-        )
+    confidence = _safe_int(
+        decision.get("confidence"),
+        0,
     )
 
     if context["state"] == "INSUFFICIENT_EVIDENCE":

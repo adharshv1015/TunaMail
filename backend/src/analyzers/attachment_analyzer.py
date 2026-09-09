@@ -420,9 +420,9 @@ class AttachmentAnalyzer:
     def _normalize_filename(filename: Any) -> str:
         if filename is None: return ""
         try: return str(filename).strip()
-        except: return ""
+        except Exception: return ""
 
     @staticmethod
     def _safe_size(size: Any) -> int:
         try: return max(0, int(size or 0))
-        except: return 0
+        except Exception: return 0
