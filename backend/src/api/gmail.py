@@ -1270,8 +1270,42 @@ def unlock_pdf(
     if len(file_bytes) > ATTACHMENT_DEEP_SCAN_MAX_BYTES:
         raise HTTPException(status_code=400, detail="Attachment exceeds maximum scan size")
 
+    # Resolve original attachment filename
+    original_filename = "attachment.pdf"
+    from src.services.analysis_cache import analysis_cache, get_analysis_fingerprint
+    cached = analysis_cache.get_by_message_id(message_id)
+    if cached and isinstance(cached, dict):
+        files_to_check = (
+            cached.get("analysis", {}).get("attachment", {}).get("files", [])
+            or cached.get("attachments", [])
+        )
+        for f in files_to_check:
+            if isinstance(f, dict):
+                f_att_id = f.get("attachmentId")
+                f_name = f.get("filename") or ""
+                if f_att_id and f_att_id == attachment_id:
+                    if f_name and f_name.lower().strip("'\"") != "unlocked.pdf":
+                        original_filename = f_name
+                        break
+                elif f.get("is_encrypted_pdf") or f_name.lower().endswith(".pdf"):
+                    if f_name and f_name.lower().strip("'\"") != "unlocked.pdf" and original_filename == "attachment.pdf":
+                        original_filename = f_name
+
+    if original_filename == "attachment.pdf":
+        try:
+            full_msg = connector.get_message(message_id)
+            from src.connectors.gmail_parser import GmailParser
+            parser = GmailParser()
+            parsed_atts = parser.extract_attachments(full_msg.get("payload", {}))
+            for att in parsed_atts:
+                if att.get("attachmentId") == attachment_id and att.get("filename"):
+                    original_filename = att["filename"]
+                    break
+        except Exception:
+            pass
+
     analyzer = AttachmentAnalyzer()
-    result = analyzer.analyze_encrypted_pdf(file_bytes, "unlocked.pdf", payload.password)
+    result = analyzer.analyze_encrypted_pdf(file_bytes, original_filename, payload.password)
     
     if result.get("status") == "INVALID_PASSWORD":
         raise HTTPException(status_code=400, detail="Incorrect password. Decryption failed.")
@@ -1280,55 +1314,190 @@ def unlock_pdf(
     elif result.get("status") != "SUCCESS" and result.get("status") != "ALREADY_DECRYPTED":
         raise HTTPException(status_code=400, detail=f"Unable to unlock PDF: {result.get('status', 'Unknown error')}")
 
+
     if result.get("status") == "SUCCESS":
-        from src.services.analysis_cache import analysis_cache, get_analysis_fingerprint
-        cached = analysis_cache.get_by_message_id(message_id)
         if cached and isinstance(cached, dict) and "analysis" in cached:
             analysis = cached["analysis"]
             attachments = analysis.get("attachment", {})
             
-            # Remove PDF_ENCRYPTED evidence
+            # Remove PDF_ENCRYPTED and old unlocked.pdf evidence flags now that it's been unlocked
             if "structured_evidence" in attachments:
                 attachments["structured_evidence"] = [
                     ev for ev in attachments["structured_evidence"]
-                    if ev.get("type") != "PDF_ENCRYPTED" and ev.get("indicator") != "PDF_ENCRYPTED"
+                    if ev.get("type") != "PDF_ENCRYPTED"
+                    and ev.get("indicator") != "PDF_ENCRYPTED"
+                    and "unlocked.pdf" not in str(ev.get("explanation", "")).lower()
                 ]
             if "evidence" in attachments:
                 attachments["evidence"] = [
                     ev for ev in attachments["evidence"]
                     if "encrypted" not in str(ev).lower()
+                    and "unlocked.pdf" not in str(ev).lower()
                 ]
                 
+            # Merge new attachment evidence from decrypted scan
             if "structured_evidence" in attachments and result.get("structured_evidence"):
                 attachments["structured_evidence"].extend(result["structured_evidence"])
             if "evidence" in attachments and result.get("evidence"):
                 attachments["evidence"].extend(result["evidence"])
 
-            # Mark files as decrypted
-            for f in attachments.get("files", []):
-                if isinstance(f, dict):
-                    f["is_encrypted_pdf"] = False
-                
-            decision = analysis.get("decision", {})
-            from src.engines.decision_fusion_guard import enforce_deterministic_priority
-            decision = enforce_deterministic_priority(decision, analysis)
-            
-            # Do not convert UNKNOWN to SAFE merely because the risk score is low.
-            # UNKNOWN must remain UNKNOWN when evidence is insufficient or degraded.
-            parsed = cached
-            decision = finalize_intelligence(
-                parsed,
-                analysis,
-                decision,
+            # ----------------------------------------------------------------
+            # Keep attachment findings strictly inside the attachment analysis
+            # block (do NOT contaminate the main Links & Domains module).
+            # ----------------------------------------------------------------
+            new_risk = result.get("risk_score", 0)
+            attachments["risk_score"] = max(
+                attachments.get("risk_score", 0),
+                new_risk,
             )
+
+            # Clean out any phantom "unlocked.pdf" entries from previous runs
+            raw_target_files = attachments.get("files", [])
+            target_files = [
+                f for f in raw_target_files
+                if isinstance(f, dict) and (f.get("filename") or "").lower().strip("'\"") != "unlocked.pdf"
+            ]
+
+            matched = False
+            for f in target_files:
+                if isinstance(f, dict):
+                    fname = (f.get("filename") or "").lower()
+                    if (
+                        f.get("attachmentId") == payload.attachment_id
+                        or f.get("attachmentId") == attachment_id
+                        or f.get("is_encrypted_pdf")
+                        or (original_filename and fname == original_filename.lower())
+                        or fname.endswith(".pdf")
+                    ):
+                        f["is_encrypted_pdf"] = False
+                        f["risk_score"] = new_risk
+                        f["unsafe_urls"] = result.get("unsafe_urls", [])
+                        f["issues"] = result.get("issues", [])
+                        f["malicious"] = result.get("malicious", False)
+                        if not f.get("filename") or f.get("filename").lower().strip("'\"") == "unlocked.pdf":
+                            f["filename"] = original_filename
+                        matched = True
+                        break
+
+            if not matched and not target_files:
+                target_files.append({
+                    "filename": original_filename,
+                    "attachmentId": payload.attachment_id or attachment_id,
+                    "is_encrypted_pdf": False,
+                    "risk_score": new_risk,
+                    "unsafe_urls": result.get("unsafe_urls", []),
+                    "issues": result.get("issues", []),
+                    "malicious": result.get("malicious", False),
+                    "mimeType": "application/pdf",
+                })
+
+            attachments["files"] = target_files
+
+            # Also purge any phantom unlocked.pdf from top-level cached attachments
+            if "attachments" in cached and isinstance(cached["attachments"], list):
+                cached["attachments"] = [
+                    a for a in cached["attachments"]
+                    if not (isinstance(a, dict) and (a.get("filename") or "").lower().strip("'\"") == "unlocked.pdf")
+                ]
+
+            # Clean any previous PDF attachment items from url analysis so Links & Domains stays clean
+            if "url" in analysis and isinstance(analysis["url"], dict):
+                existing_items = analysis["url"].get("analysis", [])
+                analysis["url"]["analysis"] = [
+                    item for item in existing_items
+                    if not (str(item.get("source", "")).lower() == "pdf attachment" or item.get("pdf_source"))
+                ]
+            if "urls" in analysis and isinstance(analysis["urls"], dict):
+                existing_items = analysis["urls"].get("analysis", [])
+                analysis["urls"]["analysis"] = [
+                    item for item in existing_items
+                    if not (str(item.get("source", "")).lower() == "pdf attachment" or item.get("pdf_source"))
+                ]
+
+            analysis["attachment"] = attachments
+            analysis["attachments"] = attachments
+            logger.info(
+                "PDF unlock: updated attachment block with %d unsafe URLs (risk_score=%d)",
+                len(result.get("unsafe_urls", [])),
+                attachments["risk_score"],
+            )
+            
+            # ----------------------------------------------------------------
+            # Full decision pipeline re-run with enriched URL + attachment data
+            # ----------------------------------------------------------------
+            try:
+                analyzers = get_analyzers()
+                tracker = PerformanceTracker(budget_seconds=15.0)
                 
-            cached["decision"] = decision
-            analysis["decision"] = decision
+                auth_analysis = analysis.get("authentication", {})
+                url_analysis = analysis.get("url") or analysis.get("urls") or {}
+                whois_analysis = analysis.get("whois", [])
+                content_analysis = analysis.get("content", {})
+                attachment_analysis = attachments
+                trust_analysis = analysis.get("trust", {})
+                ai_analysis = analysis.get("ai", {})
+                url_page_intelligence = analysis.get("url_page_intelligence", {})
+                historical_evidence = analysis.get("historical_evidence", {})
+                
+                are_result = safe_analyze(
+                    "AnalyticalReasoningEngine", message_id,
+                    analyzers["are"].evaluate, tracker,
+                    auth_analysis, url_analysis, whois_analysis, content_analysis,
+                    attachment_analysis, trust_analysis,
+                    ai_analysis=ai_analysis,
+                    url_page_intelligence=url_page_intelligence,
+                    historical_evidence=historical_evidence,
+                )
+                
+                conflict_result = safe_analyze(
+                    "EvidenceConflictEngine", message_id,
+                    analyzers["conflict"].evaluate, tracker,
+                    cached, auth_analysis, url_analysis, whois_analysis,
+                    content_analysis, attachment_analysis, trust_analysis,
+                    ai_analysis, url_page_intelligence,
+                )
+                
+                decision_result = safe_analyze(
+                    "DecisionFusionEngine", message_id,
+                    analyzers["decision"].evaluate, tracker,
+                    are_result, conflict_result,
+                )
+                
+                decision_result = analyzers["consistency_validator"].validate(decision_result)
+                
+                final_analysis = {
+                    **analysis,
+                    "reasoning": are_result.get("evidence", {}),
+                    "are_confidence": are_result.get("confidence", 90),
+                    "conflict": conflict_result,
+                    "url_page_intelligence": url_page_intelligence,
+                }
+                
+                decision_result = finalize_intelligence(cached, final_analysis, decision_result)
+                
+                analysis["reasoning"] = are_result.get("evidence", {})
+                analysis["conflict"] = conflict_result
+                analysis["decision"] = decision_result
+                
+                logger.info(
+                    "PDF unlock re-analysis: verdict=%s risk=%.1f",
+                    decision_result.get("verdict"),
+                    decision_result.get("risk_score", 0),
+                )
+            except Exception as _re_exc:
+                logger.warning(f"PDF unlock: full re-analysis failed, falling back to guard-only: {_re_exc}")
+                decision_result = analysis.get("decision", {})
+                from src.engines.decision_fusion_guard import enforce_deterministic_priority
+                decision_result = enforce_deterministic_priority(decision_result, analysis)
+                decision_result = finalize_intelligence(cached, analysis, decision_result)
+                analysis["decision"] = decision_result
+            
+            cached["decision"] = decision_result
             
             fingerprint = get_analysis_fingerprint(cached)
             analysis_cache.set(message_id, fingerprint, cached)
             
-            result["new_decision"] = decision
+            result["new_decision"] = decision_result
             result["message"] = cached
 
     return result

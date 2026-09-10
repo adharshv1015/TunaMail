@@ -965,6 +965,12 @@ class URLAnalyzer:
             domain
         )
 
+        # ----------------------------------------------------
+        # Unicode Homograph / IDN Spoofing
+        # ----------------------------------------------------
+        homograph_result = self.detect_unicode_homograph(domain)
+        inspection_data["unicode_homograph"] = homograph_result
+
         inspection_data[
             "suspicious_port"
         ] = self.has_suspicious_port(
@@ -1777,6 +1783,161 @@ class URLAnalyzer:
         )
 
     # ========================================================
+    # Unicode Homograph / IDN Spoofing Detection
+    # ========================================================
+
+    # Mapping of Unicode confusable characters → their Latin lookalike.
+    # Covers Cyrillic, Greek, and other common script-mixing tricks.
+    _CONFUSABLE_MAP: Dict[str, str] = {
+        # --- Cyrillic ---
+        "\u0430": "a",   # а → a
+        "\u0435": "e",   # е → e
+        "\u043e": "o",   # о → o
+        "\u0440": "r",   # р → r (Cyrillic р looks like Latin r)
+        "\u0441": "c",   # с → c
+        "\u0445": "x",   # х → x
+        "\u0440": "r",
+        "\u0432": "b",   # в → b (approximate)
+        "\u043d": "h",   # н → h (approximate)
+        "\u0438": "u",   # и → u (approximate)
+        "\u043a": "k",   # к → k
+        "\u043c": "m",   # м → m
+        "\u0442": "t",   # т → t
+        "\u0443": "y",   # у → y
+        "\u0444": "f",   # ф → f (partial)
+        "\u0458": "j",   # ј → j (Cyrillic je)
+        "\u0455": "s",   # ѕ → s (Cyrillic dze)
+        "\u0456": "i",   # і → i (Cyrillic i)
+        "\u0406": "I",   # І → I
+        "\u0410": "A",   # А → A (Cyrillic capital)
+        "\u0412": "B",   # В → B
+        "\u0415": "E",   # Е → E
+        "\u041c": "M",   # М → M
+        "\u041d": "H",   # Н → H
+        "\u041e": "O",   # О → O
+        "\u0420": "P",   # Р → P
+        "\u0421": "C",   # С → C
+        "\u0422": "T",   # Т → T
+        "\u0425": "X",   # Х → X
+        # --- Greek ---
+        "\u03bf": "o",   # ο → o (Greek omicron)
+        "\u03c1": "p",   # ρ → p (Greek rho)
+        "\u03b1": "a",   # α → a (Greek alpha)
+        "\u03bd": "v",   # ν → v (Greek nu)
+        "\u03c5": "u",   # υ → u (Greek upsilon)
+        "\u0391": "A",   # Α → A (Greek capital alpha)
+        "\u0392": "B",   # Β → B (Greek capital beta)
+        "\u0395": "E",   # Ε → E
+        "\u0396": "Z",   # Ζ → Z
+        "\u0397": "H",   # Η → H
+        "\u0399": "I",   # Ι → I
+        "\u039a": "K",   # Κ → K
+        "\u039c": "M",   # Μ → M
+        "\u039d": "N",   # Ν → N
+        "\u039f": "O",   # Ο → O
+        "\u03a1": "P",   # Ρ → P
+        "\u03a4": "T",   # Τ → T
+        "\u03a5": "Y",   # Υ → Y
+        "\u03a7": "X",   # Χ → X
+        # --- Other scripts ---
+        "\u0131": "i",   # ı → i (Turkish dotless i)
+        "\u0261": "g",   # ɡ → g
+        "\u1d0f": "o",   # ᴏ → o (Latin letter small capital o)
+        "\uff41": "a",   # ａ → a (fullwidth)
+        "\uff45": "e",   # ｅ → e (fullwidth)
+        "\uff4f": "o",   # ｏ → o (fullwidth)
+        "\uff52": "r",   # ｒ → r (fullwidth)
+        "\uff53": "s",   # ｓ → s (fullwidth)
+    }
+
+    @classmethod
+    def detect_unicode_homograph(
+        cls,
+        domain: str,
+    ) -> Dict[str, Any]:
+        """
+        Detect Unicode homograph / IDN spoofing attacks.
+
+        Returns a dict:
+          - detected: bool
+          - decoded_domain: ASCII lookalike of the suspicious domain
+          - spoofed_brand: the trusted brand domain being impersonated (or '')
+          - mixed_scripts: bool — domain mixes character scripts
+          - non_ascii_chars: list of suspicious chars found
+        """
+        if not domain:
+            return {"detected": False}
+
+        import unicodedata
+
+        non_ascii_chars = [
+            ch for ch in domain
+            if ord(ch) > 127
+        ]
+
+        # --- Check 1: Punycode IDN (e.g. xn--fcbook-5ya.com) ---
+        # Decode it and see if it looks like a brand
+        decoded_idn = domain
+        if "xn--" in domain.lower():
+            try:
+                decoded_idn = domain.encode("ascii").decode("idna")
+            except Exception:
+                pass
+
+        # --- Check 2: Confusable-char substitution ---
+        # Replace each known-confusable char with its ASCII lookalike
+        decoded_confusable = "".join(
+            cls._CONFUSABLE_MAP.get(ch, ch) for ch in domain
+        )
+
+        # --- Check 3: Mixed-script detection ---
+        # A legitimate domain should use only one script (Latin).
+        scripts = set()
+        for ch in domain:
+            if ch in ".-0123456789":
+                continue  # neutral chars
+            try:
+                script = unicodedata.name(ch, "").split()[0]
+                scripts.add(script)
+            except Exception:
+                pass
+        mixed_scripts = len(scripts) > 1
+
+        # --- Check 4: Compare decoded version against trusted brands ---
+        spoofed_brand = ""
+        for candidate in (decoded_confusable.lower(), decoded_idn.lower()):
+            # Strip any port from candidate
+            candidate_host = candidate.split(":")[0]
+            # Extract registered domain for comparison
+            try:
+                ext = tldextract.extract(candidate_host)
+                candidate_registered = f"{ext.domain}.{ext.suffix}" if ext.suffix else candidate_host
+            except Exception:
+                candidate_registered = candidate_host
+
+            for trusted in URLAnalyzer.TRUSTED_DOMAINS:
+                trusted_ext = tldextract.extract(trusted)
+                trusted_registered = f"{trusted_ext.domain}.{trusted_ext.suffix}" if trusted_ext.suffix else trusted
+                if (
+                    candidate_registered == trusted_registered
+                    and candidate_host != domain.lower()
+                ):
+                    spoofed_brand = trusted
+                    break
+            if spoofed_brand:
+                break
+
+        detected = bool(non_ascii_chars or mixed_scripts or spoofed_brand)
+
+        return {
+            "detected": detected,
+            "decoded_domain": decoded_confusable if decoded_confusable != domain else decoded_idn,
+            "spoofed_brand": spoofed_brand,
+            "mixed_scripts": mixed_scripts,
+            "non_ascii_chars": [repr(ch) for ch in non_ascii_chars],
+        }
+
+    # ========================================================
     # Port
     # ========================================================
 
@@ -2122,6 +2283,62 @@ class URLAnalyzer:
                     confidence=0.90,
                 )
             )
+
+        # ----------------------------------------------------
+        # Unicode Homograph / IDN Spoofing
+        # ----------------------------------------------------
+        homograph = inspection_data.get("unicode_homograph") or {}
+        if homograph.get("detected"):
+            spoofed = homograph.get("spoofed_brand", "")
+            non_ascii = ", ".join(homograph.get("non_ascii_chars", []))
+            decoded = homograph.get("decoded_domain", domain)
+            mixed = homograph.get("mixed_scripts", False)
+
+            if spoofed:
+                evidence.append(
+                    self._evidence(
+                        type_="UNICODE_HOMOGRAPH_BRAND_SPOOF",
+                        severity="CRITICAL",
+                        direction="NEGATIVE",
+                        source="URLAnalyzer",
+                        explanation=(
+                            f"Unicode homograph attack detected: '{domain}' impersonates "
+                            f"'{spoofed}' using visually similar characters ({non_ascii}). "
+                            f"Decoded lookalike: '{decoded}'."
+                        ),
+                        confidence=0.97,
+                    )
+                )
+            elif mixed:
+                evidence.append(
+                    self._evidence(
+                        type_="UNICODE_MIXED_SCRIPT_DOMAIN",
+                        severity="HIGH",
+                        direction="NEGATIVE",
+                        source="URLAnalyzer",
+                        explanation=(
+                            f"Domain '{domain}' mixes characters from multiple Unicode "
+                            f"scripts — a common IDN spoofing technique. "
+                            f"Suspicious chars: {non_ascii}."
+                        ),
+                        confidence=0.92,
+                    )
+                )
+            elif non_ascii:
+                evidence.append(
+                    self._evidence(
+                        type_="UNICODE_NON_ASCII_DOMAIN",
+                        severity="HIGH",
+                        direction="NEGATIVE",
+                        source="URLAnalyzer",
+                        explanation=(
+                            f"Domain '{domain}' contains non-ASCII characters "
+                            f"({non_ascii}) which may be used to visually spoof a "
+                            f"legitimate domain."
+                        ),
+                        confidence=0.88,
+                    )
+                )
 
         if inspection_data.get(
             "obfuscated"

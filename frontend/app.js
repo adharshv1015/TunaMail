@@ -594,7 +594,7 @@ async function unlockPDFFile(messageId, password, attachmentId = null) {
       return;
     }
 
-    showToast("PDF unlocked and re-analyzed successfully!", "success");
+    showToast("PDF unlocked — links analysed and verdict updated!", "success");
 
     const updated = data.message || (data.id ? data : null);
     if (updated) {
@@ -1528,7 +1528,7 @@ function renderCombinedOverview(customMessage = null) {
                         ${escapeHtml(m.subject || "(No Subject)")}
                       </div>
                       <div style="font-size: 0.72rem; color: var(--tm-text-secondary); margin-top: 0.15rem;">
-                        From: <b>${escapeHtml(m.from || "Unknown")}</b> • Risk: <b style="color: ${isCrit ? "var(--risk-danger-text)" : "var(--risk-suspicious-text)"};">${r}/100</b>
+                        From: <b>${escapeHtml((m.from || "Unknown").replace(/<[^>]*>/g, '').trim())}</b> • Risk: <b style="color: ${isCrit ? "var(--risk-danger-text)" : "var(--risk-suspicious-text)"};">${r}/100</b>
                       </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.6rem;">
@@ -1832,9 +1832,27 @@ function renderEmailHeaderCard(msg, decision) {
   else if (verdict === "VERIFIED LEGITIMATE" || verdict === "VERIFIED_LEGITIMATE") { vClass = "safe"; vLabel = "Verified Safe"; }
   else if (verdict === "LIKELY LEGITIMATE" || verdict === "LIKELY_LEGITIMATE") { vClass = "safe"; vLabel = "Likely Safe"; }
 
-  const fromText = msg.from || "N/A";
-  const toText = msg.to || "N/A";
-  const dateText = msg.date || "N/A";
+  const fromText = (msg.from || "N/A").replace(/<[^>]*>/g, '').trim();
+  const toText = (msg.to || "N/A").replace(/<[^>]*>/g, '').trim();
+  let dateText = msg.date || "N/A";
+  if (dateText !== "N/A") {
+    try {
+      const d = new Date(dateText);
+      if (!isNaN(d.getTime())) {
+        dateText = new Intl.DateTimeFormat('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        }).format(d) + ' (IST)';
+      }
+    } catch (e) {}
+  }
   const subjectText = msg.subject || "(No Subject)";
 
   return `
@@ -1991,11 +2009,10 @@ function extractMessageAttachments(msg = {}, rawAnalysis = {}) {
   function addFile(candidate) {
     if (!candidate) return;
     const rawName = candidate.filename || candidate.name || "";
-    const cleanName = typeof rawName === "string" ? rawName.trim() : "";
+    let cleanName = typeof rawName === "string" ? rawName.trim().replace(/^['"`]+|['"`]+$/g, "").trim() : "";
     if (!cleanName) return;
-    const lower = cleanName.toLowerCase();
-    if (seenFilenames.has(lower)) return;
-    seenFilenames.add(lower);
+
+    const isDummyPdf = /^(unlocked\.pdf|temp_pdf_scan\.pdf)$/i.test(cleanName);
 
     const ext = (cleanName.split(".").pop() || "").toLowerCase();
     const mime = candidate.mimeType || candidate.mime_type || inferMimeType(cleanName);
@@ -2012,6 +2029,68 @@ function extractMessageAttachments(msg = {}, rawAnalysis = {}) {
       structured.some((s) => s.indicator === "OFFICE_MACRO") ||
       rawEvidence.some((e) => typeof e === "string" && /macro/i.test(e));
 
+    const rawUnsafeUrls = Array.isArray(candidate.unsafe_urls) ? [...candidate.unsafe_urls] : [];
+    const rawIssues = Array.isArray(candidate.issues) ? [...candidate.issues] : [];
+
+    // Fallback: extract unsafe URLs / homographs from structured evidence if not directly on candidate
+    if (rawUnsafeUrls.length === 0 && Array.isArray(structured)) {
+      structured.forEach((s) => {
+        if (!s) return;
+        const src = String(s.source || "");
+        const expl = String(s.explanation || "");
+        const t = String(s.type || s.indicator || "");
+        const isHomograph = t.includes("HOMOGRAPH") || t.includes("PUNYCODE") || t.includes("BRAND");
+        const isNeg = s.direction === "NEGATIVE" || s.severity === "CRITICAL" || s.severity === "HIGH";
+        if (isNeg && (src.includes(cleanName) || expl.includes(cleanName) || expl.includes("[PDF Link]") || isHomograph)) {
+          const m = expl.match(/https?:\/\/[^\s"',;)\]]+/i);
+          if (m) {
+            const uStr = m[0];
+            if (!rawUnsafeUrls.some((u) => u.url === uStr)) {
+              rawUnsafeUrls.push({
+                url: uStr,
+                verdict: isHomograph ? "PHISHING" : "UNSAFE",
+                risk_score: s.severity === "CRITICAL" ? 95 : 75,
+                reasons: [expl],
+                is_phishing: isHomograph || s.severity === "CRITICAL",
+              });
+            }
+          }
+        }
+      });
+    }
+
+    const hasPhish = rawUnsafeUrls.some((u) => u.is_phishing || u.verdict === "PHISHING");
+    const calcRisk = hasPhish ? 90 : rawUnsafeUrls.length > 0 ? 70 : isMacro ? 80 : isEncrypted ? 25 : attModule.risk_score ?? 0;
+    const finalScore = candidate.risk_score !== undefined && candidate.risk_score !== 0 ? Math.max(candidate.risk_score, calcRisk) : calcRisk;
+
+    // If candidate is a dummy internal name, merge findings into the real PDF file if available, never add as separate card
+    if (isDummyPdf) {
+      const existingPdf = list.find((item) => (item.filename || "").toLowerCase().endsWith(".pdf") && !/^(unlocked\.pdf|temp_pdf_scan\.pdf)$/i.test(item.filename));
+      if (existingPdf) {
+        if (rawUnsafeUrls.length > 0) existingPdf.unsafe_urls = rawUnsafeUrls;
+        if (rawIssues.length > 0) existingPdf.issues = rawIssues;
+        if (candidate.is_encrypted_pdf !== undefined) existingPdf.is_encrypted_pdf = candidate.is_encrypted_pdf;
+        if (candidate.malicious || hasPhish) existingPdf.malicious = true;
+        if (finalScore > (existingPdf.risk_score || 0)) existingPdf.risk_score = finalScore;
+      }
+      return;
+    }
+
+    const lower = cleanName.toLowerCase();
+    if (seenFilenames.has(lower)) {
+      const existing = list.find((item) => item.filename.toLowerCase() === lower);
+      if (existing) {
+        if (rawUnsafeUrls.length > 0) existing.unsafe_urls = rawUnsafeUrls;
+        if (rawIssues.length > 0) existing.issues = rawIssues;
+        if (isMacro) existing.is_macro = true;
+        if (candidate.is_encrypted_pdf !== undefined) existing.is_encrypted_pdf = candidate.is_encrypted_pdf;
+        if (candidate.malicious || hasPhish) existing.malicious = true;
+        if (finalScore > (existing.risk_score || 0)) existing.risk_score = finalScore;
+      }
+      return;
+    }
+    seenFilenames.add(lower);
+
     list.push({
       filename: cleanName,
       extension: ext,
@@ -2021,18 +2100,21 @@ function extractMessageAttachments(msg = {}, rawAnalysis = {}) {
       sha256: candidate.sha256 || candidate.hash || null,
       is_encrypted_pdf: isEncrypted,
       is_macro: isMacro,
-      risk_score: candidate.risk_score ?? (isMacro ? 80 : isEncrypted ? 25 : attModule.risk_score ?? 0),
+      malicious: !!candidate.malicious || hasPhish,
+      unsafe_urls: rawUnsafeUrls,
+      issues: rawIssues,
+      risk_score: finalScore,
     });
   }
 
-  // 1. Direct attachments array on message or analysis
+  // 1. Direct attachments array on message or analysis (prefer rich analysis.files first)
   const directSources = [
-    msg.attachments,
-    msg.attachment?.attachments,
+    attModule.files,
     msg.attachment?.files,
     attModule.attachments,
-    attModule.files,
+    msg.attachment?.attachments,
     analysis?.attachments_list,
+    msg.attachments,
   ];
 
   for (const src of directSources) {
@@ -2047,39 +2129,48 @@ function extractMessageAttachments(msg = {}, rawAnalysis = {}) {
     }
   }
 
-  // 2. Structured evidence from AttachmentAnalyzer
-  if (Array.isArray(attModule.structured_evidence)) {
-    attModule.structured_evidence.forEach((item) => {
-      if (!item) return;
-      const sourceMatch = (item.source || "").match(/AttachmentAnalyzer\s*\(([^)]+)\)/i);
-      const explMatch = (item.explanation || "").match(/(?:file|document|archive|PDF|attachment)[:\s]+([^\s,;:]+\.[a-z0-9]{2,5})/i);
-      const fname = (sourceMatch && sourceMatch[1]) || (explMatch && explMatch[1]) || item.filename || item.file;
-      if (fname) {
-        addFile({
-          filename: fname,
-          size: item.size,
-          sha256: item.sha256 || item.hash,
-          is_encrypted_pdf: item.indicator === "PDF_ENCRYPTED" || /encrypted|password/i.test(item.explanation || ""),
-          is_macro: item.indicator === "OFFICE_MACRO" || /macro/i.test(item.explanation || ""),
-        });
-      }
-    });
-  }
-
-  // 3. Evidence strings
-  if (Array.isArray(attModule.evidence)) {
-    attModule.evidence.forEach((ev) => {
-      if (typeof ev === "string") {
-        const match = ev.match(/([a-zA-Z0-9_\-. ]+\.(pdf|docx?|xlsx?|pptx?|zip|rar|7z|png|jpe?g|exe|bin))/i);
-        if (match && match[1]) {
-          addFile({
-            filename: match[1].trim(),
-            is_encrypted_pdf: /encrypted|password/i.test(ev),
-            is_macro: /macro/i.test(ev),
-          });
+  // ONLY do heuristic parsing from structured_evidence & evidence strings if NO direct attachments found!
+  if (list.length === 0) {
+    // 2. Structured evidence from AttachmentAnalyzer
+    if (Array.isArray(attModule.structured_evidence)) {
+      attModule.structured_evidence.forEach((item) => {
+        if (!item) return;
+        const sourceMatch = (item.source || "").match(/AttachmentAnalyzer\s*\(([^)]+)\)/i);
+        const explMatch = (item.explanation || "").match(/(?:file|document|archive|PDF|attachment)[:\s]+([^\s,;:]+\.[a-z0-9]{2,5})/i);
+        let fname = (sourceMatch && sourceMatch[1]) || (explMatch && explMatch[1]) || item.filename || item.file;
+        if (fname) {
+          fname = fname.trim().replace(/^['"`]+|['"`]+$/g, "").trim();
+          if (!/^(unlocked\.pdf|temp_pdf_scan\.pdf)$/i.test(fname)) {
+            addFile({
+              filename: fname,
+              size: item.size,
+              sha256: item.sha256 || item.hash,
+              is_encrypted_pdf: item.indicator === "PDF_ENCRYPTED" || /encrypted|password/i.test(item.explanation || ""),
+              is_macro: item.indicator === "OFFICE_MACRO" || /macro/i.test(item.explanation || ""),
+            });
+          }
         }
-      }
-    });
+      });
+    }
+
+    // 3. Evidence strings
+    if (Array.isArray(attModule.evidence)) {
+      attModule.evidence.forEach((ev) => {
+        if (typeof ev === "string") {
+          const match = ev.match(/([a-zA-Z0-9_\-. ]+\.(pdf|docx?|xlsx?|pptx?|zip|rar|7z|png|jpe?g|exe|bin))/i);
+          if (match && match[1]) {
+            let fname = match[1].trim().replace(/^['"`]+|['"`]+$/g, "").trim();
+            if (!/^(unlocked\.pdf|temp_pdf_scan\.pdf)$/i.test(fname)) {
+              addFile({
+                filename: fname,
+                is_encrypted_pdf: /encrypted|password/i.test(ev),
+                is_macro: /macro/i.test(ev),
+              });
+            }
+          }
+        }
+      });
+    }
   }
 
   // 4. Check headers for filename or Content-Disposition
@@ -2107,7 +2198,8 @@ function extractMessageAttachments(msg = {}, rawAnalysis = {}) {
     }
   }
 
-  return list;
+  const realFiles = list.filter((f) => !/^(unlocked\.pdf|temp_pdf_scan\.pdf)$/i.test((f.filename || "").trim().replace(/^['"`]+|['"`]+$/g, "")));
+  return realFiles.length > 0 ? realFiles : list;
 }
 
 /* ==========================================================================
@@ -2151,9 +2243,25 @@ function renderUnifiedSecurityStudio(msg, rawAnalysis) {
   const contentRisk = (contentUrgency ? 25 : 0) + (contentHarvest ? 35 : 0) + (contentLure ? 25 : 0) + (content.risk_score || 0);
   const contentIssue = contentUrgency || contentHarvest || contentLure || ((content.risk_score || 0) >= 40);
 
-  const urls = urlAnalysis.urls || urlAnalysis.analysis || [];
-  const analysisList = Array.isArray(urlAnalysis?.analysis) ? urlAnalysis.analysis : [];
-  const issueUrlsCount = analysisList.filter(
+  const allAnalysisList = Array.isArray(urlAnalysis?.analysis) ? urlAnalysis.analysis : [];
+  // Exclude attachment links so Links & Domains only tracks message body links
+  const messageAnalysisList = allAnalysisList.filter((a) => {
+    if (!a) return false;
+    const src = String(a.source || "").toLowerCase();
+    return !(src.includes("attachment") || src.includes("pdf") || a.is_attachment || a.pdf_source);
+  });
+  const rawUrls = (urlAnalysis.urls || []).filter((u) => {
+    const uStr = typeof u === "string" ? u : (u?.url || "");
+    const matching = allAnalysisList.find(a => a?.url === uStr || a?.normalized_url === uStr);
+    if (matching) {
+      const src = String(matching.source || "").toLowerCase();
+      if (src.includes("attachment") || src.includes("pdf") || matching.is_attachment || matching.pdf_source) return false;
+    }
+    return true;
+  });
+  const urls = rawUrls.length > 0 ? rawUrls : messageAnalysisList;
+
+  const issueUrlsCount = messageAnalysisList.filter(
     (a) => {
       if (!a) return false;
       const rep = (a.reputation || "").toUpperCase();
@@ -2179,11 +2287,12 @@ function renderUnifiedSecurityStudio(msg, rawAnalysis) {
   const attachments = extractMessageAttachments(msg, analysis);
   const attCount = Math.max(attachments.length, attachment.attachment_count || 0);
   const attThreats = Array.isArray(attachment.threats) ? attachment.threats.length : 0;
-  const attHasInfected = Array.isArray(attachment.files) && attachment.files.some((f) => (f.risk_score || 0) >= 40 || f.malicious || f.is_macro);
-  const attHasRiskFiles = attachments.some((f) => f.is_macro || (f.risk_score || 0) >= 40);
-  const attSafe = (attachment.risk_score ?? 0) === 0 && attThreats === 0 && !attHasInfected && !attHasRiskFiles;
-  const attIssue = ((attachment.risk_score || 0) >= 40) || attThreats > 0 || attHasInfected || attHasRiskFiles;
-  const attScore = attachment.risk_score ?? (attIssue ? 80 : 0);
+  const attHasInfected = Array.isArray(attachment.files) && attachment.files.some((f) => (f.risk_score || 0) >= 40 || f.malicious || f.is_macro || (f.unsafe_urls && f.unsafe_urls.length > 0));
+  const attHasRiskFiles = attachments.some((f) => f.is_macro || (f.risk_score || 0) >= 40 || (f.unsafe_urls && f.unsafe_urls.length > 0));
+  const hasPhishingInAtt = attachments.some(f => f.unsafe_urls && f.unsafe_urls.some(u => u.is_phishing || u.verdict === "PHISHING"));
+  const attSafe = (attachment.risk_score ?? 0) === 0 && attThreats === 0 && !attHasInfected && !attHasRiskFiles && !hasPhishingInAtt;
+  const attIssue = ((attachment.risk_score || 0) >= 40) || attThreats > 0 || attHasInfected || attHasRiskFiles || hasPhishingInAtt;
+  const attScore = attachment.risk_score ?? (hasPhishingInAtt ? 90 : attIssue ? 80 : 0);
 
   // AI Decision verdict analysis
   const decVerdict = (decision.verdict || "").toUpperCase();
@@ -2711,8 +2820,25 @@ function renderContentTab(content = {}) {
 
 /* 3. Links & Domains Module */
 function renderLinksTab(urlAnalysis = {}, whois = []) {
-  const rawUrls = Array.isArray(urlAnalysis?.urls) ? urlAnalysis.urls : [];
-  const analysisList = Array.isArray(urlAnalysis?.analysis) ? urlAnalysis.analysis : [];
+  const allAnalysisList = Array.isArray(urlAnalysis?.analysis) ? urlAnalysis.analysis : [];
+  // Strictly filter out any attachment links from the Links & Domains tab
+  const analysisList = allAnalysisList.filter((item) => {
+    if (!item) return false;
+    const src = String(item.source || "").toLowerCase();
+    return !(src.includes("attachment") || src.includes("pdf") || item.is_attachment || item.pdf_source);
+  });
+
+  const rawUrls = (Array.isArray(urlAnalysis?.urls) ? urlAnalysis.urls : []).filter((entry) => {
+    const uStr = typeof entry === "string" ? entry.trim() : (entry?.url || "").trim();
+    const matching = allAnalysisList.find((a) => a?.url === uStr || a?.normalized_url === uStr);
+    if (matching) {
+      const src = String(matching.source || "").toLowerCase();
+      if (src.includes("attachment") || src.includes("pdf") || matching.is_attachment || matching.pdf_source) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   // Build a lookup map of rich analysis objects by URL
   const analysisByUrl = new Map();
@@ -2724,7 +2850,16 @@ function renderLinksTab(urlAnalysis = {}, whois = []) {
   });
 
   // Source list: prefer rawUrls if present, otherwise analysisList
-  const sourceList = rawUrls.length > 0 ? rawUrls : analysisList;
+  const sourceList = (rawUrls.length > 0 ? rawUrls : analysisList).filter((entry) => {
+    let analyzed = {};
+    if (typeof entry === "string") {
+      analyzed = analysisByUrl.get(entry.trim()) || {};
+    } else if (typeof entry === "object") {
+      analyzed = entry;
+    }
+    const src = String(analyzed.source || "").toLowerCase();
+    return !(src.includes("attachment") || src.includes("pdf") || analyzed.is_attachment || analyzed.pdf_source);
+  });
 
   // Normalize each item so whether it was a string or object, all fields are guaranteed
   const normalizedUrls = sourceList.map((entry) => {
@@ -2937,7 +3072,7 @@ function renderLinksTab(urlAnalysis = {}, whois = []) {
           <!-- Collapsible Inspection List for Safe URLs -->
           <details style="margin-top: 0.75rem; border-top: 1px solid var(--tm-border); padding-top: 0.6rem;">
             <summary style="cursor: pointer; font-size: 0.78rem; font-weight: 700; color: var(--tm-accent); padding: 0.2rem 0; user-select: none;">
-              ▶ Expand full inventory of ${safeUrls.length} safe URLs
+              Expand full inventory of ${safeUrls.length} safe URLs
             </summary>
             <div class="url-list" style="margin-top: 0.65rem; max-height: 280px; overflow-y: auto; padding-right: 0.35rem;">
               ${safeUrls.map((u) => `
@@ -3041,20 +3176,29 @@ function renderAttachmentsTab(arg1 = {}, arg2 = {}) {
   const statusClass = risk === 0 ? "safe" : "danger";
   const hasEncryptedPDF = rawFiles.some((f) => f.is_encrypted_pdf);
 
-  // Sort files: Risky files (macros, high score, encrypted) appear FIRST
+  // Sort files: Risky files (phishing links, macros, high score, encrypted) appear FIRST
   const files = [...rawFiles].sort((a, b) => {
-    const aIssue = a.is_macro || (a.risk_score || 0) >= 40 || a.is_encrypted_pdf;
-    const bIssue = b.is_macro || (b.risk_score || 0) >= 40 || b.is_encrypted_pdf;
+    const aPhish = a.unsafe_urls && a.unsafe_urls.some((u) => u.is_phishing || u.verdict === "PHISHING");
+    const bPhish = b.unsafe_urls && b.unsafe_urls.some((u) => u.is_phishing || u.verdict === "PHISHING");
+    if (aPhish && !bPhish) return -1;
+    if (!aPhish && bPhish) return 1;
+
+    const aIssue = a.is_macro || (a.risk_score || 0) >= 40 || a.is_encrypted_pdf || (a.unsafe_urls && a.unsafe_urls.length > 0);
+    const bIssue = b.is_macro || (b.risk_score || 0) >= 40 || b.is_encrypted_pdf || (b.unsafe_urls && b.unsafe_urls.length > 0);
     if (aIssue && !bIssue) return -1;
     if (!aIssue && bIssue) return 1;
     return (b.risk_score || 0) - (a.risk_score || 0);
   });
 
-  const issueFiles = files.filter((f) => f.is_macro || (f.risk_score || 0) >= 40 || f.is_encrypted_pdf);
+  const issueFiles = files.filter((f) => f.is_macro || (f.risk_score || 0) >= 40 || f.is_encrypted_pdf || (f.unsafe_urls && f.unsafe_urls.length > 0));
+
+  const hasPhishUrl = files.some((f) => f.unsafe_urls && f.unsafe_urls.some((u) => u.is_phishing || u.verdict === "PHISHING"));
+  const hasUnsafeUrl = files.some((f) => f.unsafe_urls && f.unsafe_urls.length > 0);
 
   const factors = [
-    { label: "Executable / Script", value: risk >= 80 ? 80 : 0, color: "var(--risk-danger)" },
-    { label: "Embedded Macro", value: risk >= 50 && risk < 80 ? 50 : 0, color: "var(--risk-danger)" },
+    { label: "Phishing / Unsafe Link in File", value: hasPhishUrl ? 90 : hasUnsafeUrl ? 70 : 0, color: "var(--risk-danger)" },
+    { label: "Executable / Script", value: risk >= 80 && !hasPhishUrl ? 80 : 0, color: "var(--risk-danger)" },
+    { label: "Embedded Macro", value: files.some((f) => f.is_macro) ? 60 : 0, color: "var(--risk-danger)" },
     { label: "Encrypted PDF Container", value: hasEncryptedPDF ? 25 : 0, color: "var(--risk-suspicious)" },
   ];
 
@@ -3062,14 +3206,14 @@ function renderAttachmentsTab(arg1 = {}, arg2 = {}) {
     <div class="studio-banner">
       <div>
         <div class="studio-banner-title">
-          <span>📎</span> Attachment Sandbox & Macro Inspection
+          <span>📎</span> Attachment Sandbox & Forensic Inspection
         </div>
         <div class="studio-banner-desc">
-          Static file analysis, macro parsing, cryptographic hashes, and container inspection
+          Static file analysis, deep URL extraction, macro parsing, cryptographic hashes, and container inspection
         </div>
       </div>
       <div class="module-score-badge ${statusClass}">
-        Attachment Risk: ${risk}/100 • ${risk === 0 && issueFiles.length === 0 ? "CLEAN" : "SUSPICIOUS"}
+        Attachment Risk: ${risk}/100 • ${risk === 0 && issueFiles.length === 0 ? "CLEAN" : hasPhishUrl ? "PHISHING DETECTED" : "THREAT DETECTED"}
       </div>
     </div>
 
@@ -3081,17 +3225,29 @@ function renderAttachmentsTab(arg1 = {}, arg2 = {}) {
         <div class="data-card" style="border-left: 4px solid var(--risk-danger); background: var(--risk-danger-bg);">
           <div class="data-card-title" style="color: var(--risk-danger-text); display: flex; align-items: center; justify-content: space-between;">
             <span>⚠️ Flagged Attachment Issues (${issueFiles.length})</span>
-            <span class="verdict-tag danger">ACTION REQUIRED</span>
+            <span class="verdict-tag danger">${hasPhishUrl ? "PHISHING ATTACK" : "ACTION REQUIRED"}</span>
           </div>
           <div style="font-size: 0.78rem; color: var(--tm-text-secondary); margin-bottom: 0.5rem;">
-            The following files contain active macro payloads, password protections, or suspicious launch triggers:
+            The following files contain malicious or phishing links, active macros, or security risks:
           </div>
           <ul style="padding-left: 1.2rem; font-size: 0.78rem; color: var(--risk-danger-text); line-height: 1.5; margin: 0;">
-            ${issueFiles.map((f) => `
-              <li>
-                <b>${escapeHtml(f.filename)}:</b> ${f.is_macro ? "Active VBA macro code detected." : f.is_encrypted_pdf ? "Password-encrypted container preventing static inspection." : "Suspicious executable or anomaly payload."}
-              </li>
-            `).join("")}
+            ${issueFiles.map((f) => {
+              let alertDesc = "";
+              if (f.unsafe_urls && f.unsafe_urls.length > 0) {
+                const u0 = f.unsafe_urls[0];
+                const reason = u0.reasons && u0.reasons[0] ? ` (${escapeHtml(u0.reasons[0])})` : "";
+                alertDesc = `🚨 <b>${escapeHtml(u0.verdict || "Phishing")} Link inside Document:</b> <code style="word-break: break-all;">${escapeHtml(u0.url)}</code>${reason}`;
+              } else if (f.is_macro) {
+                alertDesc = "Active VBA macro code detected capable of executing local payloads.";
+              } else if (f.is_encrypted_pdf) {
+                alertDesc = "Password-encrypted container preventing static inspection.";
+              } else if (f.issues && f.issues.length > 0) {
+                alertDesc = escapeHtml(f.issues[0]);
+              } else {
+                alertDesc = "Suspicious executable or anomaly payload.";
+              }
+              return `<li><b>${escapeHtml(f.filename)}:</b> ${alertDesc}</li>`;
+            }).join("")}
           </ul>
         </div>
       `
@@ -3144,7 +3300,9 @@ function renderAttachmentsTab(arg1 = {}, arg2 = {}) {
           const icon = getFileIcon(f.filename);
           const typeName = getFileTypeName(f.filename);
           const sizeStr = formatFileSize(f.size);
-          const isClean = !f.is_macro && !f.is_encrypted_pdf && (f.risk_score ?? 0) === 0;
+          const hasUnsafe = Array.isArray(f.unsafe_urls) && f.unsafe_urls.length > 0;
+          const hasPhish = hasUnsafe && f.unsafe_urls.some((u) => u.is_phishing || u.verdict === "PHISHING");
+          const isClean = !f.is_macro && !f.is_encrypted_pdf && (f.risk_score ?? 0) === 0 && !hasUnsafe;
 
           return `
                   <div class="attachment-card" style="${!isClean ? "border-color: var(--risk-danger-border); background: var(--risk-danger-bg);" : ""}">
@@ -3163,13 +3321,17 @@ function renderAttachmentsTab(arg1 = {}, arg2 = {}) {
                         </div>
                       </div>
                       <div class="attachment-badge-group">
-                        ${f.is_macro
-              ? `<span class="verdict-tag danger">⚠️ MACRO DETECTED</span>`
-              : f.is_encrypted_pdf
-                ? `<span class="verdict-tag suspicious">🔒 ENCRYPTED PDF</span>`
-                : !isClean
-                  ? `<span class="verdict-tag danger">🚨 SUSPICIOUS</span>`
-                  : `<span class="verdict-tag safe">✓ CLEAN</span>`
+                        ${hasPhish
+              ? `<span class="verdict-tag danger">🚨 PHISHING LINK FOUND</span>`
+              : hasUnsafe
+                ? `<span class="verdict-tag danger">⚠️ UNSAFE LINK</span>`
+                : f.is_macro
+                  ? `<span class="verdict-tag danger">⚠️ MACRO DETECTED</span>`
+                  : f.is_encrypted_pdf
+                    ? `<span class="verdict-tag suspicious">🔒 ENCRYPTED PDF</span>`
+                    : !isClean
+                      ? `<span class="verdict-tag danger">🚨 SUSPICIOUS</span>`
+                      : `<span class="verdict-tag safe">✓ CLEAN</span>`
             }
                       </div>
                     </div>
@@ -3178,11 +3340,15 @@ function renderAttachmentsTab(arg1 = {}, arg2 = {}) {
                       <div class="attachment-forensic-row">
                         <span class="forensic-label">Inspection Verdict:</span>
                         <span class="forensic-val ${isClean ? "safe" : "danger"}">
-                          ${f.is_macro
-              ? "Document contains active VBA macro code capable of executing local payloads."
-              : f.is_encrypted_pdf
-                ? "Encrypted PDF stream container. Password required for AST and JavaScript decompression."
-                : "Static file inspection verified: Clean streams, valid header magic bytes, no unauthorized launch actions."}
+                          ${hasPhish
+              ? "Phishing attack detected inside file: deceptive or brand-impersonating link identified in document streams."
+              : hasUnsafe
+                ? "Unsafe external destination link detected inside document streams."
+                : f.is_macro
+                  ? "Document contains active VBA macro code capable of executing local payloads."
+                  : f.is_encrypted_pdf
+                    ? "Encrypted PDF stream container. Password required for AST and JavaScript decompression."
+                    : "Static file inspection verified: Clean streams, valid header magic bytes, no unauthorized launch actions."}
                         </span>
                       </div>
                       ${f.sha256 ? `
@@ -3197,6 +3363,43 @@ function renderAttachmentsTab(arg1 = {}, arg2 = {}) {
                         </div>
                       `}
                     </div>
+
+                    <!-- Dedicated Unsafe / Phishing Links Inside Document Box (ONLY unsafe links shown) -->
+                    ${hasUnsafe ? `
+                      <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(239, 68, 68, 0.09); border: 1px solid var(--risk-danger-border); border-radius: 8px;">
+                        <div style="font-size: 0.76rem; font-weight: 800; color: var(--risk-danger-text); margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between;">
+                          <span style="display: flex; align-items: center; gap: 0.4rem;">🚨 Security Issues & Phishing Links in this Document (${f.unsafe_urls.length})</span>
+                          <span class="verdict-tag danger">ONLY UNSAFE SHOWN</span>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                          ${f.unsafe_urls.map((u) => `
+                            <div style="padding: 0.55rem 0.7rem; background: var(--tm-surface); border: 1px solid var(--risk-danger-border); border-radius: 6px;">
+                              <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                                <a href="${escapeHtml(u.url)}" target="_blank" rel="noopener noreferrer" style="color: var(--risk-danger-text); font-weight: 700; font-size: 0.8rem; word-break: break-all;" title="${escapeHtml(u.url)}">
+                                  ${escapeHtml(u.url)}
+                                </a>
+                                <span class="verdict-tag ${u.is_phishing ? 'danger' : 'suspicious'}">${escapeHtml(u.verdict || 'PHISHING')}</span>
+                              </div>
+                              ${u.reasons && u.reasons.length > 0 ? `
+                                <div style="font-size: 0.72rem; color: var(--tm-text-secondary); margin-top: 0.3rem; display: flex; flex-direction: column; gap: 0.15rem;">
+                                  ${u.reasons.map((r) => `<div style="color: var(--risk-danger-text);">⚠️ ${escapeHtml(r)}</div>`).join("")}
+                                </div>
+                              ` : ""}
+                              <div style="font-size: 0.68rem; color: var(--tm-text-muted); margin-top: 0.25rem; display: flex; gap: 0.85rem;">
+                                <span>Target Host: <b>${escapeHtml(u.domain || 'N/A')}</b></span>
+                                <span>Risk Score: <b>${u.risk_score || 85}/100</b></span>
+                              </div>
+                            </div>
+                          `).join("")}
+                        </div>
+                      </div>
+                    ` : ""}
+
+                    ${Array.isArray(f.issues) && f.issues.length > 0 && !hasUnsafe ? `
+                      <div style="margin-top: 0.6rem; padding: 0.5rem 0.65rem; background: rgba(239, 68, 68, 0.06); border: 1px solid var(--risk-danger-border); border-radius: 6px; font-size: 0.74rem; color: var(--risk-danger-text);">
+                        ${f.issues.map((iss) => `<div>⚠️ ${escapeHtml(iss)}</div>`).join("")}
+                      </div>
+                    ` : ""}
                   </div>
                 `;
         })
@@ -3204,6 +3407,7 @@ function renderAttachmentsTab(arg1 = {}, arg2 = {}) {
           </div>
         `
     }
+      </div>
     </div>
   `;
 }
@@ -3478,14 +3682,37 @@ function renderAdaptiveTab(adaptive = {}) {
 
 /* 8. Original Message Module */
 function renderOriginalTab(msg) {
+  const htmlBody = msg.html_body || "";
   const bodyText = msg.body || msg.snippet || "No body content available.";
   const rawHeaders = typeof msg.headers === "object" ? JSON.stringify(msg.headers, null, 2) : msg.headers || "No header information.";
+
+  const hasHtml = htmlBody.trim().length > 0;
+
+  // Wrap the HTML body so it inherits a light background for readability inside the dark-themed app
+  const iframeDoc = hasHtml ? `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; padding: 12px; font-family: Arial, sans-serif; font-size: 14px; background: #ffffff; color: #1a1a1a; word-break: break-word; }
+  a { color: #1a73e8; }
+  img { max-width: 100%; height: auto; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>${htmlBody}</body>
+</html>` : "";
+
+  // Escape the HTML for use in srcdoc attribute
+  const srcdocValue = iframeDoc
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;");
 
   return `
     <div class="studio-banner">
       <div>
         <div class="studio-banner-title">
-          <span>📄</span> Original Message Content & Technical Headers
+          <span>📄</span> Original Message Content &amp; Technical Headers
         </div>
         <div class="studio-banner-desc">
           Raw RFC 822 email payload, transport hops, and MIME envelope structure
@@ -3494,10 +3721,39 @@ function renderOriginalTab(msg) {
     </div>
 
     <div class="data-card">
-      <div class="data-card-title">Email Body</div>
-      <div style="background: var(--tm-surface-secondary); padding: 1rem; border-radius: 8px; font-size: 0.85rem; line-height: 1.6; white-space: pre-wrap; font-family: sans-serif; max-height: 350px; overflow-y: auto; border: 1px solid var(--tm-border);">
-        ${escapeHtml(bodyText)}
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+        <div class="data-card-title" style="margin-bottom: 0;">Email Body</div>
+        ${hasHtml ? `
+          <div style="display: flex; gap: 0.4rem;">
+            <button id="btnOrigHtmlView" type="button" class="btn-orig-view active" style="padding: 0.28rem 0.75rem; border-radius: 6px; border: 1px solid var(--tm-accent); background: var(--tm-accent); color: #fff; font-size: 0.72rem; font-weight: 600; cursor: pointer;">
+              🖼️ HTML Preview
+            </button>
+            <button id="btnOrigTextView" type="button" class="btn-orig-view" style="padding: 0.28rem 0.75rem; border-radius: 6px; border: 1px solid var(--tm-border); background: var(--tm-surface); color: var(--tm-text-secondary); font-size: 0.72rem; font-weight: 600; cursor: pointer;">
+              📝 Plain Text
+            </button>
+          </div>
+        ` : ""}
       </div>
+
+      ${hasHtml ? `
+        <div id="origHtmlPane" style="border-radius: 8px; border: 1px solid var(--tm-border); overflow: hidden; background: #fff;">
+          <iframe
+            id="origHtmlIframe"
+            srcdoc="${srcdocValue}"
+            sandbox="allow-same-origin allow-popups"
+            referrerpolicy="no-referrer"
+            style="width: 100%; border: 0; min-height: 380px; display: block;"
+            onload="this.style.height = Math.min(this.contentDocument.body ? this.contentDocument.body.scrollHeight + 24 : 380, 600) + 'px';"
+          ></iframe>
+        </div>
+        <div id="origTextPane" style="display: none; background: var(--tm-surface-secondary); padding: 1rem; border-radius: 8px; font-size: 0.85rem; line-height: 1.6; white-space: pre-wrap; font-family: sans-serif; max-height: 400px; overflow-y: auto; border: 1px solid var(--tm-border);">
+          ${escapeHtml(bodyText)}
+        </div>
+      ` : `
+        <div style="background: var(--tm-surface-secondary); padding: 1rem; border-radius: 8px; font-size: 0.85rem; line-height: 1.6; white-space: pre-wrap; font-family: sans-serif; max-height: 400px; overflow-y: auto; border: 1px solid var(--tm-border);">
+          ${escapeHtml(bodyText)}
+        </div>
+      `}
     </div>
 
     <div class="data-card">
@@ -3509,6 +3765,37 @@ function renderOriginalTab(msg) {
       </details>
     </div>
   `;
+}
+
+/* Wire up HTML/Text toggle buttons for the Original Message tab */
+function attachOriginalTabToggle() {
+  const btnHtml = document.getElementById("btnOrigHtmlView");
+  const btnText = document.getElementById("btnOrigTextView");
+  const htmlPane = document.getElementById("origHtmlPane");
+  const textPane = document.getElementById("origTextPane");
+  if (!btnHtml || !btnText || !htmlPane || !textPane) return;
+
+  btnHtml.addEventListener("click", () => {
+    htmlPane.style.display = "block";
+    textPane.style.display = "none";
+    btnHtml.style.background = "var(--tm-accent)";
+    btnHtml.style.color = "#fff";
+    btnHtml.style.borderColor = "var(--tm-accent)";
+    btnText.style.background = "var(--tm-surface)";
+    btnText.style.color = "var(--tm-text-secondary)";
+    btnText.style.borderColor = "var(--tm-border)";
+  });
+
+  btnText.addEventListener("click", () => {
+    htmlPane.style.display = "none";
+    textPane.style.display = "block";
+    btnText.style.background = "var(--tm-accent)";
+    btnText.style.color = "#fff";
+    btnText.style.borderColor = "var(--tm-accent)";
+    btnHtml.style.background = "var(--tm-surface)";
+    btnHtml.style.color = "var(--tm-text-secondary)";
+    btnHtml.style.borderColor = "var(--tm-border)";
+  });
 }
 
 /* ==========================================================================
@@ -3551,6 +3838,9 @@ function attachDetailEventListeners(messageId) {
       showUnlockModal(messageId, attId);
     });
   }
+
+  // Original Message tab — HTML / Plain Text toggle
+  attachOriginalTabToggle();
 }
 
 /* Encrypted PDF Unlock Modal */
@@ -3559,12 +3849,20 @@ function showUnlockModal(messageId, attachmentId = null) {
     <div class="modal-box">
       <div class="modal-title">🔒 Unlock Encrypted PDF</div>
       <div class="modal-desc">
-        Enter the decryption password for this attachment to extract internal streams and analyze embedded macros.
+        Enter the password to decrypt this PDF. The system will then:
+        <ul style="margin: 0.5rem 0 0 1rem; padding: 0; font-size: 0.82rem; color: var(--tm-text-secondary); list-style: disc;">
+          <li>Extract all text and embedded links</li>
+          <li>Inspect each link for phishing, malware, or redirect chains</li>
+          <li>Re-calculate the email's security verdict</li>
+        </ul>
       </div>
       <input type="password" id="pdfPasswordInput" class="modal-input" placeholder="Enter PDF password..." />
+      <div id="pdfUnlockStatus" style="display:none; font-size:0.82rem; color: var(--tm-text-secondary); margin-top: 0.5rem; text-align:center;">
+        🔍 Decrypting and analysing links… please wait
+      </div>
       <div class="modal-buttons">
         <button type="button" class="btn-modal-cancel" id="btnCancelModal">Cancel</button>
-        <button type="button" class="btn-modal-submit" id="btnSubmitUnlock">Unlock & Re-Inspect</button>
+        <button type="button" class="btn-modal-submit" id="btnSubmitUnlock">Unlock &amp; Analyse Links</button>
       </div>
     </div>
   `;

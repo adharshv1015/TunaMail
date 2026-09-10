@@ -39,6 +39,7 @@ class AnalyticalReasoningEngine:
         "MALICIOUS_URL",
         "MALICIOUS_REDIRECT",
         "BRAND_IMPERSONATION",
+        "UNICODE_HOMOGRAPH_BRAND_SPOOF",
         "MALICIOUS_ATTACHMENT",
         "EXECUTABLE_ATTACHMENT",
         "SCRIPT_ATTACHMENT",
@@ -50,7 +51,10 @@ class AnalyticalReasoningEngine:
     STRONG_NEGATIVE_TYPES = {
         "SUSPICIOUS_URL",
         "HOMOGRAPH_DOMAIN",
+        "UNICODE_MIXED_SCRIPT_DOMAIN",
+        "UNICODE_NON_ASCII_DOMAIN",
         "PUNYCODE_DOMAIN",
+        "TLS_POLICY_VIOLATION",
         "HOSTNAME_MISMATCH",
         "CREDENTIAL_REQUEST",
         "FINANCIAL_REQUEST",
