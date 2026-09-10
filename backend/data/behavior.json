@@ -5,7 +5,8 @@
       1788307080.286453,
       1788324136.295935,
       1788324388.270627,
-      1788324393.488202
+      1788324393.488202,
+      1789017975.02547
     ],
     "url_domains": [],
     "auth_summary": [
@@ -43,7 +44,8 @@
   },
   "donotreply@match.indeed.com": {
     "timestamps": [
-      1788313229.723499
+      1788313229.723499,
+      1789017904.325404
     ],
     "url_domains": [
       "cts.indeed.com",
@@ -53,7 +55,12 @@
       "subscriptions.indeed.com",
       "engage.indeed.com",
       "www.w3.org",
-      "fonts.googleapis.com"
+      "fonts.googleapis.com",
+      "in.indeed.com",
+      "secure.indeed.com",
+      "match.indeed.com",
+      "support.indeed.com",
+      "hrtechprivacy.com"
     ],
     "auth_summary": [
       "SPF:pass DKIM:pass DMARC:pass"
@@ -68,6 +75,80 @@
     ],
     "auth_summary": [
       "SPF:unknown DKIM:unknown DMARC:unknown"
+    ]
+  },
+  "alza.incorporationtvmZ21haWwuY29t@naukri.com": {
+    "timestamps": [
+      1789017969.926837
+    ],
+    "url_domains": [
+      "logs.naukri.com",
+      "fonts.googleapis.com",
+      "fonts.gstatic.com",
+      "www.naukri.com",
+      "w10.naukri.com",
+      "img.naukimg.com",
+      "www.ambitionbox.com",
+      "my.naukri.com",
+      "www.ieplads.com",
+      "www.facebook.com",
+      "twitter.com",
+      "www.instagram.com",
+      "w5.naukri.com",
+      "company.naukri.com",
+      "www.alzaincorporation.com"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "team@mail.notion.so": {
+    "timestamps": [
+      1789018258.891945
+    ],
+    "url_domains": [
+      "fonts.googleapis.com",
+      "e.customeriomail.com",
+      "userimg-assets.customeriomail.com",
+      "www.notion.so",
+      "www.notion.com",
+      "track.customer.io",
+      "www.litmus.com"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "notification@smartrecruiters.com": {
+    "timestamps": [
+      1789022526.386479
+    ],
+    "url_domains": [
+      "jobs.smartrecruiters.com"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "indeedapply@indeed.com": {
+    "timestamps": [
+      1789022550.565121
+    ],
+    "url_domains": [
+      "www.indeed.com",
+      "offers.indeed.com",
+      "dpuk71x9wlmkf.cloudfront.net",
+      "prod.statics.indeed.com",
+      "apply.indeed.com",
+      "d2q79iu7y748jz.cloudfront.net",
+      "in.indeed.com",
+      "indeedemployers.zendesk.com",
+      "subscriptions.indeed.com",
+      "engage.indeed.com",
+      "fonts.googleapis.com"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
     ]
   }
 }

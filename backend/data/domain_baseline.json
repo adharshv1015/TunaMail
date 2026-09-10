@@ -1,8 +1,8 @@
 {
   "gmail.com": {
-    "messages_analyzed": 30,
+    "messages_analyzed": 31,
     "first_seen": "2026-09-02T05:03:54.016388",
-    "last_seen": "2026-09-02T12:20:48.446258"
+    "last_seen": "2026-09-10T10:56:15.019371"
   },
   "getgitguardian.com": {
     "messages_analyzed": 1,
@@ -18,5 +18,30 @@
     "messages_analyzed": 1,
     "first_seen": "2026-09-02T07:43:07.756125",
     "last_seen": "2026-09-02T07:43:07.756134"
+  },
+  "match.indeed.com": {
+    "messages_analyzed": 1,
+    "first_seen": "2026-09-10T10:54:48.995227",
+    "last_seen": "2026-09-10T10:54:48.995235"
+  },
+  "naukri.com": {
+    "messages_analyzed": 1,
+    "first_seen": "2026-09-10T10:56:04.976668",
+    "last_seen": "2026-09-10T10:56:04.976678"
+  },
+  "mail.notion.so": {
+    "messages_analyzed": 1,
+    "first_seen": "2026-09-10T11:00:51.366877",
+    "last_seen": "2026-09-10T11:00:51.366885"
+  },
+  "smartrecruiters.com": {
+    "messages_analyzed": 1,
+    "first_seen": "2026-09-10T12:12:02.367346",
+    "last_seen": "2026-09-10T12:12:02.367362"
+  },
+  "indeed.com": {
+    "messages_analyzed": 1,
+    "first_seen": "2026-09-10T12:12:21.069795",
+    "last_seen": "2026-09-10T12:12:21.069804"
   }
 }

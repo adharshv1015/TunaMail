@@ -232,3 +232,17 @@ backend/inspection_timing.py
 backend/phishing_test.eml
 backend/private_ip_test.eml
 backend/test_email.txt
+
+
+
+
+
+backend/data/behaviour.json
+backend/data/campaigns.json
+backend/data/reputation_store.json
+backend/data/domain_baseline.json
+backend/data/domain_reputation.json
+backend/data/reputation.json
+backend/data/sender_baseline.json
+backend/data/trend_history.json
+backend/data/url_history.json

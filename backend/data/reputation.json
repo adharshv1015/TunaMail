@@ -1,17 +1,18 @@
 {
   "saseendranv888@gmail.com": {
     "sender": "saseendranv888@gmail.com",
-    "messages_seen": 5,
-    "legitimate_count": 2,
+    "messages_seen": 6,
+    "legitimate_count": 3,
     "suspicious_count": 3,
     "phishing_count": 0,
-    "reputation": "UNKNOWN",
+    "reputation": "SUSPICIOUS",
     "seen_message_ids": [
       "1a05c5b4c6559588",
       "1a0609560ac4c48a",
       "1a0619a97ff626c7",
       "1a0619e52b63c7d5",
-      "1a0619cca9609357"
+      "1a0619cca9609357",
+      "1a089aaef5438cd0"
     ]
   },
   "security@getgitguardian.com": {
@@ -38,13 +39,14 @@
   },
   "donotreply@match.indeed.com": {
     "sender": "donotreply@match.indeed.com",
-    "messages_seen": 1,
+    "messages_seen": 2,
     "legitimate_count": 1,
     "suspicious_count": 0,
-    "phishing_count": 0,
-    "reputation": "UNKNOWN",
+    "phishing_count": 1,
+    "reputation": "NEW",
     "seen_message_ids": [
-      "1a05dbde7928e2d4"
+      "1a05dbde7928e2d4",
+      "1a08ac9f81d9e298"
     ]
   },
   "test@example.com": {
@@ -56,6 +58,50 @@
     "reputation": "UNKNOWN",
     "seen_message_ids": [
       "mock_id"
+    ]
+  },
+  "alza.incorporationtvmZ21haWwuY29t@naukri.com": {
+    "sender": "alza.incorporationtvmZ21haWwuY29t@naukri.com",
+    "messages_seen": 1,
+    "legitimate_count": 1,
+    "suspicious_count": 0,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN",
+    "seen_message_ids": [
+      "1a089d731a609a8c"
+    ]
+  },
+  "team@mail.notion.so": {
+    "sender": "team@mail.notion.so",
+    "messages_seen": 1,
+    "legitimate_count": 1,
+    "suspicious_count": 0,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN",
+    "seen_message_ids": [
+      "1a089b018987a0d7"
+    ]
+  },
+  "notification@smartrecruiters.com": {
+    "sender": "notification@smartrecruiters.com",
+    "messages_seen": 1,
+    "legitimate_count": 1,
+    "suspicious_count": 0,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN",
+    "seen_message_ids": [
+      "1a08aae2d8cb6bcd"
+    ]
+  },
+  "indeedapply@indeed.com": {
+    "sender": "indeedapply@indeed.com",
+    "messages_seen": 1,
+    "legitimate_count": 1,
+    "suspicious_count": 0,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN",
+    "seen_message_ids": [
+      "1a08aadbd8e7baa4"
     ]
   }
 }

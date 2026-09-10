@@ -121,5 +121,167 @@
     ],
     "url_domains": [],
     "messages_seen": 1
+  },
+  "c_1789017904": {
+    "normalized_subject": "elv engineer at camline security solutions in west bengal and 3 more new jobs",
+    "sender_domains": [
+      "match.indeed.com"
+    ],
+    "url_domains": [
+      "subscriptions.indeed.com",
+      "in.indeed.com",
+      "prod.statics.indeed.com",
+      "in.indeed.com",
+      "secure.indeed.com",
+      "in.indeed.com",
+      "prod.statics.indeed.com",
+      "in.indeed.com",
+      "in.indeed.com",
+      "in.indeed.com",
+      "cts.indeed.com",
+      "match.indeed.com",
+      "prod.statics.indeed.com",
+      "support.indeed.com",
+      "hrtechprivacy.com",
+      "in.indeed.com",
+      "subscriptions.indeed.com",
+      "subscriptions.indeed.com",
+      "engage.indeed.com",
+      "subscriptions.indeed.com",
+      "prod.statics.indeed.com",
+      "fonts.googleapis.com",
+      "subscriptions.indeed.com"
+    ],
+    "messages_seen": 1
+  },
+  "c_1789017969": {
+    "normalized_subject": "\u2709\ufe0f job | congratulations! interview confirmation call letter !!! apply here in thiruvananthapuram",
+    "sender_domains": [
+      "naukri.com"
+    ],
+    "url_domains": [
+      "logs.naukri.com",
+      "fonts.googleapis.com",
+      "fonts.gstatic.com",
+      "fonts.googleapis.com",
+      "www.naukri.com",
+      "w10.naukri.com",
+      "www.naukri.com",
+      "w10.naukri.com",
+      "w10.naukri.com",
+      "w10.naukri.com",
+      "img.naukimg.com",
+      "w10.naukri.com",
+      "www.ambitionbox.com",
+      "w10.naukri.com",
+      "w10.naukri.com",
+      "w10.naukri.com",
+      "w10.naukri.com",
+      "w10.naukri.com",
+      "my.naukri.com",
+      "www.ieplads.com",
+      "www.naukri.com",
+      "www.ieplads.com",
+      "www.ieplads.com",
+      "www.naukri.com",
+      "w10.naukri.com",
+      "w10.naukri.com",
+      "w10.naukri.com",
+      "www.facebook.com",
+      "w10.naukri.com",
+      "twitter.com",
+      "w10.naukri.com",
+      "www.instagram.com",
+      "w10.naukri.com",
+      "www.naukri.com",
+      "w5.naukri.com",
+      "www.naukri.com",
+      "company.naukri.com",
+      "w10.naukri.com",
+      "www.alzaincorporation.com"
+    ],
+    "messages_seen": 1
+  },
+  "c_1789017975": {
+    "normalized_subject": "new website of our",
+    "sender_domains": [
+      "gmail.com"
+    ],
+    "url_domains": [],
+    "messages_seen": 1
+  },
+  "c_1789018258": {
+    "normalized_subject": "let ai take the notes next meeting",
+    "sender_domains": [
+      "mail.notion.so"
+    ],
+    "url_domains": [
+      "fonts.googleapis.com",
+      "fonts.googleapis.com",
+      "e.customeriomail.com",
+      "userimg-assets.customeriomail.com",
+      "e.customeriomail.com",
+      "e.customeriomail.com",
+      "userimg-assets.customeriomail.com",
+      "e.customeriomail.com",
+      "userimg-assets.customeriomail.com",
+      "e.customeriomail.com",
+      "userimg-assets.customeriomail.com",
+      "e.customeriomail.com",
+      "e.customeriomail.com",
+      "e.customeriomail.com",
+      "e.customeriomail.com",
+      "e.customeriomail.com",
+      "www.notion.so",
+      "www.notion.so",
+      "www.notion.com",
+      "www.notion.so",
+      "www.notion.com",
+      "track.customer.io",
+      "track.customer.io",
+      "www.notion.so",
+      "track.customer.io",
+      "fonts.googleapis.com",
+      "fonts.googleapis.com",
+      "www.litmus.com",
+      "userimg-assets.customeriomail.com"
+    ],
+    "messages_seen": 1
+  },
+  "c_1789022526": {
+    "normalized_subject": "thank you for applying to skynet secure solutions",
+    "sender_domains": [
+      "smartrecruiters.com"
+    ],
+    "url_domains": [
+      "jobs.smartrecruiters.com"
+    ],
+    "messages_seen": 1
+  },
+  "c_1789022550": {
+    "normalized_subject": "indeed application: cyber security analyst",
+    "sender_domains": [
+      "indeed.com"
+    ],
+    "url_domains": [
+      "www.indeed.com",
+      "offers.indeed.com",
+      "dpuk71x9wlmkf.cloudfront.net",
+      "prod.statics.indeed.com",
+      "apply.indeed.com",
+      "d2q79iu7y748jz.cloudfront.net",
+      "in.indeed.com",
+      "apply.indeed.com",
+      "apply.indeed.com",
+      "www.indeed.com",
+      "indeedemployers.zendesk.com",
+      "subscriptions.indeed.com",
+      "engage.indeed.com",
+      "apply.indeed.com",
+      "prod.statics.indeed.com",
+      "fonts.googleapis.com",
+      "offers.indeed.com"
+    ],
+    "messages_seen": 1
   }
 }

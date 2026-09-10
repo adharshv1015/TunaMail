@@ -610,6 +610,7 @@ async function unlockPDFFile(messageId, password, attachmentId = null) {
     }
 
     hideModal();
+    document.getElementById("inspectorTabOverlay")?.remove();
   } catch (err) {
     showToast(err.message || "Failed to unlock PDF", "error");
   }
@@ -1811,7 +1812,7 @@ function renderAnalysisArea() {
   dom.analysisArea.innerHTML = `
     <div class="email-detail-container">
       ${renderEmailHeaderCard(msg, effectiveDecision)}
-      ${renderHumanVerdictHero(effectiveDecision, msg.id)}
+      ${renderHumanVerdictHero(effectiveDecision, msg.id, msg)}
       ${renderUnifiedSecurityStudio(msg, analysis)}
     </div>
   `;
@@ -1884,7 +1885,7 @@ function renderEmailHeaderCard(msg, decision) {
 }
 
 /* TIER 1: Human Verdict & Action Hero Banner */
-function renderHumanVerdictHero(decision, messageId) {
+function renderHumanVerdictHero(decision, messageId, msg) {
   const verdict = (decision.verdict || "SAFE").toUpperCase();
   const score = decision.risk_score ?? 0;
 
@@ -1910,6 +1911,9 @@ function renderHumanVerdictHero(decision, messageId) {
     badgeText = "PHISHING DETECTED";
   }
 
+  // Inline original message panel (compact) between advice and actions
+  const origPanel = msg ? renderOriginalMsgPanel(msg) : "";
+
   return `
     <div class="verdict-hero ${heroClass}">
       <div class="hero-left">
@@ -1918,6 +1922,7 @@ function renderHumanVerdictHero(decision, messageId) {
           <div class="hero-headline">${headline}</div>
         </div>
         <div class="hero-advice">${escapeHtml(advice)}</div>
+        ${origPanel}
         <div class="hero-actions">
           <button class="btn-report" id="btnExportPDF" data-id="${escapeHtml(messageId)}">
             <span>📄</span> Export Security Report (PDF)
@@ -1935,6 +1940,52 @@ function renderHumanVerdictHero(decision, messageId) {
     </div>
   `;
 }
+
+/* Original Message Panel — constant compact preview inside verdict hero */
+function renderOriginalMsgPanel(msg) {
+  const htmlBody = msg.html_body || "";
+  const plainText = msg.body || msg.snippet || "No body content available.";
+  const hasHtml = htmlBody.trim().length > 0;
+
+  const iframeDoc = hasHtml
+    ? `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:6px 8px;font-family:Arial,sans-serif;font-size:11px;background:#fff;color:#1a1a1a;word-break:break-word;zoom:0.85;-webkit-text-size-adjust:85%;}a{color:#1a73e8;}img{max-width:100%;height:auto;}*{box-sizing:border-box;}</style></head><body>${htmlBody}</body></html>`
+    : "";
+  const srcdocValue = iframeDoc.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+
+  return `
+    <div class="orig-msg-panel" id="origMsgPanel">
+      <div class="orig-msg-header">
+        <div class="orig-msg-header-left">
+          <span style="font-size:0.8rem;">📄</span>
+          <span class="orig-msg-title">Original Message</span>
+        </div>
+        <div class="omp-toggles" id="ompToggles">
+          ${hasHtml ? `
+            <button id="ompBtnHtml" type="button" class="omp-toggle active">HTML</button>
+            <button id="ompBtnText" type="button" class="omp-toggle">Text</button>
+          ` : ""}
+          <button id="ompBtnExpand" type="button" class="omp-toggle omp-expand-btn" title="Toggle extended preview">
+            <span class="omp-expand-icon">⤢</span> <span class="omp-expand-text">Expand</span>
+          </button>
+        </div>
+      </div>
+      <div class="orig-msg-body" id="origMsgBody">
+        ${hasHtml ? `
+          <div id="ompHtmlPane" class="omp-html-pane">
+            <iframe srcdoc="${srcdocValue}" sandbox="allow-same-origin allow-popups" referrerpolicy="no-referrer"
+              class="omp-iframe"
+            ></iframe>
+          </div>
+          <div id="ompTextPane" class="omp-text-pane" style="display:none;">${escapeHtml(plainText)}</div>
+        ` : `
+          <div class="omp-text-pane">${escapeHtml(plainText)}</div>
+        `}
+      </div>
+    </div>
+  `;
+}
+
+
 
 /* ==========================================================================
    Attachment Extraction & Forensic Helpers
@@ -2320,26 +2371,38 @@ function renderUnifiedSecurityStudio(msg, rawAnalysis) {
   const adaptiveIssue = !isAdaptiveStable;
   const adaptiveScore = anomalyScore || (adaptiveIssue ? 45 : 0);
 
+  // Merged 6-tab module layout:
+  // 1. Sender & Intel  = Sender & Auth + Stage 5 Intel (merged)
+  // 2. AI & Language   = AI Reasoning + Message Language (merged)
+  // 3. Links & Domains (unchanged)
+  // 4. Attached Files  (unchanged)
+  // 5. Adaptive Baseline (unchanged)
+  // "Original Message" content is now shown in the Risk Score gauge area
+  const senderIntelIssue = authIssue || stage5Issue;
+  const senderIntelScore = Math.max(authScore, stage5Score);
+  const aiLangIssue = aiIssue || contentIssue;
+  const aiLangScore = Math.max(aiScore, contentRisk || (contentIssue ? 50 : 0));
+
   const modules = [
     {
-      key: "sender",
+      key: "sender-intel",
       icon: "🛡️",
-      label: "Sender & Auth",
-      sub: "SPF · DKIM · Trust",
-      pillText: authIssue ? "🚨 FAIL" : "✓ PASS",
-      pillClass: authIssue ? "danger" : "pass",
-      isIssue: authIssue,
-      issueScore: authScore,
+      label: "Sender & Intel",
+      sub: "Auth · SPF · MITRE",
+      pillText: senderIntelIssue ? (stage5Issue ? `🚨 THREAT` : "🚨 FAIL") : "✓ PASS",
+      pillClass: senderIntelIssue ? "danger" : "pass",
+      isIssue: senderIntelIssue,
+      issueScore: senderIntelScore,
     },
     {
-      key: "content",
-      icon: "💬",
-      label: "Message Language",
-      sub: "Urgency & Tone",
-      pillText: contentIssue ? (contentHarvest ? "🚨 HARVEST" : contentUrgency ? "🚨 URGENCY" : "🚨 ALERT") : "✓ CLEAN",
-      pillClass: contentIssue ? "danger" : "clean",
-      isIssue: contentIssue,
-      issueScore: contentRisk || (contentIssue ? 50 : 0),
+      key: "ai-language",
+      icon: "⚖️",
+      label: "AI & Language",
+      sub: "Reasoning · Tone",
+      pillText: aiLangIssue ? (contentHarvest ? "🚨 HARVEST" : aiIssue ? "🚨 RISK" : "🚨 ALERT") : `${decision.confidence ?? 85}% Conf`,
+      pillClass: aiLangIssue ? "danger" : "safe",
+      isIssue: aiLangIssue,
+      issueScore: aiLangScore,
     },
     {
       key: "links",
@@ -2364,26 +2427,6 @@ function renderUnifiedSecurityStudio(msg, rawAnalysis) {
       issueScore: attScore,
     },
     {
-      key: "explanation",
-      icon: "⚖️",
-      label: "AI Reasoning",
-      sub: "Fused Rationale",
-      pillText: aiIssue ? "🚨 RISK" : `${decision.confidence ?? 85}% Conf`,
-      pillClass: aiIssue ? "danger" : "safe",
-      isIssue: aiIssue,
-      issueScore: aiScore,
-    },
-    {
-      key: "stage5",
-      icon: "🛰️",
-      label: "Stage 5 Intel",
-      sub: "MITRE & IOCs",
-      pillText: stage5Issue ? `🚨 ${stage5ThreatCount || 1} Threat${stage5ThreatCount > 1 ? "s" : ""}` : "0 Threats",
-      pillClass: stage5Issue ? "danger" : "safe",
-      isIssue: stage5Issue,
-      issueScore: stage5Score,
-    },
-    {
       key: "adaptive",
       icon: "📈",
       label: "Adaptive Baseline",
@@ -2392,16 +2435,6 @@ function renderUnifiedSecurityStudio(msg, rawAnalysis) {
       pillClass: adaptiveIssue ? "danger" : "safe",
       isIssue: adaptiveIssue,
       issueScore: adaptiveScore,
-    },
-    {
-      key: "original",
-      icon: "📄",
-      label: "Original Message",
-      sub: "Raw RFC 822",
-      pillText: "Headers",
-      pillClass: "neutral",
-      isIssue: false,
-      issueScore: 0,
     },
   ];
 
@@ -2418,7 +2451,7 @@ function renderUnifiedSecurityStudio(msg, rawAnalysis) {
   // Default to currently selected tab if valid, or auto-focus the first module (top issue)
   const activeTabKey = (state.inspectorTab && sortedModules.some((m) => m.key === state.inspectorTab))
     ? state.inspectorTab
-    : sortedModules[0]?.key || "sender";
+    : sortedModules[0]?.key || "sender-intel";
 
   const currentMod = sortedModules.find((m) => m.key === activeTabKey) || sortedModules[0];
 
@@ -2437,12 +2470,12 @@ function renderUnifiedSecurityStudio(msg, rawAnalysis) {
         </div>
       </div>
 
-      <!-- Compact 8-Module Forensic Deck (Issues in Red First, Safe Modules Follow) -->
+      <!-- Compact 6-Tab Forensic Deck — click any tab to open details popup -->
       <div class="forensic-deck">
         ${sortedModules
       .map(
         (m) => `
-          <button type="button" class="deck-item ${m.isIssue ? "has-issue" : "is-safe"} ${m.key === activeTabKey ? "active" : ""}" data-tab="${m.key}">
+          <button type="button" class="deck-item ${m.isIssue ? "has-issue" : "is-safe"}" data-tab="${m.key}">
             <div class="deck-item-top">
               <span class="deck-item-icon">${m.icon}</span>
               <span class="deck-item-pill ${m.pillClass}">${escapeHtml(m.pillText)}</span>
@@ -2454,36 +2487,35 @@ function renderUnifiedSecurityStudio(msg, rawAnalysis) {
       )
       .join("")}
       </div>
-
-      <!-- Active Evidence Canvas -->
-      <div class="evidence-canvas">
-        ${renderActiveInspectorTab(activeTabKey, msg, analysis)}
-      </div>
     </div>
   `;
 }
 
-/* Render Active Inspector Tab */
+/* Render Active Inspector Tab (6 merged tabs) */
 function renderActiveInspectorTab(tab, msg, analysis) {
   switch (tab) {
-    case "sender":
-      return renderSenderAuthTab(analysis.authentication, analysis.trust);
-    case "content":
-      return renderContentTab(analysis.content);
+    case "sender-intel":
+      return renderSenderIntelTab(analysis.authentication, analysis.trust, analysis.intelligence, analysis);
+    case "ai-language":
+      return renderAiLanguageTab(analysis.explanation, analysis.decision, analysis.content);
     case "links":
       return renderLinksTab(analysis.url || analysis.urls, analysis.whois);
     case "attachments":
       return renderAttachmentsTab(msg, analysis);
-    case "explanation":
-      return renderExplanationTab(analysis.explanation, analysis.decision);
-    case "stage5":
-      return renderStage5Tab(analysis.intelligence, analysis);
     case "adaptive":
       return renderAdaptiveTab(analysis.adaptive || msg.adaptive);
+    // Legacy fallbacks
+    case "sender":
+      return renderSenderIntelTab(analysis.authentication, analysis.trust, analysis.intelligence, analysis);
+    case "explanation":
+    case "content":
+      return renderAiLanguageTab(analysis.explanation, analysis.decision, analysis.content);
+    case "stage5":
+      return renderSenderIntelTab(analysis.authentication, analysis.trust, analysis.intelligence, analysis);
     case "original":
       return renderOriginalTab(msg);
     default:
-      return renderSenderAuthTab(analysis.authentication, analysis.trust);
+      return renderSenderIntelTab(analysis.authentication, analysis.trust, analysis.intelligence, analysis);
   }
 }
 
@@ -2527,7 +2559,45 @@ function renderRiskDistBar(factors, totalScore) {
   `;
 }
 
-/* 1. Sender & Auth Module */
+/* ============================================================
+   MERGED TAB 1: Sender & Intel (Sender & Auth + Stage 5 Intel)
+   ============================================================ */
+function renderSenderIntelTab(auth = {}, trust = {}, intel = {}, analysis = {}) {
+  const senderHtml = renderSenderAuthTab(auth, trust);
+  const intelHtml = renderStage5Tab(intel, analysis);
+  return `
+    <div class="merged-tab-section">
+      <div class="merged-tab-part">
+        ${senderHtml}
+      </div>
+      <div class="merged-tab-divider"></div>
+      <div class="merged-tab-part">
+        ${intelHtml}
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   MERGED TAB 2: AI & Language (AI Reasoning + Message Language)
+   ============================================================ */
+function renderAiLanguageTab(explanation = {}, decision = {}, content = {}) {
+  const aiHtml = renderExplanationTab(explanation, decision);
+  const langHtml = renderContentTab(content);
+  return `
+    <div class="merged-tab-section">
+      <div class="merged-tab-part">
+        ${aiHtml}
+      </div>
+      <div class="merged-tab-divider"></div>
+      <div class="merged-tab-part">
+        ${langHtml}
+      </div>
+    </div>
+  `;
+}
+
+/* 1. Sender & Auth Module (used internally by merged tab) */
 function renderSenderAuthTab(auth = {}, trust = {}) {
   const spfVal = (auth.spf || "").toLowerCase();
   const dkimVal = (auth.dkim || "").toLowerCase();
@@ -3275,12 +3345,16 @@ function renderAttachmentsTab(arg1 = {}, arg2 = {}) {
         const encPdf = files.find((f) => f.is_encrypted_pdf);
         const encAttId = encPdf?.attachmentId || "";
         return `
-      <div style="background: var(--risk-suspicious-bg); border: 1px solid var(--risk-suspicious-border); border-radius: 12px; padding: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem;">
-        <div>
-          <div style="font-size: 0.85rem; font-weight: 800; color: var(--risk-suspicious-text);">🔒 Password-Protected PDF Detected</div>
-          <div style="font-size: 0.75rem; color: var(--tm-text-secondary); margin-top: 0.15rem;">Unlock with password to allow deep inspection of internal streams and macros.</div>
+      <div class="data-card" style="border-left: 4px solid var(--risk-suspicious); background: var(--risk-suspicious-bg); border-color: var(--risk-suspicious-border); display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 1rem;">
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 0.85rem; font-weight: 800; color: var(--risk-suspicious-text); display: flex; align-items: center; gap: 0.4rem;">
+            <span>🔒</span> Password-Protected PDF Detected
+          </div>
+          <div style="font-size: 0.75rem; color: var(--tm-text-secondary); margin-top: 0.2rem;">
+            Unlock with password to allow deep inspection of internal streams and macros.
+          </div>
         </div>
-        <button class="btn-modal-submit" id="btnOpenUnlockModal" data-id="${escapeHtml(messageId)}" data-attachment-id="${escapeHtml(encAttId)}">
+        <button class="btn-modal-submit" id="btnOpenUnlockModal" data-id="${escapeHtml(messageId)}" data-attachment-id="${escapeHtml(encAttId)}" style="flex-shrink: 0; padding: 0.5rem 1.25rem;">
           Unlock PDF
         </button>
       </div>
@@ -3818,15 +3892,11 @@ function attachDetailEventListeners(messageId) {
     });
   }
 
-  // Forensic Category Deck Tabs (and backwards-compatible matrix-btn & pillar-card)
+  // Forensic Category Deck Tabs — opens popup modal on click
   document.querySelectorAll(".deck-item[data-tab], .matrix-btn[data-tab], .pillar-card[data-jump-tab]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      state.inspectorTab = btn.dataset.tab || btn.dataset.jumpTab;
-      renderAnalysisArea();
-      const consoleEl = document.getElementById("inspectorConsole");
-      if (consoleEl && btn.dataset.jumpTab) {
-        consoleEl.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+      const tabKey = btn.dataset.tab || btn.dataset.jumpTab;
+      showInspectorTabModal(tabKey);
     });
   });
 
@@ -3839,14 +3909,122 @@ function attachDetailEventListeners(messageId) {
     });
   }
 
-  // Original Message tab — HTML / Plain Text toggle
+
+  // Wire up HTML/Text toggle & Expand button for original message panel
+  (function wireOrigMsgPanel() {
+    const btnH = document.getElementById("ompBtnHtml");
+    const btnT = document.getElementById("ompBtnText");
+    const btnE = document.getElementById("ompBtnExpand");
+    const hp = document.getElementById("ompHtmlPane");
+    const tp = document.getElementById("ompTextPane");
+    const panel = document.getElementById("origMsgPanel");
+
+    if (btnH && btnT) {
+      btnH.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (hp) hp.style.display = "block";
+        if (tp) tp.style.display = "none";
+        btnH.classList.add("active");
+        btnT.classList.remove("active");
+      });
+      btnT.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (hp) hp.style.display = "none";
+        if (tp) tp.style.display = "block";
+        btnT.classList.add("active");
+        btnH.classList.remove("active");
+      });
+    }
+
+    if (btnE && panel) {
+      btnE.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isExp = panel.classList.toggle("is-expanded");
+        const icon = btnE.querySelector(".omp-expand-icon");
+        const text = btnE.querySelector(".omp-expand-text");
+        if (icon) icon.textContent = isExp ? "⤡" : "⤢";
+        if (text) text.textContent = isExp ? "Compact" : "Expand";
+        btnE.setAttribute("title", isExp ? "Compact preview" : "Expand preview");
+      });
+    }
+  })();
+
+  // Original Message tab — HTML / Plain Text toggle (for legacy renderOriginalTab if reached via fallback)
   attachOriginalTabToggle();
+}
+
+/* ==========================================================================
+   Inspector Tab Popup Modal
+   ========================================================================== */
+function showInspectorTabModal(tabKey) {
+  const msgData = state.selectedMessageData;
+  if (!msgData) return;
+  const analysis = msgData.analysis || {};
+
+  const tabLabels = {
+    "sender-intel": { icon: "🛡️", label: "Sender & Intel" },
+    "ai-language":  { icon: "⚖️", label: "AI & Language" },
+    "links":        { icon: "🔗", label: "Links & Domains" },
+    "attachments":  { icon: "📎", label: "Attached Files" },
+    "adaptive":     { icon: "📈", label: "Adaptive Baseline" },
+    // legacy keys
+    "sender":       { icon: "🛡️", label: "Sender & Auth" },
+    "content":      { icon: "💬", label: "Message Language" },
+    "explanation":  { icon: "⚖️", label: "AI Reasoning" },
+    "stage5":       { icon: "🛰️", label: "Stage 5 Intel" },
+    "original":     { icon: "📄", label: "Original Message" },
+  };
+  const meta = tabLabels[tabKey] || { icon: "🔍", label: tabKey };
+  const tabContent = renderActiveInspectorTab(tabKey, msgData, analysis);
+
+  // Build and inject the modal
+  const overlay = document.createElement("div");
+  overlay.id = "inspectorTabOverlay";
+  overlay.innerHTML = `
+    <div class="itm-backdrop" id="itmBackdrop"></div>
+    <div class="itm-popup" role="dialog" aria-modal="true" aria-label="${escapeHtml(meta.label)} Details">
+      <div class="itm-header">
+        <div class="itm-header-left">
+          <span class="itm-header-icon">${meta.icon}</span>
+          <div>
+            <div class="itm-header-title">${escapeHtml(meta.label)}</div>
+            <div class="itm-header-sub">Security Inspector · Forensic Evidence</div>
+          </div>
+        </div>
+        <button class="itm-close" id="itmCloseBtn" aria-label="Close">✕</button>
+      </div>
+      <div class="itm-body" id="itmBody">
+        ${tabContent}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  // Trap focus & close handlers
+  const close = () => { overlay.remove(); document.removeEventListener("keydown", onKey); };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  document.getElementById("itmCloseBtn")?.addEventListener("click", close);
+  document.getElementById("itmBackdrop")?.addEventListener("click", close);
+  document.addEventListener("keydown", onKey);
+
+  // Re-wire any sub-toggle buttons inside the popup (e.g. unlock PDF)
+  overlay.querySelectorAll("#btnOpenUnlockModal, .btn-unlock-pdf").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const mId = btn.getAttribute("data-id") || msgData?.id || state.selectedMessageId;
+      const attId = btn.getAttribute("data-attachment-id") || null;
+      showUnlockModal(mId, attId);
+    });
+  });
+
+  // Wire original msg toggle if opened
+  if (tabKey === "original") attachOriginalTabToggle();
 }
 
 /* Encrypted PDF Unlock Modal */
 function showUnlockModal(messageId, attachmentId = null) {
   dom.modalContainer.innerHTML = `
-    <div class="modal-box">
+    <div class="modal-box" onclick="event.stopPropagation();">
       <div class="modal-title">🔒 Unlock Encrypted PDF</div>
       <div class="modal-desc">
         Enter the password to decrypt this PDF. The system will then:
@@ -3868,16 +4046,30 @@ function showUnlockModal(messageId, attachmentId = null) {
   `;
   dom.modalContainer.classList.remove("hidden");
 
-  const input = document.getElementById("pdfPasswordInput");
-  input.focus();
+  // Allow clicking outside the modal box to dismiss
+  dom.modalContainer.onclick = (e) => {
+    if (e.target === dom.modalContainer) hideModal();
+  };
 
-  document.getElementById("btnCancelModal").addEventListener("click", hideModal);
-  document.getElementById("btnSubmitUnlock").addEventListener("click", () => {
-    const pw = input.value.trim();
+  const input = document.getElementById("pdfPasswordInput");
+  setTimeout(() => input?.focus(), 50);
+
+  // Allow pressing Enter in password input to submit
+  input?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      document.getElementById("btnSubmitUnlock")?.click();
+    }
+  });
+
+  document.getElementById("btnCancelModal")?.addEventListener("click", hideModal);
+  document.getElementById("btnSubmitUnlock")?.addEventListener("click", () => {
+    const pw = input?.value?.trim();
     if (!pw) {
       showToast("Please enter a password", "error");
       return;
     }
+    const statusEl = document.getElementById("pdfUnlockStatus");
+    if (statusEl) statusEl.style.display = "block";
     unlockPDFFile(messageId, pw, attachmentId);
   });
 }

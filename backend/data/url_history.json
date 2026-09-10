@@ -66,5 +66,573 @@
       "test@example.com"
     ],
     "last_seen": "2026-09-02T07:43:07.770330"
+  },
+  "https://subscriptions.indeed.com/imgping": {
+    "senders": [
+      "donotreply@match.indeed.com",
+      "indeedapply@indeed.com"
+    ],
+    "last_seen": "2026-09-10T12:12:21.114977"
+  },
+  "https://in.indeed.com/": {
+    "senders": [
+      "donotreply@match.indeed.com"
+    ],
+    "last_seen": "2026-09-10T10:54:49.015298"
+  },
+  "https://prod.statics.indeed.com/eml/assets/images/logo/indeed_en_color.png": {
+    "senders": [
+      "donotreply@match.indeed.com"
+    ],
+    "last_seen": "2026-09-10T10:54:49.012679"
+  },
+  "https://secure.indeed.com/account/login": {
+    "senders": [
+      "donotreply@match.indeed.com"
+    ],
+    "last_seen": "2026-09-10T10:54:49.017435"
+  },
+  "https://in.indeed.com/pagead/clk/dl": {
+    "senders": [
+      "donotreply@match.indeed.com"
+    ],
+    "last_seen": "2026-09-10T10:54:49.034138"
+  },
+  "https://prod.statics.indeed.com/eml/assets/images/icons/Plane_primary_whitebg.png": {
+    "senders": [
+      "donotreply@match.indeed.com"
+    ],
+    "last_seen": "2026-09-10T10:54:49.024610"
+  },
+  "https://cts.indeed.com/v3/H4sIAAAAAAAA_32OuwqDQBRE_2ULq_jaYAyCpLaxSi_metXVfci6mxDEf88VQsp0w5mBORvzrGCjc8taxPFiTS8kRkJ3iF0ERhHCHi1qwPXWW6PKyTwEbxvlpROUQ9RhVTeoWiEDMGVVB6MsUbMTU6zYWAtgvHZVRzdpkvHsfOE5pxakgPk-WuOHkTpnPf7oe0FCFp8CX-FXKoTWdrQ4JKj8o0EjNx93M89gWgc1r7m7Jinb9w_gmjtV7wAAAA/jl5DOGS8-vqqe5gCn6xUPY0JSVV3Ax1iFRzhKQTvJLQ": {
+    "senders": [
+      "donotreply@match.indeed.com"
+    ],
+    "last_seen": "2026-09-10T10:54:49.036426"
+  },
+  "https://match.indeed.com/invitations/pause": {
+    "senders": [
+      "donotreply@match.indeed.com"
+    ],
+    "last_seen": "2026-09-10T10:54:49.038781"
+  },
+  "https://prod.statics.indeed.com/eml/assets/images/icons/ArrowRight_primary_whitebg.png": {
+    "senders": [
+      "donotreply@match.indeed.com"
+    ],
+    "last_seen": "2026-09-10T10:54:49.041133"
+  },
+  "https://support.indeed.com/hc/en-gb": {
+    "senders": [
+      "donotreply@match.indeed.com"
+    ],
+    "last_seen": "2026-09-10T10:54:49.043706"
+  },
+  "https://hrtechprivacy.com/brands/indeed": {
+    "senders": [
+      "donotreply@match.indeed.com"
+    ],
+    "last_seen": "2026-09-10T10:54:49.045954"
+  },
+  "https://in.indeed.com/legal": {
+    "senders": [
+      "donotreply@match.indeed.com"
+    ],
+    "last_seen": "2026-09-10T10:54:49.048735"
+  },
+  "https://subscriptions.indeed.com/optout": {
+    "senders": [
+      "donotreply@match.indeed.com"
+    ],
+    "last_seen": "2026-09-10T10:54:49.051097"
+  },
+  "https://engage.indeed.com/q/KIpAYfmE3OgCrMzkytOD3Q~~/AAR9hBA~/EEtLOrd8376tb-_Qzp-mMZGsFYpnxDqodkFfdx364I78VeTOZo4BfkEefzSPZJwIWF_m8or4joznCnWbb6Co5Q~~": {
+    "senders": [
+      "donotreply@match.indeed.com"
+    ],
+    "last_seen": "2026-09-10T10:54:49.056092"
+  },
+  "https://subscriptions.indeed.com": {
+    "senders": [
+      "donotreply@match.indeed.com"
+    ],
+    "last_seen": "2026-09-10T10:54:49.058679"
+  },
+  "https://prod.statics.indeed.com/ds/assets/typography/indeedsans/v1/indeedsans.css": {
+    "senders": [
+      "donotreply@match.indeed.com",
+      "indeedapply@indeed.com"
+    ],
+    "last_seen": "2026-09-10T12:12:21.126652"
+  },
+  "https://fonts.googleapis.com/css2": {
+    "senders": [
+      "donotreply@match.indeed.com",
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com",
+      "indeedapply@indeed.com"
+    ],
+    "last_seen": "2026-09-10T12:12:21.130297"
+  },
+  "https://logs.naukri.com/collectorapi/v1/uba": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:04.979269"
+  },
+  "https://fonts.googleapis.com": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:04.982292"
+  },
+  "https://fonts.gstatic.com": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:04.984871"
+  },
+  "https://www.naukri.com": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:04.990298"
+  },
+  "https://w10.naukri.com/mailers/2024/naukri/upload-march/Naukri_Logo.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:04.993515"
+  },
+  "https://www.naukri.com/durl/nEZb": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:04.996069"
+  },
+  "https://w10.naukri.com/mailers/2023/naukri/naukri-mailer-02june/i3.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:04.999385"
+  },
+  "https://w10.naukri.com/mailers/2023/naukri/naukri-mailer-02june/space.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.002921"
+  },
+  "https://w10.naukri.com/mailers/2023/naukri/naukri-mailer-02june/i2.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.006923"
+  },
+  "https://img.naukimg.com/logo_images/groups/v1/mobile/4292882.gif": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.009606"
+  },
+  "https://w10.naukri.com/mailers/2023/naukri/naukri-mailer-02june/star.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.012412"
+  },
+  "https://www.ambitionbox.com/reviews/johnson-and-johnson-reviews": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.015282"
+  },
+  "https://w10.naukri.com/mailers/2023/naukri/naukri-mailer-02june/i3_1.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.018091"
+  },
+  "https://w10.naukri.com/mailers/2023/naukri/naukri-mailer-02june/i4_1.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.021158"
+  },
+  "https://w10.naukri.com/mailers/2023/naukri/naukri-mailer-02june/i4.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.023649"
+  },
+  "https://w10.naukri.com/mailers/2023/naukri/naukri-mailer-02june/i6.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.027626"
+  },
+  "https://w10.naukri.com/mailers/2023/naukri/naukri-mailer-02june/i7.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.030223"
+  },
+  "http://my.naukri.com/AL/ResdexRMJMail/alid/{}/redirectParam/applyBroadcastMail": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.033434"
+  },
+  "https://www.ieplads.com/mailers/2023_ui/naukri/career-camp-15feb/images/space.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.037642"
+  },
+  "https://www.naukri.com/minis": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.041287"
+  },
+  "https://www.ieplads.com/mailers/2025_ui/naukri/apply-confirmation-19sept/images/minis.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.043947"
+  },
+  "https://www.ieplads.com/mailers/2025_ui/naukri/apply-confirmation-19sept/images/Buttons.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.047816"
+  },
+  "https://www.naukri.com/imposter/report-fake-job-recruiter": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.052216"
+  },
+  "https://w10.naukri.com/mailers/2020/naukri/jobs-from-companies-13april/images/gplay.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.055656"
+  },
+  "https://w10.naukri.com/mailers/2020/naukri/jobs-from-companies-13april/images/apple.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.058456"
+  },
+  "https://w10.naukri.com/mailers/2025/naukri-qr-code/qr3.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.062696"
+  },
+  "https://www.facebook.com/Naukri/": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.066190"
+  },
+  "https://w10.naukri.com/mailers/2023/naukri/naukri-mailer-02june/fb.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.070120"
+  },
+  "https://twitter.com/Naukri": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.073429"
+  },
+  "https://w10.naukri.com/mailers/2023/naukri/naukri-mailer-02june/twitter.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.077088"
+  },
+  "https://www.instagram.com/naukridotcom/": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.080984"
+  },
+  "https://w10.naukri.com/mailers/2023/naukri/naukri-mailer-02june/insta.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.084424"
+  },
+  "https://www.naukri.com/mnjuser/settings/communication": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.087577"
+  },
+  "https://w5.naukri.com/fdbck/main/feedback.php": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.091188"
+  },
+  "https://www.naukri.com/termsconditions": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.094103"
+  },
+  "https://company.naukri.com/landing-page/fakejobtrend/new/index.html": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.098019"
+  },
+  "https://w10.naukri.com/mailers/2024/naukri/upload-jan/person.png": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.101325"
+  },
+  "http://www.alzaincorporation.com": {
+    "senders": [
+      "alza.incorporationtvmZ21haWwuY29t@naukri.com"
+    ],
+    "last_seen": "2026-09-10T10:56:05.104686"
+  },
+  "https://fonts.googleapis.com/css": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.461329"
+  },
+  "https://e.customeriomail.com/e/c/eyJlbWFpbF9pZCI6ImRnVHYyQVVCQUlhTnpKSUJoWTNNa2dFQm9JbXdCeXU5LWpObVFHUHUtdWpUIiwiaHJlZiI6Imh0dHBzOi8vd3d3Lm5vdGlvbi5zby8_dGFyZ2V0PWNyZWF0ZV9tZWV0aW5nX25vdGVcdTAwMjZ1dG1fY2FtcGFpZ249JTVCVXBkYXRlZCU1RCtDcmVhdG9yK09uYm9hcmRpbmcrMjAyNVx1MDAyNnV0bV9jYW1wYWlnbmlkPTY1Mlx1MDAyNnV0bV9jYW1wYWlnbnR5cGU9dHJhbnNhY3Rpb25hbFx1MDAyNnV0bV9jb250ZW50PUVtYWlsKzMrLStBSU1OXHUwMDI2dXRtX21lZGl1bT1lbWFpbF9hY3Rpb25cdTAwMjZ1dG1fc291cmNlPWN1c3RvbWVyLmlvIiwiaW50ZXJuYWwiOiJlZmQ4MDU4NzUwYjVhNDAxODY4ZGNjOTIwMSIsImxpbmtfaWQiOjEzMjU5fQ/34a2c4f0b05b070a1b88535971aecf65a46f9aa213f5b97d5325c50ff36574f7": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.376835"
+  },
+  "https://userimg-assets.customeriomail.com/images/client-env-93295/1762217907763_NotionAI-ModalClip-MeetingNotes-PersonalUseCase-EN_01K965YMP7NDZXVW8DCMM58HC2.gif": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.379299"
+  },
+  "https://e.customeriomail.com/e/c/eyJlbWFpbF9pZCI6ImRnVHYyQVVCQUlhTnpKSUJoWTNNa2dFQm9JbXdCeXU5LWpObVFHUHUtdWpUIiwiaHJlZiI6Imh0dHBzOi8vd3d3Lm5vdGlvbi5zby9tZWV0P3V0bV9jYW1wYWlnbj0lNUJVcGRhdGVkJTVEK0NyZWF0b3IrT25ib2FyZGluZysyMDI1XHUwMDI2dXRtX2NhbXBhaWduaWQ9NjUyXHUwMDI2dXRtX2NhbXBhaWdudHlwZT10cmFuc2FjdGlvbmFsXHUwMDI2dXRtX2NvbnRlbnQ9RW1haWwrMystK0FJTU5cdTAwMjZ1dG1fbWVkaXVtPWVtYWlsX2FjdGlvblx1MDAyNnV0bV9zb3VyY2U9Y3VzdG9tZXIuaW8iLCJpbnRlcm5hbCI6ImVmZDgwNTg3NTBiNWE0MDE4NjhkY2M5MjAxIiwibGlua19pZCI6MTU0NzF9/c90b196e4341044b99d039e6770388aa102330bc7778a1706061a70dd38eb291": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.382857"
+  },
+  "https://e.customeriomail.com/e/c/eyJlbWFpbF9pZCI6ImRnVHYyQVVCQUlhTnpKSUJoWTNNa2dFQm9JbXdCeXU5LWpObVFHUHUtdWpUIiwiaHJlZiI6Imh0dHBzOi8vd3d3Lm5vdGlvbi5jb20vZG93bmxvYWQ_dXRtX2NhbXBhaWduPSU1QlVwZGF0ZWQlNUQrQ3JlYXRvcitPbmJvYXJkaW5nKzIwMjVcdTAwMjZ1dG1fY2FtcGFpZ25pZD02NTJcdTAwMjZ1dG1fY2FtcGFpZ250eXBlPXRyYW5zYWN0aW9uYWxcdTAwMjZ1dG1fY29udGVudD1FbWFpbCszKy0rQUlNTlx1MDAyNnV0bV9tZWRpdW09ZW1haWxfYWN0aW9uXHUwMDI2dXRtX3NvdXJjZT1jdXN0b21lci5pbyIsImludGVybmFsIjoiZWZkODA1ODc1MGI1YTQwMTg2OGRjYzkyMDEiLCJsaW5rX2lkIjoxMTMwNn0/6e8a984d11f044e2da12501e1ab90ac7a289506f308c11f32fef1447e1445e7c": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.386224"
+  },
+  "https://userimg-assets.customeriomail.com/images/client-env-93295/1762788963885_Email%20Footers%20Use%20Cases%20Image_01K9Q6HXZES66YA60W7MRDT027.png": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.389543"
+  },
+  "https://e.customeriomail.com/e/c/eyJlbWFpbF9pZCI6ImRnVHYyQVVCQUlhTnpKSUJoWTNNa2dFQm9JbXdCeXU5LWpObVFHUHUtdWpUIiwiaHJlZiI6Imh0dHBzOi8vd3d3Lm5vdGlvbi5zby8_dXRtX2NhbXBhaWduPSU1QlVwZGF0ZWQlNUQrQ3JlYXRvcitPbmJvYXJkaW5nKzIwMjVcdTAwMjZ1dG1fY2FtcGFpZ25pZD02NTJcdTAwMjZ1dG1fY2FtcGFpZ250eXBlPXRyYW5zYWN0aW9uYWxcdTAwMjZ1dG1fY29udGVudD1FbWFpbCszKy0rQUlNTlx1MDAyNnV0bV9tZWRpdW09ZW1haWxfYWN0aW9uXHUwMDI2dXRtX3NvdXJjZT1jdXN0b21lci5pbyIsImludGVybmFsIjoiZWZkODA1ODc1MGI1YTQwMTg2OGRjYzkyMDEiLCJsaW5rX2lkIjoyfQ/263f85045a40552bb8ebf018e41a6afa49c05d40b3213c3e09b5ec9a2cbd493d": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.392939"
+  },
+  "https://userimg-assets.customeriomail.com/images/client-env-93295/1736257678190_notion-logo-small-supports-dark_01JH0GBB5PBAN054H9NQK4JNBX.png": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.395963"
+  },
+  "https://e.customeriomail.com/e/c/eyJlbWFpbF9pZCI6ImRnVHYyQVVCQUlhTnpKSUJoWTNNa2dFQm9JbXdCeXU5LWpObVFHUHUtdWpUIiwiaHJlZiI6Imh0dHBzOi8vd3d3Lm5vdGlvbi5jb20vcHJvZHVjdC9jYWxlbmRhcj91dG1fY2FtcGFpZ249JTVCVXBkYXRlZCU1RCtDcmVhdG9yK09uYm9hcmRpbmcrMjAyNVx1MDAyNnV0bV9jYW1wYWlnbmlkPTY1Mlx1MDAyNnV0bV9jYW1wYWlnbnR5cGU9dHJhbnNhY3Rpb25hbFx1MDAyNnV0bV9jb250ZW50PUVtYWlsKzMrLStBSU1OXHUwMDI2dXRtX21lZGl1bT1lbWFpbF9hY3Rpb25cdTAwMjZ1dG1fc291cmNlPWN1c3RvbWVyLmlvIiwiaW50ZXJuYWwiOiJlZmQ4MDU4NzUwYjVhNDAxODY4ZGNjOTIwMSIsImxpbmtfaWQiOjExODEzfQ/2516f2c081698368f8f00aa7f3f12a0b64c53ddb1a03adffbdb2cf9e89c86659": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.400589"
+  },
+  "https://userimg-assets.customeriomail.com/images/client-env-93295/1750781867074_1750684712296_Notion-Calendar-Logo-2024.png%201_01JYEF1FECF5M9AG4AGGNWGYT0%20(2)_01JYHBPDF9FR87C75WEBKAPKF3.png": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.403994"
+  },
+  "https://e.customeriomail.com/unsubscribe/dgTv2AUBAIaNzJIBhY3MkgEBoImwByu9-jNmQGPu-ujT": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.407670"
+  },
+  "https://e.customeriomail.com/manage_subscription_preferences/dgTv2AUBAIaNzJIBhY3MkgEBoImwByu9-jNmQGPu-ujT": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.410718"
+  },
+  "https://e.customeriomail.com/e/c/eyJlbWFpbF9pZCI6ImRnVHYyQVVCQUlhTnpKSUJoWTNNa2dFQm9JbXdCeXU5LWpObVFHUHUtdWpUIiwiaHJlZiI6Imh0dHBzOi8vd3d3Lm5vdGlvbi5zby9ub3Rpb24vUHJpdmFjeS1Qb2xpY3ktMzQ2OGQxMjBjZjYxNGQ0YzkwMTRjMDlmNmFkYzkwOTE_dXRtX2NhbXBhaWduPSU1QlVwZGF0ZWQlNUQrQ3JlYXRvcitPbmJvYXJkaW5nKzIwMjVcdTAwMjZ1dG1fY2FtcGFpZ25pZD02NTJcdTAwMjZ1dG1fY2FtcGFpZ250eXBlPXRyYW5zYWN0aW9uYWxcdTAwMjZ1dG1fY29udGVudD1FbWFpbCszKy0rQUlNTlx1MDAyNnV0bV9tZWRpdW09ZW1haWxfYWN0aW9uXHUwMDI2dXRtX3NvdXJjZT1jdXN0b21lci5pbyIsImludGVybmFsIjoiZWZkODA1ODc1MGI1YTQwMTg2OGRjYzkyMDEiLCJsaW5rX2lkIjoxMzAzNH0/df9a93720fe4f267ff83baac00fd7ea169ba5d48391f3b361daad15fc13f47c5": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.414960"
+  },
+  "https://e.customeriomail.com/deliveries/dgTv2AUBAIaNzJIBhY3MkgEBoImwByu9-jNmQGPu-ujT": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.418240"
+  },
+  "https://e.customeriomail.com/e/o/eyJlbWFpbF9pZCI6ImRnVHYyQVVCQUlhTnpKSUJoWTNNa2dFQm9JbXdCeXU5LWpObVFHUHUtdWpUIn0=": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.421823"
+  },
+  "https://www.notion.so/": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.436766"
+  },
+  "https://www.notion.so/meet": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.429483"
+  },
+  "https://www.notion.com/download": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.433492"
+  },
+  "https://www.notion.com/product/calendar": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.439889"
+  },
+  "https://track.customer.io/unsubscribe/dgTv2AUBAIaNzJIBhY3MkgEBoImwByu9-jNmQGPu-ujT": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.443926"
+  },
+  "https://track.customer.io/manage_subscription_preferences/dgTv2AUBAIaNzJIBhY3MkgEBoImwByu9-jNmQGPu-ujT": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.448131"
+  },
+  "https://www.notion.so/notion/Privacy-Policy-3468d120cf614d4c9014c09f6adc9091": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.451851"
+  },
+  "https://track.customer.io/deliveries/dgTv2AUBAIaNzJIBhY3MkgEBoImwByu9-jNmQGPu-ujT": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.454879"
+  },
+  "https://www.litmus.com/blog/how-to-remove-blue-links-in-html-emails/": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.464794"
+  },
+  "https://userimg-assets.customeriomail.com/images/client-env-93295/1750781867074_1750684712296_Notion-Calendar-Logo-2024.png%201_01JYEF1FECF5M9AG4AGGNWGYT0%20": {
+    "senders": [
+      "team@mail.notion.so"
+    ],
+    "last_seen": "2026-09-10T11:00:51.467756"
+  },
+  "https://jobs.smartrecruiters.com/my-applications/SkynetSecureSolutions/71e1dc68-0989-4e59-a5f6-062561a297d1": {
+    "senders": [
+      "notification@smartrecruiters.com"
+    ],
+    "last_seen": "2026-09-10T12:12:02.370267"
+  },
+  "https://www.indeed.com": {
+    "senders": [
+      "indeedapply@indeed.com"
+    ],
+    "last_seen": "2026-09-10T12:12:21.073036"
+  },
+  "https://offers.indeed.com/rs/699-SXJ-715/images/indeed_blue.png": {
+    "senders": [
+      "indeedapply@indeed.com"
+    ],
+    "last_seen": "2026-09-10T12:12:21.076898"
+  },
+  "https://dpuk71x9wlmkf.cloudfront.net/mt/20210602211405/Application-3.png": {
+    "senders": [
+      "indeedapply@indeed.com"
+    ],
+    "last_seen": "2026-09-10T12:12:21.080527"
+  },
+  "https://prod.statics.indeed.com/eml/assets/images/icons/CheckCircle_success_status.png": {
+    "senders": [
+      "indeedapply@indeed.com"
+    ],
+    "last_seen": "2026-09-10T12:12:21.083849"
+  },
+  "https://apply.indeed.com/indeedapply/confirmemail/viewjob": {
+    "senders": [
+      "indeedapply@indeed.com"
+    ],
+    "last_seen": "2026-09-10T12:12:21.087677"
+  },
+  "https://d2q79iu7y748jz.cloudfront.net/s/_squarelogo/256x256/6ddcc123d153d9298525a9424560477c": {
+    "senders": [
+      "indeedapply@indeed.com"
+    ],
+    "last_seen": "2026-09-10T12:12:21.091857"
+  },
+  "http://in.indeed.com/cmp/Skynet-Secure-Solutions": {
+    "senders": [
+      "indeedapply@indeed.com"
+    ],
+    "last_seen": "2026-09-10T12:12:21.095581"
+  },
+  "https://apply.indeed.com/indeedapply/confirmemail/fraudlink": {
+    "senders": [
+      "indeedapply@indeed.com"
+    ],
+    "last_seen": "2026-09-10T12:12:21.099013"
+  },
+  "https://apply.indeed.com/indeedapply/confirmemail/contactus": {
+    "senders": [
+      "indeedapply@indeed.com"
+    ],
+    "last_seen": "2026-09-10T12:12:21.122706"
+  },
+  "https://www.indeed.com/legal": {
+    "senders": [
+      "indeedapply@indeed.com"
+    ],
+    "last_seen": "2026-09-10T12:12:21.106712"
+  },
+  "https://indeedemployers.zendesk.com/": {
+    "senders": [
+      "indeedapply@indeed.com"
+    ],
+    "last_seen": "2026-09-10T12:12:21.110823"
+  },
+  "https://engage.indeed.com/q/-oXWr5YQFahkGQDDrQjj-A~~/AAR9hBA~/fjeC0w5jSmSoVRTht9Xke0OVtKd94NxZJdDTxTb6xU5GF8kQYI86yfqutuPpCxKmD07QL4M5N0LHT2xVIBTm7A~~": {
+    "senders": [
+      "indeedapply@indeed.com"
+    ],
+    "last_seen": "2026-09-10T12:12:21.119194"
+  },
+  "https://offers.indeed.com/rs/699-SXJ-715/images/white-square-240.jpg": {
+    "senders": [
+      "indeedapply@indeed.com"
+    ],
+    "last_seen": "2026-09-10T12:12:21.133580"
   }
 }
