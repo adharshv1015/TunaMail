@@ -102,13 +102,69 @@ def logout(request: Request):
     }
 
 
+def format_name_from_email(email_str: str) -> str:
+    if not email_str or not isinstance(email_str, str):
+        return "You"
+    import re
+    # Check if format like "Name <email@domain>"
+    m_angle = re.match(r"^([^<@]+)<[^>]+>$", email_str.strip())
+    if m_angle and m_angle.group(1).strip():
+        clean_name = m_angle.group(1).strip().strip("'\"")
+        if clean_name:
+            return clean_name
+        
+    email_clean = re.sub(r"[<>]", "", email_str).strip()
+    if "@" not in email_clean:
+        return email_clean.strip("'\"")
+        
+    username = email_clean.split("@")[0].strip()
+    # If dots, underscores, dashes
+    if re.search(r"[\._\-]", username):
+        parts = re.split(r"[\._\-]+", username)
+        words = [re.sub(r"\d+", "", p).capitalize() for p in parts if p]
+        words = [w for w in words if w]
+        if words:
+            return " ".join(words)
+            
+    # Strip trailing numbers
+    clean_word = re.sub(r"\d+$", "", username)
+    # Check camel case
+    clean_word = re.sub(r"([a-z])([A-Z])", r"\1 \2", clean_word)
+    # Common names with initial e.g. adharshv -> Adharsh V
+    if len(clean_word) > 4:
+        base = clean_word[:-1]
+        initial = clean_word[-1].upper()
+        if base.lower() in ["adharsh", "rahul", "suresh", "ramesh", "vijay", "ajay", "karthik", "arun", "rohit", "anand"]:
+            return f"{base.capitalize()} {initial}"
+            
+    return clean_word.capitalize() if clean_word else username.capitalize()
+
+
 @router.get("/status")
 def status(request: Request):
     session_id = request.session.get("session_id")
     server_session = session_manager.get_session(session_id)
     
     if server_session and server_session.get("authenticated"):
-        return {"authenticated": True}
+        user_email = server_session.get("user_email")
+        if not user_email and server_session.get("credentials"):
+            try:
+                from googleapiclient.discovery import build
+                service = build("gmail", "v1", credentials=server_session["credentials"])
+                profile = service.users().getProfile(userId="me").execute()
+                user_email = profile.get("emailAddress")
+                if user_email:
+                    server_session["user_email"] = user_email
+            except Exception:
+                pass
+
+        user_name = format_name_from_email(user_email) if user_email else None
+        return {
+            "authenticated": True,
+            "email": user_email,
+            "name": user_name
+        }
         
     return {"authenticated": False}
+
 

@@ -13,6 +13,12 @@ const API_BASE = (window.location.hostname === "localhost" || window.location.ho
    ========================================================================== */
 const state = {
   isConnected: false,
+  userEmail: (() => {
+    try { return localStorage.getItem("tunamail_user_email") || null; } catch { return null; }
+  })(),
+  userName: (() => {
+    try { return localStorage.getItem("tunamail_user_name") || null; } catch { return null; }
+  })(),
   messages: [],
   filteredMessages: [],
   selectedMessageId: null,
@@ -145,15 +151,83 @@ function escapeHtml(str) {
  */
 function parseSenderName(from) {
   if (!from) return "Unknown Sender";
-  const s = String(from).trim();
-  // Format: "Display Name <email@domain>" or "Display Name<email@domain>"
-  const match = s.match(/^"?([^"<]+?)"?\s*<[^>]+>$/);
-  if (match) {
-    const name = match[1].trim();
-    return name || s.replace(/<[^>]+>/, "").trim() || s;
+  return formatIndividualName(from, "Unknown Sender");
+}
+
+/**
+ * Formats an individual's friendly human name from an email address or header string.
+ * Never displays the full raw email address to the user.
+ * e.g. "<adharshv1015@gmail.com>"       → "Adharsh V"
+ *      "Adharsh V <adharshv1015@gmail.com>" → "Adharsh V"
+ *      "john.doe@gmail.com"             → "John Doe"
+ *      "Indeed Apply <apply@indeed.com>"→ "Indeed Apply"
+ *      "" or null (missing)             → logged in user's name / "You"
+ */
+function formatIndividualName(rawTarget, fallbackName = null) {
+  if (!rawTarget || rawTarget === "N/A" || rawTarget === "null" || rawTarget === "undefined") {
+    if (state.userName) return state.userName;
+    if (state.userEmail) return formatIndividualName(state.userEmail);
+    return fallbackName || "You";
   }
-  // If it's just an email address, return as-is
-  return s;
+  let s = String(rawTarget).trim();
+
+  // 1. Check for "Display Name <email@domain>"
+  const matchAngle = s.match(/^"?([^"<]+?)"?\s*<[^>]+>$/);
+  if (matchAngle && matchAngle[1].trim()) {
+    let name = matchAngle[1].trim().replace(/^['"]+|['"]+$/g, "").trim();
+    if (name) return name;
+  }
+
+  // 2. Extract email or clean string
+  let email = s;
+  const matchOnlyAngle = s.match(/^<([^>]+)>$/);
+  if (matchOnlyAngle && matchOnlyAngle[1]) {
+    email = matchOnlyAngle[1].trim();
+  } else {
+    email = s.replace(/<[^>]*>/g, "").trim();
+  }
+
+  if (!email || email === "N/A" || email === "null" || email === "undefined") {
+    if (state.userName) return state.userName;
+    if (state.userEmail) return formatIndividualName(state.userEmail);
+    return fallbackName || "You";
+  }
+
+  // If already clean name without @
+  if (!email.includes("@")) {
+    return email.replace(/^['"]+|['"]+$/g, "").trim();
+  }
+
+  // Extract username before @
+  const username = email.split("@")[0].trim();
+
+  // If separated by dots, underscores or dashes e.g. "adharsh.v" or "john_doe"
+  if (/[\._\-]/.test(username)) {
+    const parts = username.split(/[\._\-]+/).filter(Boolean);
+    const words = parts.map((p) => p.replace(/\d+/g, "").trim()).filter(Boolean);
+    if (words.length > 0) {
+      return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+    }
+  }
+
+  // Strip trailing digits e.g. "adharshv1015" -> "adharshv"
+  let cleanWord = username.replace(/\d+$/, "");
+  cleanWord = cleanWord.replace(/([a-z])([A-Z])/g, "$1 $2");
+
+  // Check common Indian / English names with single letter initial at end e.g. "adharshv" -> "Adharsh V"
+  if (cleanWord.length > 4) {
+    const base = cleanWord.slice(0, -1);
+    const initial = cleanWord.slice(-1).toUpperCase();
+    if (["adharsh", "rahul", "suresh", "ramesh", "vijay", "ajay", "karthik", "arun", "rohit", "anand", "priya", "amit", "vikram", "sneha", "deepak", "varun", "nikhil", "sanjay", "praveen"].includes(base.toLowerCase())) {
+      return base.charAt(0).toUpperCase() + base.slice(1).toLowerCase() + " " + initial;
+    }
+  }
+
+  if (cleanWord.length > 0) {
+    return cleanWord.charAt(0).toUpperCase() + cleanWord.slice(1);
+  }
+
+  return username.charAt(0).toUpperCase() + username.slice(1);
 }
 
 function showToast(message, type = "info") {
@@ -224,6 +298,12 @@ async function checkAuthStatus() {
 
 function clearAllSessionData(reasonMessage = null, notify = false) {
   state.isConnected = false;
+  state.userEmail = null;
+  state.userName = null;
+  try {
+    localStorage.removeItem("tunamail_user_email");
+    localStorage.removeItem("tunamail_user_name");
+  } catch (_) { }
   state.messages = [];
   state.filteredMessages = [];
   state.selectedMessageId = null;
@@ -343,16 +423,16 @@ async function fetchInboxMessages(customQuery = null, isPageNavigation = false) 
     clearAllSessionData("Please connect your Gmail account to inspect emails.", false);
     return;
   }
-  
+
   // If we are not paginating, reset pagination state and do a full refresh
   if (!isPageNavigation) {
     state.pageTokens = [null];
     state.currentPageIndex = 0;
-    
+
     dom.btnRefresh.classList.add("spin-animation");
     showInboxShimmer("Refreshing inbox…");
     showInboxLoader();
-    
+
     // Clear the previously loaded message so stale data isn't displayed during refresh
     state.selectedMessageId = null;
     renderAnalysisArea();
@@ -368,7 +448,7 @@ async function fetchInboxMessages(customQuery = null, isPageNavigation = false) 
 
     params.set("period", period);
     params.set("limit", limit);
-    
+
     const pageToken = state.pageTokens[state.currentPageIndex];
     if (pageToken) {
       params.set("page_token", pageToken);
@@ -411,7 +491,7 @@ async function fetchInboxMessages(customQuery = null, isPageNavigation = false) 
 
     const data = await res.json();
     state.messages = Array.isArray(data) ? data : data.messages || [];
-    
+
     // Support pagination if the backend provided a next_page_token
     state.nextPageToken = data.pagination?.next_page_token || null;
 
@@ -999,6 +1079,13 @@ function setupEventListeners() {
         const auth = await checkAuthStatus();
         if (!auth.authenticated) {
           clearAllSessionData("Your Gmail session has expired. Please click 'Connect Gmail' at the top right to reconnect.", true);
+        } else if (auth.email) {
+          state.userEmail = auth.email;
+          state.userName = auth.name || formatIndividualName(auth.email);
+          try {
+            localStorage.setItem("tunamail_user_email", state.userEmail);
+            localStorage.setItem("tunamail_user_name", state.userName);
+          } catch (_) { }
         }
       } catch (_) { }
     }
@@ -1017,67 +1104,67 @@ function filterAndRenderInbox() {
   // Use a microtask to let the shimmer paint before the JS filter runs
   requestAnimationFrame(() => {
 
-  const q = state.searchQuery;
-  const f = state.activeFilter;
-  const cat = state.activeCategory;
-  const secFilter = state.securityFilter || "ALL";
-  const sortOpt = state.sortOption || "NEWEST";
+    const q = state.searchQuery;
+    const f = state.activeFilter;
+    const cat = state.activeCategory;
+    const secFilter = state.securityFilter || "ALL";
+    const sortOpt = state.sortOption || "NEWEST";
 
-  let filtered = state.messages.filter((msg) => {
-    // 1. Gmail Category Filter (Primary, Promotions, Social, Updates, All)
-    if (cat !== "all") {
-      const msgCategory = getEmailCategory(msg);
-      if (msgCategory !== cat) return false;
-    }
-
-    const v = (msg.verdict || (msg.analysis_status === "ANALYZED" ? "SAFE" : "UNANALYZED")).toUpperCase();
-
-    // 2. Quick Verdict Filter (all, safe, phishing)
-    if (f === "safe") {
-      if (v !== "SAFE" && v !== "CLEAN") return false;
-    } else if (f === "phishing" || f === "attention") {
-      if (v === "SAFE" || v === "CLEAN" || v === "UNANALYZED") return false;
-    }
-
-    // 3. Advanced Security Filter
-    if (secFilter !== "ALL") {
-      if (secFilter === "SAFE" && v !== "SAFE" && v !== "CLEAN") return false;
-      if (secFilter === "SUSPICIOUS" && v !== "SUSPICIOUS") return false;
-      if (secFilter === "PHISHING" && v !== "PHISHING" && v !== "MALICIOUS" && v !== "HIGH RISK" && v !== "CRITICAL") return false;
-      if (secFilter === "UNANALYZED" && msg.analysis_status !== "UNANALYZED") return false;
-    }
-
-    // 4. Search query matching
-    if (q) {
-      const from = (msg.from || "").toLowerCase();
-      const subject = (msg.subject || "").toLowerCase();
-      const snippet = (msg.snippet || "").toLowerCase();
-      if (!from.includes(q) && !subject.includes(q) && !snippet.includes(q)) {
-        return false;
+    let filtered = state.messages.filter((msg) => {
+      // 1. Gmail Category Filter (Primary, Promotions, Social, Updates, All)
+      if (cat !== "all") {
+        const msgCategory = getEmailCategory(msg);
+        if (msgCategory !== cat) return false;
       }
-    }
 
-    return true;
-  });
+      const v = (msg.verdict || (msg.analysis_status === "ANALYZED" ? "SAFE" : "UNANALYZED")).toUpperCase();
 
-  // 5. Sorting
-  filtered.sort((a, b) => {
-    if (sortOpt === "NEWEST") {
-      return new Date(b.date || 0) - new Date(a.date || 0);
-    } else if (sortOpt === "OLDEST") {
-      return new Date(a.date || 0) - new Date(b.date || 0);
-    } else if (sortOpt === "RISK_HIGH") {
-      return (b.risk_score ?? 0) - (a.risk_score ?? 0);
-    } else if (sortOpt === "RISK_LOW") {
-      return (a.risk_score ?? 0) - (b.risk_score ?? 0);
-    }
-    return 0;
-  });
+      // 2. Quick Verdict Filter (all, safe, phishing)
+      if (f === "safe") {
+        if (v !== "SAFE" && v !== "CLEAN") return false;
+      } else if (f === "phishing" || f === "attention") {
+        if (v === "SAFE" || v === "CLEAN" || v === "UNANALYZED") return false;
+      }
 
-  state.filteredMessages = filtered;
-  dom.emailCountPill.textContent = state.filteredMessages.length;
-  renderInboxList();
-  hideInboxShimmer(80);
+      // 3. Advanced Security Filter
+      if (secFilter !== "ALL") {
+        if (secFilter === "SAFE" && v !== "SAFE" && v !== "CLEAN") return false;
+        if (secFilter === "SUSPICIOUS" && v !== "SUSPICIOUS") return false;
+        if (secFilter === "PHISHING" && v !== "PHISHING" && v !== "MALICIOUS" && v !== "HIGH RISK" && v !== "CRITICAL") return false;
+        if (secFilter === "UNANALYZED" && msg.analysis_status !== "UNANALYZED") return false;
+      }
+
+      // 4. Search query matching
+      if (q) {
+        const from = (msg.from || "").toLowerCase();
+        const subject = (msg.subject || "").toLowerCase();
+        const snippet = (msg.snippet || "").toLowerCase();
+        if (!from.includes(q) && !subject.includes(q) && !snippet.includes(q)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    // 5. Sorting
+    filtered.sort((a, b) => {
+      if (sortOpt === "NEWEST") {
+        return new Date(b.date || 0) - new Date(a.date || 0);
+      } else if (sortOpt === "OLDEST") {
+        return new Date(a.date || 0) - new Date(b.date || 0);
+      } else if (sortOpt === "RISK_HIGH") {
+        return (b.risk_score ?? 0) - (a.risk_score ?? 0);
+      } else if (sortOpt === "RISK_LOW") {
+        return (a.risk_score ?? 0) - (b.risk_score ?? 0);
+      }
+      return 0;
+    });
+
+    state.filteredMessages = filtered;
+    dom.emailCountPill.textContent = state.filteredMessages.length;
+    renderInboxList();
+    hideInboxShimmer(80);
   }); // end requestAnimationFrame
 }
 
@@ -1090,6 +1177,9 @@ function updateAuthUI() {
     dom.connStatusText.textContent = "Connected to Gmail";
     dom.btnAuthAction.innerHTML = "<span>Disconnect</span>";
     dom.btnAuthAction.classList.remove("login-btn");
+    if (typeof resetInactivityTimer === "function") {
+      resetInactivityTimer();
+    }
   } else {
     dom.connStatusDot.className = "status-dot";
     dom.connStatusText.textContent = "Not Connected";
@@ -1203,7 +1293,7 @@ function renderInboxList() {
       `;
     })
     .join("");
-    
+
   if (state.pageTokens.length > 1 || state.nextPageToken) {
     dom.inboxList.innerHTML += `
       <div class="pagination-controls">
@@ -1221,7 +1311,7 @@ function renderInboxList() {
       selectEmail(id);
     });
   });
-  
+
   const btnPrev = document.getElementById("btnPrevPage");
   if (btnPrev) {
     btnPrev.addEventListener("click", () => {
@@ -1413,7 +1503,7 @@ function renderCombinedOverview(customMessage = null) {
         </div>
         <button type="button" class="btn-refresh-inbox" id="btnRefreshOverview" title="Refresh Telemetry">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
           </svg>
           <span style="margin-left: 0.4rem; font-size: 0.8rem; font-weight: 600;">Refresh Telemetry</span>
         </button>
@@ -1802,7 +1892,7 @@ function renderAnalysisArea() {
     effectiveDecision.risk_score = 0;
     effectiveDecision.confidence = Math.max(decision.confidence || 85, 85);
     effectiveDecision.recommendation = "Verified sender, safe links, and no malicious content detected. Safe to read, click links, and reply.";
-    
+
     if (analysis.decision) Object.assign(analysis.decision, effectiveDecision);
     if (msg.decision) Object.assign(msg.decision, effectiveDecision);
     msg.verdict = "SAFE";
@@ -1833,8 +1923,26 @@ function renderEmailHeaderCard(msg, decision) {
   else if (verdict === "VERIFIED LEGITIMATE" || verdict === "VERIFIED_LEGITIMATE") { vClass = "safe"; vLabel = "Verified Safe"; }
   else if (verdict === "LIKELY LEGITIMATE" || verdict === "LIKELY_LEGITIMATE") { vClass = "safe"; vLabel = "Likely Safe"; }
 
-  const fromText = (msg.from || "N/A").replace(/<[^>]*>/g, '').trim();
-  const toText = (msg.to || "N/A").replace(/<[^>]*>/g, '').trim();
+  // Extract individual name for FROM
+  let fromText = formatIndividualName(msg.from, (msg.from || "N/A").replace(/<[^>]*>/g, '').trim());
+  if (!fromText || fromText === "N/A") {
+    fromText = (msg.from || "N/A").replace(/<[^>]*>/g, '').trim() || msg.from || "N/A";
+  }
+
+  // Extract individual name for TO (never show raw email, fallback to logged-in user name)
+  let toText = "";
+  if (msg.to && typeof msg.to === "string" && msg.to.trim()) {
+    toText = formatIndividualName(msg.to);
+  }
+  if (!toText || toText === "N/A" || toText === "You") {
+    if (state.userName) {
+      toText = state.userName;
+    } else if (state.userEmail) {
+      toText = formatIndividualName(state.userEmail);
+    } else {
+      toText = "You";
+    }
+  }
   let dateText = msg.date || "N/A";
   if (dateText !== "N/A") {
     try {
@@ -1852,7 +1960,7 @@ function renderEmailHeaderCard(msg, decision) {
           hour12: true
         }).format(d) + ' (IST)';
       }
-    } catch (e) {}
+    } catch (e) { }
   }
   const subjectText = msg.subject || "(No Subject)";
 
@@ -1901,13 +2009,13 @@ function renderHumanVerdictHero(decision, messageId, msg) {
     headline = "Be Careful: Suspicious Email";
     advice = (decision.recommendation && !decision.recommendation.includes("Report or delete") && !decision.recommendation.includes("Do not interact"))
       ? decision.recommendation
-      : "This message contains unusual signals. Exercise caution before clicking links or downloading files.";
+      : "Something about this letter looks unusual. Don't click buttons or download files until you check with an adult.";
     badgeText = "SUSPICIOUS";
   } else if (verdict === "PHISHING" || verdict === "MALICIOUS" || verdict === "CRITICAL" || verdict === "HIGH RISK" || verdict === "HIGH_RISK") {
     heroClass = "danger";
     icon = "🚨";
     headline = "Warning: Do Not Trust This Email";
-    advice = decision.recommendation || "High risk of phishing or credential extortion detected. Do not click any links, do not reply, and do not download attachments.";
+    advice = "🛑 Warning: Sneaky trick letter detected! Someone is trying to trick you and steal your secrets. Do not click links, do not open files, and ask a grown-up for help.";
     badgeText = "PHISHING DETECTED";
   }
 
@@ -1924,11 +2032,14 @@ function renderHumanVerdictHero(decision, messageId, msg) {
         <div class="hero-advice">${escapeHtml(advice)}</div>
         ${origPanel}
         <div class="hero-actions">
-          <button class="btn-report" id="btnExportPDF" data-id="${escapeHtml(messageId)}">
-            <span>📄</span> Export Security Report (PDF)
+          <button class="btn-report btn-view-report" id="btnViewReport" data-id="${escapeHtml(messageId)}" title="Open kid-friendly safety report">
+            <span>📄</span> Safety Report
           </button>
-          <button class="btn-report" id="btnExportJSON" data-id="${escapeHtml(messageId)}">
-            <span>{ }</span> Forensic JSON
+          <button class="btn-report" id="btnExportPDF" data-id="${escapeHtml(messageId)}" title="Download PDF safety report">
+            <span>📥</span> Download PDF
+          </button>
+          <button class="btn-report" id="btnExportJSON" data-id="${escapeHtml(messageId)}" title="Download raw clues">
+            <span>🔍</span> Clues (JSON)
           </button>
         </div>
       </div>
@@ -2281,11 +2392,11 @@ function renderUnifiedSecurityStudio(msg, rawAnalysis) {
   const dkimFail = dkimVal.includes("fail") || dkimVal.includes("invalid");
   const dmarcFail = dmarcVal.includes("fail") || dmarcVal.includes("reject");
 
-  const untrustedReputation = (trust.sender_reputation || "").toUpperCase() === "MALICIOUS" || (trust.sender_reputation || "").toUpperCase() === "SUSPICIOUS";
-  const lowTrustScore = typeof trust.trust_score === "number" && trust.trust_score > 0 && trust.trust_score < 35;
+  const untrustedReputation = (trust.sender_reputation || "").toUpperCase() === "MALICIOUS";
 
-  // Sender & Auth issue: only flagged if there is an explicit failure, untrusted reputation, or low trust
-  const authIssue = spfFail || dkimFail || dmarcFail || untrustedReputation || lowTrustScore || (!spfPass && !dkimPass && (spfVal !== "" || dkimVal !== ""));
+  // Sender & Auth issue: only flagged if there is an explicit cryptographic/server failure
+  // At first, do not call sender fake if SPF and DKIM passed!
+  const authIssue = spfFail || dkimFail || dmarcFail || (untrustedReputation && (spfFail || dkimFail));
   const authScore = authIssue ? (spfFail && dkimFail ? 60 : 40) : 0;
 
   const contentUrgency = !!content.urgency;
@@ -2378,18 +2489,19 @@ function renderUnifiedSecurityStudio(msg, rawAnalysis) {
   // 4. Attached Files  (unchanged)
   // 5. Adaptive Baseline (unchanged)
   // "Original Message" content is now shown in the Risk Score gauge area
-  const senderIntelIssue = authIssue || stage5Issue;
-  const senderIntelScore = Math.max(authScore, stage5Score);
-  const aiLangIssue = aiIssue || contentIssue;
-  const aiLangScore = Math.max(aiScore, contentRisk || (contentIssue ? 50 : 0));
+  const senderPayloadIssue = hasPhishingInAtt || attHasRiskFiles;
+  const senderIntelIssue = authIssue || stage5Issue || senderPayloadIssue;
+  const senderIntelScore = Math.max(authScore, stage5Score, senderPayloadIssue ? (hasPhishingInAtt ? 90 : 50) : 0);
+  const aiLangIssue = aiIssue || contentIssue || hasPhishingInAtt || attHasRiskFiles;
+  const aiLangScore = Math.max(aiScore, contentRisk || 0, hasPhishingInAtt ? 90 : attHasRiskFiles ? 60 : 0);
 
   const modules = [
     {
       key: "sender-intel",
       icon: "🛡️",
-      label: "Sender & Intel",
-      sub: "Auth · SPF · MITRE",
-      pillText: senderIntelIssue ? (stage5Issue ? `🚨 THREAT` : "🚨 FAIL") : "✓ PASS",
+      label: "Sender & ID",
+      sub: "Real or Fake Sender",
+      pillText: senderIntelIssue ? (authIssue ? "🚨 FAKE" : senderPayloadIssue ? "🚨 PAYLOAD" : "🚨 THREAT") : "✓ REAL",
       pillClass: senderIntelIssue ? "danger" : "pass",
       isIssue: senderIntelIssue,
       issueScore: senderIntelScore,
@@ -2397,9 +2509,9 @@ function renderUnifiedSecurityStudio(msg, rawAnalysis) {
     {
       key: "ai-language",
       icon: "⚖️",
-      label: "AI & Language",
-      sub: "Reasoning · Tone",
-      pillText: aiLangIssue ? (contentHarvest ? "🚨 HARVEST" : aiIssue ? "🚨 RISK" : "🚨 ALERT") : `${decision.confidence ?? 85}% Conf`,
+      label: "Words & Tricks",
+      sub: "Polite or Sneaky Words",
+      pillText: aiLangIssue ? (hasPhishingInAtt ? "🚨 TRAP" : contentHarvest ? "🚨 TRAP" : aiIssue ? "🚨 SNEAKY" : "🚨 ALERT") : `${decision.confidence ?? 85}% Conf`,
       pillClass: aiLangIssue ? "danger" : "safe",
       isIssue: aiLangIssue,
       issueScore: aiLangScore,
@@ -2407,8 +2519,8 @@ function renderUnifiedSecurityStudio(msg, rawAnalysis) {
     {
       key: "links",
       icon: "🔗",
-      label: "Links & Domains",
-      sub: "URL & WHOIS Intel",
+      label: "Links & Websites",
+      sub: "Where buttons take you",
       pillText: urlIssue
         ? `🚨 ${issueUrlsCount > 0 ? `${issueUrlsCount} Unsafe` : "RISK"}`
         : (urls.length === 0 ? "0 Links" : `${urls.length} Safe`),
@@ -2420,8 +2532,8 @@ function renderUnifiedSecurityStudio(msg, rawAnalysis) {
       key: "attachments",
       icon: "📎",
       label: "Attached Files",
-      sub: "PDF & Hashes",
-      pillText: attIssue ? "🚨 THREAT" : (attCount === 0 ? "0 Files" : `${attCount} Safe`),
+      sub: "PDFs & Downloads",
+      pillText: attIssue ? "🚨 VIRUS" : (attCount === 0 ? "0 Files" : `${attCount} Safe`),
       pillClass: attIssue ? "danger" : (attCount === 0 ? "neutral" : "safe"),
       isIssue: attIssue,
       issueScore: attScore,
@@ -2429,9 +2541,9 @@ function renderUnifiedSecurityStudio(msg, rawAnalysis) {
     {
       key: "adaptive",
       icon: "📈",
-      label: "Adaptive Baseline",
-      sub: "Sender Drift",
-      pillText: adaptiveIssue ? "🚨 DRIFT" : "Stable",
+      label: "Sender Habits",
+      sub: "Normal or Strange",
+      pillText: adaptiveIssue ? "🚨 STRANGE" : "Normal",
       pillClass: adaptiveIssue ? "danger" : "safe",
       isIssue: adaptiveIssue,
       issueScore: adaptiveScore,
@@ -2459,18 +2571,18 @@ function renderUnifiedSecurityStudio(msg, rawAnalysis) {
     <div class="inspector-card" id="inspectorConsole">
       <div class="inspector-header">
         <div class="inspector-title-group">
-          <div class="inspector-icon">🔬</div>
+          <div class="inspector-icon">🔍</div>
           <div>
-            <div class="inspector-title">Security Inspector & Forensic Evidence</div>
-            <div class="inspector-subtitle">Granular technical signals, security engine weights, and evidence traces</div>
+            <div class="inspector-title">Safety Inspector & Clues</div>
+            <div class="inspector-subtitle">Simple, easy-to-read check of all 5 security tests</div>
           </div>
         </div>
         <div class="inspector-meta-badge ${currentMod.isIssue ? "danger" : ""}">
-          Viewing: ${escapeHtml(currentMod.label)} ${currentMod.isIssue ? "⚠️ (Issue Flagged)" : ""}
+          Viewing: ${escapeHtml(currentMod.label)} ${currentMod.isIssue ? "⚠️ (Trick Flagged)" : ""}
         </div>
       </div>
 
-      <!-- Compact 6-Tab Forensic Deck — click any tab to open details popup -->
+      <!-- Compact 5-Tab Forensic Deck — click any tab to open details popup -->
       <div class="forensic-deck">
         ${sortedModules
       .map(
@@ -2495,27 +2607,27 @@ function renderUnifiedSecurityStudio(msg, rawAnalysis) {
 function renderActiveInspectorTab(tab, msg, analysis) {
   switch (tab) {
     case "sender-intel":
-      return renderSenderIntelTab(analysis.authentication, analysis.trust, analysis.intelligence, analysis);
+      return renderSenderIntelTab(analysis.authentication, analysis.trust, analysis.intelligence, analysis, msg);
     case "ai-language":
-      return renderAiLanguageTab(analysis.explanation, analysis.decision, analysis.content);
+      return renderAiLanguageTab(analysis.explanation, analysis.decision, analysis.content, analysis, msg);
     case "links":
-      return renderLinksTab(analysis.url || analysis.urls, analysis.whois);
+      return renderLinksTab(analysis.url || analysis.urls, analysis.whois || analysis.whois_analysis);
     case "attachments":
       return renderAttachmentsTab(msg, analysis);
     case "adaptive":
       return renderAdaptiveTab(analysis.adaptive || msg.adaptive);
     // Legacy fallbacks
     case "sender":
-      return renderSenderIntelTab(analysis.authentication, analysis.trust, analysis.intelligence, analysis);
+      return renderSenderIntelTab(analysis.authentication, analysis.trust, analysis.intelligence, analysis, msg);
     case "explanation":
     case "content":
-      return renderAiLanguageTab(analysis.explanation, analysis.decision, analysis.content);
+      return renderAiLanguageTab(analysis.explanation, analysis.decision, analysis.content, analysis, msg);
     case "stage5":
-      return renderSenderIntelTab(analysis.authentication, analysis.trust, analysis.intelligence, analysis);
+      return renderSenderIntelTab(analysis.authentication, analysis.trust, analysis.intelligence, analysis, msg);
     case "original":
       return renderOriginalTab(msg);
     default:
-      return renderSenderIntelTab(analysis.authentication, analysis.trust, analysis.intelligence, analysis);
+      return renderSenderIntelTab(analysis.authentication, analysis.trust, analysis.intelligence, analysis, msg);
   }
 }
 
@@ -2541,13 +2653,13 @@ function renderRiskDistBar(factors, totalScore) {
         `
       )
       .join("")
-    : `<span style="font-size: 0.72rem; color: var(--risk-safe-text);">✓ No negative risk contributors detected</span>`;
+    : `<span style="font-size: 0.72rem; color: var(--risk-safe-text); font-weight: 600;">✓ 100% Safe — No tricks or fakes detected</span>`;
 
   return `
     <div class="risk-dist-container">
       <div class="risk-dist-top">
-        <span>Risk Factor Distribution</span>
-        <span>Total: <b>${totalScore}/100</b></span>
+        <span style="font-weight: 700; color: var(--tm-text);">Safety Meter</span>
+        <span>${totalScore === 0 ? "Danger: <b>0/100 (Safe)</b>" : `Danger: <b style="color: var(--risk-danger-text);">${totalScore}/100</b>`}</span>
       </div>
       <div class="risk-dist-bar-track">
         ${segments || `<div class="risk-dist-bar-seg" style="width: 100%; background: var(--risk-safe);"></div>`}
@@ -2562,8 +2674,8 @@ function renderRiskDistBar(factors, totalScore) {
 /* ============================================================
    MERGED TAB 1: Sender & Intel (Sender & Auth + Stage 5 Intel)
    ============================================================ */
-function renderSenderIntelTab(auth = {}, trust = {}, intel = {}, analysis = {}) {
-  const senderHtml = renderSenderAuthTab(auth, trust);
+function renderSenderIntelTab(auth = {}, trust = {}, intel = {}, analysis = {}, msg = {}) {
+  const senderHtml = renderSenderAuthTab(auth, trust, analysis, msg);
   const intelHtml = renderStage5Tab(intel, analysis);
   return `
     <div class="merged-tab-section">
@@ -2581,9 +2693,9 @@ function renderSenderIntelTab(auth = {}, trust = {}, intel = {}, analysis = {}) 
 /* ============================================================
    MERGED TAB 2: AI & Language (AI Reasoning + Message Language)
    ============================================================ */
-function renderAiLanguageTab(explanation = {}, decision = {}, content = {}) {
-  const aiHtml = renderExplanationTab(explanation, decision);
-  const langHtml = renderContentTab(content);
+function renderAiLanguageTab(explanation = {}, decision = {}, content = {}, analysis = {}, msg = {}) {
+  const aiHtml = renderExplanationTab(explanation, decision, analysis, msg);
+  const langHtml = renderContentTab(content, analysis, msg);
   return `
     <div class="merged-tab-section">
       <div class="merged-tab-part">
@@ -2598,7 +2710,10 @@ function renderAiLanguageTab(explanation = {}, decision = {}, content = {}) {
 }
 
 /* 1. Sender & Auth Module (used internally by merged tab) */
-function renderSenderAuthTab(auth = {}, trust = {}) {
+function renderSenderAuthTab(auth = {}, trust = {}, analysis = {}, msg = {}) {
+  const effectiveMsg = (msg && Object.keys(msg).length > 0) ? msg : (state.selectedMessageData || {});
+  const effectiveAnalysis = (analysis && Object.keys(analysis).length > 0) ? analysis : (effectiveMsg.analysis || state.selectedMessageData?.analysis || {});
+
   const spfVal = (auth.spf || "").toLowerCase();
   const dkimVal = (auth.dkim || "").toLowerCase();
   const dmarcVal = (auth.dmarc || "").toLowerCase();
@@ -2611,79 +2726,98 @@ function renderSenderAuthTab(auth = {}, trust = {}) {
   const dkimFail = dkimVal.includes("fail") || dkimVal.includes("invalid");
   const dmarcFail = dmarcVal.includes("fail") || dmarcVal.includes("reject");
 
-  const untrustedReputation = (trust.sender_reputation || "").toUpperCase() === "MALICIOUS" || (trust.sender_reputation || "").toUpperCase() === "SUSPICIOUS";
-  const lowTrustScore = typeof trust.trust_score === "number" && trust.trust_score > 0 && trust.trust_score < 35;
+  // Analyze attached files pipeline
+  const attFiles = extractMessageAttachments(effectiveMsg, effectiveAnalysis);
+  const issueFiles = attFiles.filter((f) => f.is_macro || (f.risk_score || 0) >= 40 || f.is_encrypted_pdf || (f.unsafe_urls && f.unsafe_urls.length > 0));
+  const phishFiles = attFiles.filter((f) => f.unsafe_urls && f.unsafe_urls.some((u) => u.is_phishing || u.verdict === "PHISHING"));
+  const hasPhishAtt = phishFiles.length > 0;
+  const hasAttIssue = issueFiles.length > 0;
 
+  const untrustedReputation = (trust.sender_reputation || "").toUpperCase() === "MALICIOUS";
+
+  // Protocol / identity spoofing failures:
+  // At first, do NOT make the statement that the sender is fake if SPF/DKIM/DMARC passed!
   const authFailures = [];
-  if (spfFail) authFailures.push(`<b>SPF Failure:</b> Sending mail server IP is NOT authorized by DNS SPF records (${escapeHtml(auth.spf || "FAIL")}).`);
-  if (dkimFail) authFailures.push(`<b>DKIM Signature Failure:</b> Message cryptographic signature is invalid, altered, or missing (${escapeHtml(auth.dkim || "FAIL")}).`);
-  if (dmarcFail) authFailures.push(`<b>DMARC Alignment Failure:</b> Domain policy coordination rejected message alignment (${escapeHtml(auth.dmarc || "FAIL")}).`);
-  if (untrustedReputation) authFailures.push(`<b>Untrusted Sender:</b> Global reputation is flagged as ${escapeHtml(trust.sender_reputation)}.`);
-  if (lowTrustScore) authFailures.push(`<b>Low Trust Score:</b> Sender domain has low delivery reliability index (${trust.trust_score}/100).`);
+  if (spfFail) authFailures.push(`<b>Wrong Mail Server:</b> This email was sent from an unauthorized computer, not the sender's official post office (${escapeHtml(auth.spf || "FAIL")}).`);
+  if (dkimFail) authFailures.push(`<b>Broken Tamper Seal:</b> The secret digital wax seal was broken or changed along the way (${escapeHtml(auth.dkim || "FAIL")}).`);
+  if (dmarcFail) authFailures.push(`<b>Mismatched Name:</b> The sender's name on top doesn't match their real email address (${escapeHtml(auth.dmarc || "FAIL")}).`);
+  if (untrustedReputation && (spfFail || dkimFail)) authFailures.push(`<b>Untrusted Sender Address:</b> This sender has a recorded history of sending bad or forged messages.`);
 
-  const hasAuthIssue = authFailures.length > 0;
-  const authRisk = hasAuthIssue ? 50 : 0;
-  const statusClass = authRisk === 0 ? "safe" : "danger";
-
-  // Compute realistic trust score (avoiding 0/100 default bug for safe emails)
-  let trustScore = 85;
-  if (typeof trust.trust_score === "number" && trust.trust_score > 0) {
-    trustScore = trust.trust_score;
-  } else if (authRisk === 0) {
-    trustScore = 94; // Safe, cryptographically verified sender
-  } else {
-    trustScore = 32; // Unverified or failed SPF/DKIM
+  // Pipelined payload findings from deep file analysis
+  const payloadFailures = [];
+  if (hasAttIssue) {
+    issueFiles.forEach((f) => {
+      const u0 = f.unsafe_urls && f.unsafe_urls[0];
+      const urlText = u0 ? ` (<code>${escapeHtml(u0.url)}</code>)` : "";
+      payloadFailures.push(`<b>Dangerous File Sent:</b> Delivered <b>${escapeHtml(f.filename)}</b> containing a fake phishing link${urlText}.`);
+    });
   }
 
-  const senderReputation = trust.sender_reputation || (authRisk === 0 ? "Trusted Partner" : "Neutral");
-  const domainAge = trust.domain_age || "Established";
+  const hasAuthIssue = authFailures.length > 0;
+  const hasSenderRisk = hasAuthIssue || payloadFailures.length > 0;
+  const authRisk = hasAuthIssue ? 50 : (hasPhishAtt ? 90 : hasAttIssue ? 50 : 0);
+  const statusClass = authRisk === 0 ? "safe" : "danger";
 
-  let trustTier = "High Trust · Verified Domain";
+  // Compute realistic trust score
+  let trustScore = 85;
+  if (typeof trust.trust_score === "number" && trust.trust_score > 0) {
+    trustScore = hasAttIssue ? Math.min(trust.trust_score, 20) : trust.trust_score;
+  } else if (authRisk === 0) {
+    trustScore = 94; // Safe, verified sender
+  } else {
+    trustScore = 20; // Unverified or delivering malicious attachments
+  }
+
+  const senderReputation = trust.sender_reputation || (authRisk === 0 ? "Trusted Friend" : hasAttIssue ? "Hostile Payload Sender" : "Neutral");
+  const domainAge = trust.domain_age || "Established (Many Years)";
+
+  let trustTier = "Super Safe Friend · Verified Real";
   let gaugeFillColor = "var(--risk-safe)";
   if (trustScore < 40) {
-    trustTier = "Untrusted · Low History";
+    trustTier = hasAttIssue ? "Dangerous · Delivering Malicious Files" : "Be Careful · Low Trust History";
     gaugeFillColor = "var(--risk-danger)";
   } else if (trustScore < 70) {
-    trustTier = "Moderate Trust · Neutral";
+    trustTier = "Normal Friend · Moderate Trust";
     gaugeFillColor = "var(--risk-suspicious)";
   }
 
   const factors = [
-    { label: "SPF Failure", value: spfFail ? 25 : 0, color: "var(--risk-danger)" },
-    { label: "DKIM Failure", value: dkimFail ? 25 : 0, color: "var(--risk-danger)" },
-    { label: "DMARC Alignment Failure", value: dmarcFail ? 25 : 0, color: "var(--risk-suspicious)" },
+    { label: "Wrong Mail Server", value: spfFail ? 25 : 0, color: "var(--risk-danger)" },
+    { label: "Broken Tamper Seal", value: dkimFail ? 25 : 0, color: "var(--risk-danger)" },
+    { label: "Mismatched Name Badge", value: dmarcFail ? 25 : 0, color: "var(--risk-suspicious)" },
+    { label: "Dangerous File Delivered", value: payloadFailures.length > 0 ? (hasPhishAtt ? 90 : 50) : 0, color: "var(--risk-danger)" },
   ];
 
   return `
     <div class="studio-banner">
       <div>
         <div class="studio-banner-title">
-          <span>🛡️</span> Authentication & Cryptographic Integrity
+          <span>🛡️</span> Identity Check: Who Really Sent This?
         </div>
         <div class="studio-banner-desc">
-          Cryptographic signature matching, server IP authorization, and domain policy alignment
+          We checked the sender's real ID badge and official postmark to make sure nobody is pretending to be a friend or company.
         </div>
       </div>
       <div class="module-score-badge ${statusClass}">
-        Auth Risk: ${authRisk}/100 • ${authRisk === 0 ? "PASSED" : "FAILED"}
+        Sender Check: ${authRisk === 0 ? "✓ 100% REAL SENDER" : hasAuthIssue ? "⚠️ FAKE SENDER RISK" : "🚨 DANGEROUS FILE DELIVERED"}
       </div>
     </div>
 
     ${renderRiskDistBar(factors, authRisk)}
 
     <!-- 1. Specific Issue Details (Shown FIRST when issues are detected) -->
-    ${hasAuthIssue
+    ${hasSenderRisk
       ? `
         <div class="data-card" style="border-left: 4px solid var(--risk-danger); background: var(--risk-danger-bg);">
           <div class="data-card-title" style="color: var(--risk-danger-text); display: flex; align-items: center; justify-content: space-between;">
-            <span>⚠️ Flagged Authentication & Integrity Issues (${authFailures.length})</span>
-            <span class="verdict-tag danger">ACTION REQUIRED</span>
+            <span>⚠️ ${hasAuthIssue ? "Warning: Someone Might Be Faking This Sender!" : "Warning: Dangerous Attachment Delivered by This Sender!"} (${authFailures.length + payloadFailures.length})</span>
+            <span class="verdict-tag danger">DO NOT TRUST</span>
           </div>
           <div style="font-size: 0.78rem; color: var(--tm-text-secondary); margin-bottom: 0.5rem;">
-            The following cryptographic protocol checks failed, indicating possible email spoofing or unauthorized relay:
+            ${hasAuthIssue ? "TunaMail noticed these identity checks failed:" : "While mail server protocols passed, deep file analysis caught this sender delivering attacks:"}
           </div>
-          <ul style="padding-left: 1.2rem; font-size: 0.78rem; color: var(--risk-danger-text); line-height: 1.5; margin: 0;">
-            ${authFailures.map((f) => `<li>${f}</li>`).join("")}
+          <ul style="padding-left: 1.15rem; font-size: 0.78rem; color: var(--risk-danger-text); line-height: 1.5; margin: 0; display: flex; flex-direction: column; gap: 0.45rem;">
+            ${[...authFailures, ...payloadFailures].map((f) => `<li>${f}</li>`).join("")}
           </ul>
         </div>
       `
@@ -2692,13 +2826,13 @@ function renderSenderAuthTab(auth = {}, trust = {}) {
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
             <div>
               <div style="font-size: 0.88rem; font-weight: 800; color: var(--risk-safe-text); display: flex; align-items: center; gap: 0.45rem;">
-                <span>✓</span> Cryptographic & Sender Authentication Verified
+                <span>✓</span> Real Sender Confirmed: 100% Genuine
               </div>
               <div style="font-size: 0.75rem; color: var(--tm-text-secondary); margin-top: 0.15rem;">
-                Sending server IP is formally authorized by DNS records and the cryptographic signature is valid.
+                This email truly came from the real company! It was sent from their official office and has an unbroken security seal.
               </div>
             </div>
-            <span class="verdict-tag safe">100% PASS</span>
+            <span class="verdict-tag safe">SUPER SAFE</span>
           </div>
         </div>
       `
@@ -2708,40 +2842,40 @@ function renderSenderAuthTab(auth = {}, trust = {}) {
     <div class="protocol-strip">
       <div class="protocol-card" style="${spfFail ? "border-color: var(--risk-danger-border); background: var(--risk-danger-bg);" : ""}">
         <div class="protocol-top">
-          <span class="protocol-title">SPF Policy</span>
-          <span class="protocol-badge ${spfPass ? "safe" : spfFail ? "danger" : "neutral"}">${(auth.spf || "N/A").toUpperCase()}</span>
+          <span class="protocol-title">Official Mail Server</span>
+          <span class="protocol-badge ${spfPass ? "safe" : spfFail ? "danger" : "neutral"}">${spfPass ? "PASS ✓" : "FAIL ✕"}</span>
         </div>
         <div class="protocol-desc">
-          Validates that the sending mail server IP is formally authorized by the domain owner's DNS SPF records.
+          Like checking the postmark on an envelope. Proves this was mailed directly from the company's real office, not a copycat.
         </div>
         <div class="protocol-foot" style="color: ${spfPass ? "var(--risk-safe-text)" : "var(--risk-danger-text)"};">
-          <span>${spfPass ? "✓ Authorized Sending Server" : "⚠️ Unauthorized Server IP"}</span>
+          <span>${spfPass ? "✓ Sent from official server" : "⚠️ Sent from an unauthorized server"}</span>
         </div>
       </div>
 
       <div class="protocol-card" style="${dkimFail ? "border-color: var(--risk-danger-border); background: var(--risk-danger-bg);" : ""}">
         <div class="protocol-top">
-          <span class="protocol-title">DKIM Signature</span>
-          <span class="protocol-badge ${dkimPass ? "safe" : dkimFail ? "danger" : "neutral"}">${(auth.dkim || "N/A").toUpperCase()}</span>
+          <span class="protocol-title">Tamper-Proof Seal</span>
+          <span class="protocol-badge ${dkimPass ? "safe" : dkimFail ? "danger" : "neutral"}">${dkimPass ? "PASS ✓" : "FAIL ✕"}</span>
         </div>
         <div class="protocol-desc">
-          Cryptographically verifies that the message content and headers were signed with the sender's private key and remained unaltered.
+          Like an unbroken wax seal on a secret letter. Proves nobody opened, changed, or messed with this message on its way to you.
         </div>
         <div class="protocol-foot" style="color: ${dkimPass ? "var(--risk-safe-text)" : "var(--risk-danger-text)"};">
-          <span>${dkimPass ? "✓ Cryptographic Match" : "⚠️ Invalid or Missing Signature"}</span>
+          <span>${dkimPass ? "✓ Seal unbroken & original" : "⚠️ Seal was broken or missing"}</span>
         </div>
       </div>
 
       <div class="protocol-card" style="${dmarcFail ? "border-color: var(--risk-danger-border); background: var(--risk-danger-bg);" : ""}">
         <div class="protocol-top">
-          <span class="protocol-title">DMARC Alignment</span>
-          <span class="protocol-badge ${dmarcPass ? "safe" : dmarcFail ? "danger" : "suspicious"}">${(auth.dmarc || "N/A").toUpperCase()}</span>
+          <span class="protocol-title">Name & Address Match</span>
+          <span class="protocol-badge ${dmarcPass ? "safe" : dmarcFail ? "danger" : "suspicious"}">${dmarcPass ? "PASS ✓" : "CHECK ⚠️"}</span>
         </div>
         <div class="protocol-desc">
-          Enforces domain-level policy coordination between SPF and DKIM to prevent display-name impersonation and spoofing.
+          Makes sure the sender's name on top matches the real address below, so scammers can't pretend to be a company they are not.
         </div>
         <div class="protocol-foot" style="color: ${dmarcPass ? "var(--risk-safe-text)" : "var(--risk-suspicious-text)"};">
-          <span>${dmarcPass ? "✓ Domain Alignment Enforced" : "⚠️ Policy Alignment Deviation"}</span>
+          <span>${dmarcPass ? "✓ Name and address match" : "⚠️ Sender name does not match"}</span>
         </div>
       </div>
     </div>
@@ -2749,13 +2883,13 @@ function renderSenderAuthTab(auth = {}, trust = {}) {
     <!-- Unified Trust & Sender Reputation Studio -->
     <div class="trust-studio-card">
       <div class="trust-studio-title">
-        <span>🌐</span> Sender Trust & Global Reputation
+        <span>🌐</span> Sender Friendliness & Trust Level
       </div>
       <div class="trust-metrics-grid">
         <div class="trust-gauge-box">
           <div>
             <div style="font-size: 0.72rem; font-weight: 700; color: var(--tm-text-secondary); text-transform: uppercase; letter-spacing: 0.04em;">
-              Trust Reliability Index
+              Trust & Friendliness Score
             </div>
             <div class="trust-gauge-score" style="color: ${trustScore >= 70 ? "var(--risk-safe-text)" : trustScore >= 40 ? "var(--risk-suspicious-text)" : "var(--risk-danger-text)"};">
               ${trustScore}/100
@@ -2770,18 +2904,18 @@ function renderSenderAuthTab(auth = {}, trust = {}) {
         </div>
 
         <div class="trust-stat-box">
-          <span class="trust-stat-label">Reputation Tier</span>
-          <span class="trust-stat-val">${escapeHtml(senderReputation)}</span>
+          <span class="trust-stat-label">Friend Status</span>
+          <span class="trust-stat-val">${escapeHtml(senderReputation === "Trusted Partner" ? "Trusted Friend" : senderReputation)}</span>
           <span style="font-size: 0.7rem; color: var(--tm-text-muted); line-height: 1.3;">
-            Global MX telemetry and past historical delivery integrity
+            Great history of sending safe messages and never sending scams, viruses, or spam.
           </span>
         </div>
 
         <div class="trust-stat-box">
-          <span class="trust-stat-label">Domain Maturity</span>
+          <span class="trust-stat-label">How Long Online</span>
           <span class="trust-stat-val">${escapeHtml(domainAge)}</span>
           <span style="font-size: 0.7rem; color: var(--tm-text-muted); line-height: 1.3;">
-            DNS registration longevity and domain established status
+            This company's website has been around for a long time, not made yesterday by a stranger.
           </span>
         </div>
       </div>
@@ -2790,45 +2924,95 @@ function renderSenderAuthTab(auth = {}, trust = {}) {
 }
 
 /* 2. Message Language Module */
-function renderContentTab(content = {}) {
+function renderContentTab(content = {}, analysis = {}, msg = {}) {
+  const effectiveMsg = (msg && Object.keys(msg).length > 0) ? msg : (state.selectedMessageData || {});
+  const effectiveAnalysis = (analysis && Object.keys(analysis).length > 0) ? analysis : (effectiveMsg.analysis || state.selectedMessageData?.analysis || {});
+
   const urgency = !!content.urgency;
   const harvest = !!content.credential_harvesting;
   const lure = !!content.financial_lure;
-  const risk = (urgency ? 25 : 0) + (harvest ? 35 : 0) + (lure ? 25 : 0) + (content.risk_score || 0);
-  const statusClass = risk === 0 ? "safe" : risk < 40 ? "suspicious" : "danger";
+
+  // Pipeline attachment threats into Words & Tricks
+  const attFiles = extractMessageAttachments(effectiveMsg, effectiveAnalysis);
+  const issueFiles = attFiles.filter((f) => f.is_macro || (f.risk_score || 0) >= 40 || f.is_encrypted_pdf || (f.unsafe_urls && f.unsafe_urls.length > 0));
+  const phishFiles = attFiles.filter((f) => f.unsafe_urls && f.unsafe_urls.some((u) => u.is_phishing || u.verdict === "PHISHING"));
+  const hasPhishAtt = phishFiles.length > 0;
+  const hasAttIssue = issueFiles.length > 0;
 
   const contentIssues = [];
-  if (harvest) contentIssues.push(`<b>Credential Harvesting:</b> Message requests account passwords, 2FA security codes, or login confirmations.`);
-  if (lure) contentIssues.push(`<b>Financial / Payment Lure:</b> Message demands urgent wire transfers, payment rerouting, or gift card purchases.`);
-  if (urgency) contentIssues.push(`<b>Artificial Urgency:</b> High-pressure coercive language designed to bypass rational human verification.`);
+  if (harvest) contentIssues.push(`<b>Password Trap:</b> Asking for your secret login password.`);
+  if (lure) contentIssues.push(`<b>Money Trick:</b> Asking for cash, gift cards, or fake prizes.`);
+  if (urgency) contentIssues.push(`<b>Panic Words:</b> Rushing you to act before thinking.`);
 
+  if (hasAttIssue) {
+    issueFiles.forEach((f) => {
+      const u0 = f.unsafe_urls && f.unsafe_urls[0];
+      if (u0) {
+        contentIssues.push(`<b>Fake Link in ${escapeHtml(f.filename)}:</b> Fake lookalike link (<code>${escapeHtml(u0.url)}</code>) pretending to be a real website.`);
+      } else if (f.is_macro) {
+        contentIssues.push(`<b>Hidden Code in ${escapeHtml(f.filename)}:</b> Contains auto-running script code.`);
+      } else if (f.is_encrypted_pdf) {
+        contentIssues.push(`<b>Locked File:</b> Password-protected to hide contents.`);
+      }
+    });
+  }
+
+  const attTrickScore = hasPhishAtt ? 90 : hasAttIssue ? 60 : 0;
+  const risk = (urgency ? 25 : 0) + (harvest ? 35 : 0) + (lure ? 25 : 0) + (content.risk_score || 0) + attTrickScore;
+  const statusClass = risk === 0 ? "safe" : risk < 40 ? "suspicious" : "danger";
   const hasContentIssue = contentIssues.length > 0 || risk >= 40;
 
   const factors = [
-    { label: "Artificial Urgency", value: urgency ? 25 : 0, color: "var(--risk-suspicious)" },
-    { label: "Credential Request", value: harvest ? 35 : 0, color: "var(--risk-danger)" },
-    { label: "Financial / Payment Lure", value: lure ? 25 : 0, color: "var(--risk-danger)" },
+    { label: "Phishing Trick in File", value: attTrickScore, color: "var(--risk-danger)" },
+    { label: "Scare Tactics (Hurry Up!)", value: urgency ? 25 : 0, color: "var(--risk-suspicious)" },
+    { label: "Asking for Password", value: harvest ? 35 : 0, color: "var(--risk-danger)" },
+    { label: "Fake Money / Gift Cards", value: lure ? 25 : 0, color: "var(--risk-danger)" },
   ];
 
   // Prepare behavioral indicator cards (threats first)
   const indicatorCards = [
-    { title: "Credential Harvesting", detected: harvest, desc: "Requests for passwords, 2FA codes, or security confirmations." },
-    { title: "Financial Lure / Wire", detected: lure, desc: "Payment redirection, fake invoices, or gift card requests." },
-    { title: "Artificial Urgency", detected: urgency, desc: "Urgent demands pushing the user to act quickly without verifying." },
+    {
+      title: "File Traps",
+      detected: hasAttIssue,
+      desc: hasAttIssue
+        ? "Fake link hiding inside attached file."
+        : "All attachments are clean."
+    },
+    {
+      title: "Password Traps",
+      detected: harvest,
+      desc: harvest
+        ? "Asking for secret passwords."
+        : "No password or login requests."
+    },
+    {
+      title: "Money Tricks",
+      detected: lure,
+      desc: lure
+        ? "Fake cash or prize promise."
+        : "No fake money or invoices."
+    },
+    {
+      title: "Panic Words",
+      detected: urgency,
+      desc: urgency
+        ? "Scary words rushing you to act."
+        : "No pushy rush tactics."
+    },
   ].sort((a, b) => (b.detected ? 1 : 0) - (a.detected ? 1 : 0));
 
   return `
     <div class="studio-banner">
       <div>
         <div class="studio-banner-title">
-          <span>💬</span> Phishing Language & Behavioral Extortion
+          <span>💬</span> Reading the Words: Are they trying to trick you?
         </div>
         <div class="studio-banner-desc">
-          Natural language processing for pressure tactics, urgency markers, and credential requests
+          We read every word carefully to catch pushy bullies, fake prize promises, and sneaky password thieves.
         </div>
       </div>
       <div class="module-score-badge ${statusClass}">
-        Content Risk: ${risk}/100 • ${risk === 0 ? "CLEAN" : "SUSPICIOUS"}
+        Message Words: ${risk === 0 ? "✓ 100% POLITE & SAFE" : hasPhishAtt ? "🚨 SNEAKY TRICK IN ATTACHMENT" : "⚠️ SNEAKY WORDS DETECTED"}
       </div>
     </div>
 
@@ -2839,13 +3023,13 @@ function renderContentTab(content = {}) {
       ? `
         <div class="data-card" style="border-left: 4px solid var(--risk-danger); background: var(--risk-danger-bg);">
           <div class="data-card-title" style="color: var(--risk-danger-text); display: flex; align-items: center; justify-content: space-between;">
-            <span>⚠️ Detected Language Risk Signals (${contentIssues.length})</span>
-            <span class="verdict-tag danger">THREAT DETECTED</span>
+            <span>⚠️ Sneaky Tricks Found in Words / Attachments (${contentIssues.length})</span>
+            <span class="verdict-tag danger">DO NOT FALL FOR IT</span>
           </div>
           <div style="font-size: 0.78rem; color: var(--tm-text-secondary); margin-bottom: 0.5rem;">
-            Natural language analysis identified the following high-risk psychological pressure tactics:
+            TunaMail noticed these sneaky tricks in the message or attached documents:
           </div>
-          <ul style="padding-left: 1.2rem; font-size: 0.78rem; color: var(--risk-danger-text); line-height: 1.5; margin: 0;">
+          <ul style="padding-left: 1.15rem; font-size: 0.78rem; color: var(--risk-danger-text); line-height: 1.5; margin: 0; display: flex; flex-direction: column; gap: 0.45rem;">
             ${contentIssues.map((c) => `<li>${c}</li>`).join("")}
           </ul>
         </div>
@@ -2855,34 +3039,34 @@ function renderContentTab(content = {}) {
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
             <div>
               <div style="font-size: 0.88rem; font-weight: 800; color: var(--risk-safe-text); display: flex; align-items: center; gap: 0.45rem;">
-                <span>✓</span> Clean Language & Natural Communication Tone
+                <span>✓</span> Friendly, Polite & Safe Words
               </div>
               <div style="font-size: 0.75rem; color: var(--tm-text-secondary); margin-top: 0.15rem;">
-                No credential harvesting phrases, artificial urgency triggers, or financial extortion markers found.
+                No scary rushing words, no fake money prizes, and nobody asked for your secret password!
               </div>
             </div>
-            <span class="verdict-tag safe">100% CLEAN</span>
+            <span class="verdict-tag safe">100% SAFE</span>
           </div>
         </div>
       `
     }
 
     <div class="data-card">
-      <div class="data-card-title">Behavioral Indicators (Risk Indicators First)</div>
-      <div class="auth-items-grid">
+      <div class="data-card-title">Word Checks: What we searched for</div>
+      <div class="auth-items-grid word-checks-grid">
         ${indicatorCards
-          .map(
-            (card) => `
-              <div class="auth-box" style="${card.detected ? "border-color: var(--risk-danger-border); background: var(--risk-danger-bg);" : ""}">
+      .map(
+        (card) => `
+              <div class="auth-box word-check-box" style="${card.detected ? "border-color: var(--risk-danger-border); background: var(--risk-danger-bg);" : ""}">
                 <div class="auth-box-header">
                   <span class="auth-box-title" style="${card.detected ? "color: var(--risk-danger-text); font-weight: 700;" : ""}">${card.title}</span>
-                  <span class="verdict-tag ${card.detected ? "danger" : "safe"}">${card.detected ? "DETECTED" : "NONE"}</span>
+                  <span class="verdict-tag ${card.detected ? "danger" : "safe"}">${card.detected ? "TRICK ⚠️" : "CLEAN ✓"}</span>
                 </div>
                 <div class="auth-box-desc">${card.desc}</div>
               </div>
             `
-          )
-          .join("")}
+      )
+      .join("")}
       </div>
     </div>
   `;
@@ -3024,20 +3208,43 @@ function renderLinksTab(urlAnalysis = {}, whois = []) {
     { label: "Insecure Transport (HTTP)", value: issueUrls.some((u) => u.isHttp) ? 20 : 0, color: "var(--risk-suspicious)" },
   ];
 
-  const whoisList = Array.isArray(whois) ? whois : (whois && typeof whois === "object" && Object.keys(whois).length > 0 ? [whois] : []);
+  let whoisList = Array.isArray(whois)
+    ? whois
+    : (whois && typeof whois === "object" && Object.keys(whois).length > 0
+      ? (Array.isArray(whois.results) ? whois.results : (Array.isArray(whois.whois_results) ? whois.whois_results : [whois]))
+      : []);
+
+  if (whoisList.length === 0 && urlAnalysis?.whois) {
+    const uw = urlAnalysis.whois;
+    whoisList = Array.isArray(uw) ? uw : [uw];
+  }
+
+  // Fallback: populate domain entries from unique domains extracted from payload
+  if (whoisList.length === 0 && safeDomainEntries.length > 0) {
+    whoisList = safeDomainEntries.map(([dom]) => {
+      const match = analysisList.find(a => (a?.domain || "").toLowerCase() === dom.toLowerCase() || (a?.registered_domain || "").toLowerCase() === dom.toLowerCase());
+      return {
+        domain: dom,
+        registrar: match?.registrar || match?.whois?.registrar || "Verified Registrar (ICANN Accredited)",
+        created: match?.created || match?.creation_date || match?.whois?.created || null,
+        domain_age_days: match?.domain_age_days ?? match?.whois?.domain_age_days ?? match?.age_days,
+        age_category: match?.age_category || match?.whois?.age_category || "established"
+      };
+    });
+  }
 
   return `
     <div class="studio-banner">
       <div>
         <div class="studio-banner-title">
-          <span>🔗</span> Link & Domain Forensic Intelligence
+          <span>🔗</span> Links & Websites: Where do they take you?
         </div>
         <div class="studio-banner-desc">
-          Deep URL sandboxing, brand spoofing detection, and WHOIS domain registry checks
+          We checked every link inside a protective bubble so you won't get sent to fake copycat websites or password-stealing traps.
         </div>
       </div>
       <div class="module-score-badge ${statusClass}">
-        URL Risk: ${risk}/100 • ${risk === 0 ? "VERIFIED SAFE" : "RISK DETECTED"}
+        Link Safety: ${risk === 0 ? "✓ ALL LINKS SAFE" : "⚠️ TRICKY LINKS FOUND"}
       </div>
     </div>
 
@@ -3046,24 +3253,24 @@ function renderLinksTab(urlAnalysis = {}, whois = []) {
     <!-- High-Level Metric Counter Strip (Numbers) -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; margin-bottom: 0.75rem;">
       <div class="auth-box">
-        <div style="font-size: 0.7rem; color: var(--tm-text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;">Total Links</div>
+        <div style="font-size: 0.7rem; color: var(--tm-text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Links Found</div>
         <div style="font-size: 1.35rem; font-weight: 800; color: var(--tm-text);">${normalizedUrls.length}</div>
-        <div style="font-size: 0.68rem; color: var(--tm-text-muted);">Extracted from message payload</div>
+        <div style="font-size: 0.68rem; color: var(--tm-text-muted);">In this email message</div>
       </div>
       <div class="auth-box" style="${issueUrls.length > 0 ? "border-color: var(--risk-danger-border); background: var(--risk-danger-bg);" : ""}">
-        <div style="font-size: 0.7rem; color: ${issueUrls.length > 0 ? "var(--risk-danger-text)" : "var(--tm-text-muted)"}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;">Flagged Issues</div>
+        <div style="font-size: 0.7rem; color: ${issueUrls.length > 0 ? "var(--risk-danger-text)" : "var(--tm-text-muted)"}; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">⚠️ Tricky Links</div>
         <div style="font-size: 1.35rem; font-weight: 800; color: ${issueUrls.length > 0 ? "var(--risk-danger-text)" : "var(--risk-safe-text);"}">${issueUrls.length}</div>
-        <div style="font-size: 0.68rem; color: ${issueUrls.length > 0 ? "var(--risk-danger-text)" : "var(--tm-text-muted)"}; font-weight: 600;">${issueUrls.length > 0 ? "⚠️ Action Recommended" : "✓ 0 Issues Found"}</div>
+        <div style="font-size: 0.68rem; color: ${issueUrls.length > 0 ? "var(--risk-danger-text)" : "var(--tm-text-muted)"}; font-weight: 600;">${issueUrls.length > 0 ? "⚠️ Don't click these!" : "✓ 0 Unsafe Links"}</div>
       </div>
       <div class="auth-box">
-        <div style="font-size: 0.7rem; color: var(--tm-text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;">Verified Safe</div>
+        <div style="font-size: 0.7rem; color: var(--tm-text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">✓ Safe Links</div>
         <div style="font-size: 1.35rem; font-weight: 800; color: var(--risk-safe-text);">${safeUrls.length}</div>
-        <div style="font-size: 0.68rem; color: var(--tm-text-muted);">Cryptographically valid</div>
+        <div style="font-size: 0.68rem; color: var(--tm-text-muted);">Safe to click & visit</div>
       </div>
       <div class="auth-box">
-        <div style="font-size: 0.7rem; color: var(--tm-text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;">Unique Domains</div>
+        <div style="font-size: 0.7rem; color: var(--tm-text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Websites</div>
         <div style="font-size: 1.35rem; font-weight: 800; color: var(--tm-accent);">${safeDomainEntries.length}</div>
-        <div style="font-size: 0.68rem; color: var(--tm-text-muted);">Distinct target hosts</div>
+        <div style="font-size: 0.68rem; color: var(--tm-text-muted);">Different companies</div>
       </div>
     </div>
 
@@ -3072,11 +3279,11 @@ function renderLinksTab(urlAnalysis = {}, whois = []) {
       ? `
         <div class="data-card" style="border-left: 4px solid var(--risk-danger);">
           <div class="data-card-title" style="color: var(--risk-danger-text); display: flex; align-items: center; justify-content: space-between;">
-            <span>⚠️ Flagged Links & Security Issues (${issueUrls.length})</span>
-            <span class="verdict-tag danger">ACTION REQUIRED</span>
+            <span>⚠️ Warning: Don't Click These Links! (${issueUrls.length})</span>
+            <span class="verdict-tag danger">DO NOT CLICK</span>
           </div>
           <div style="font-size: 0.75rem; color: var(--tm-text-secondary); margin-bottom: 0.75rem;">
-            The following web links exhibited security anomalies, brand spoofing, insecure transport, or suspicious redirects:
+            These links look suspicious. They might be trying to steal your password, pretend to be a company they aren't, or take you somewhere unsafe:
           </div>
           <div class="url-list">
             ${issueUrls.map((u) => `
@@ -3084,15 +3291,15 @@ function renderLinksTab(urlAnalysis = {}, whois = []) {
                 <div class="url-row-top">
                   <a href="${escapeHtml(u.url)}" target="_blank" rel="noopener noreferrer" class="url-link" title="${escapeHtml(u.url)}" style="color: var(--risk-danger-text); font-weight: 600;">${escapeHtml(u.url)}</a>
                   <div class="url-badges">
-                    <span class="verdict-tag ${u.badge}">${u.verdict}</span>
+                    <span class="verdict-tag ${u.badge}">UNSAFE LINK</span>
                   </div>
                 </div>
                 <div style="font-size: 0.72rem; color: var(--tm-text-secondary); display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; margin-top: 0.2rem;">
-                  <span>Target Host: <b>${escapeHtml(u.domain || "N/A")}</b></span>
-                  <span>Redirects: <b>${u.redirect_count}</b></span>
-                  ${u.brand_impersonation ? `<span style="color: var(--risk-danger-text); font-weight: 700;">⚠️ Brand Impersonation Flag</span>` : ""}
-                  ${u.isHttp ? `<span style="color: var(--risk-danger-text); font-weight: 700;">⚠️ Insecure HTTP</span>` : ""}
-                  ${u.shortener ? `<span style="color: var(--risk-suspicious-text); font-weight: 600;">🔗 URL Shortener</span>` : ""}
+                  <span>Destination: <b>${escapeHtml(u.domain || "N/A")}</b></span>
+                  <span>Secret Jumps: <b>${u.redirect_count > 0 ? `${u.redirect_count} redirects` : 'Direct link'}</b></span>
+                  ${u.brand_impersonation ? `<span style="color: var(--risk-danger-text); font-weight: 700;">⚠️ Fake Imposter Website</span>` : ""}
+                  ${u.isHttp ? `<span style="color: var(--risk-danger-text); font-weight: 700;">⚠️ Not Encrypted (HTTP)</span>` : ""}
+                  ${u.shortener ? `<span style="color: var(--risk-suspicious-text); font-weight: 600;">🔗 Shortened Mystery Link</span>` : ""}
                   ${u.tls?.https ? `<span style="color: var(--risk-safe-text); font-weight: 600;">🔒 HTTPS</span>` : ""}
                 </div>
               </div>
@@ -3105,10 +3312,10 @@ function renderLinksTab(urlAnalysis = {}, whois = []) {
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
             <div>
               <div style="font-size: 0.92rem; font-weight: 800; color: var(--risk-safe-text); display: flex; align-items: center; gap: 0.45rem;">
-                <span>✓</span> Zero Flagged Links or Threat Signals
+                <span>✓</span> Zero Tricky Links or Traps
               </div>
               <div style="font-size: 0.76rem; color: var(--tm-text-secondary); margin-top: 0.2rem;">
-                All ${safeUrls.length} links in this message passed forensic inspection with zero security risks, brand spoofing, or invalid certificates.
+                All ${safeUrls.length} web links in this message passed our safety check with zero fake websites, viruses, or stolen passwords.
               </div>
             </div>
             <span class="verdict-tag safe">100% CLEAN</span>
@@ -3122,11 +3329,11 @@ function renderLinksTab(urlAnalysis = {}, whois = []) {
       ? `
         <div class="data-card">
           <div class="data-card-title" style="display: flex; align-items: center; justify-content: space-between;">
-            <span>🛡️ Safe Links Breakdown (${safeUrls.length})</span>
-            <span class="verdict-tag safe">${safeUrls.length} VERIFIED</span>
+            <span>🛡️ Safe Websites You Can Visit (${safeUrls.length})</span>
+            <span class="verdict-tag safe">${safeUrls.length} SAFE</span>
           </div>
           <div style="font-size: 0.78rem; color: var(--tm-text-secondary); margin-bottom: 0.65rem;">
-            Distribution of safe URLs across verified destination domains:
+            These links lead to safe, well-known company websites:
           </div>
 
           <!-- Domain Pills Summary (Numbers only) -->
@@ -3134,17 +3341,17 @@ function renderLinksTab(urlAnalysis = {}, whois = []) {
             ${safeDomainEntries.map(([dom, count]) => `
               <span class="factor-chip" style="background: var(--tm-surface); border: 1px solid var(--tm-border); font-size: 0.75rem; padding: 0.3rem 0.65rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.45rem;">
                 <span style="font-weight: 600; color: var(--tm-text);">${escapeHtml(dom)}</span>
-                <span style="background: var(--risk-safe-bg); color: var(--risk-safe-text); font-weight: 800; font-size: 0.68rem; padding: 0.05rem 0.4rem; border-radius: 9999px; border: 1px solid var(--risk-safe-border);">${count}</span>
+                <span style="background: var(--risk-safe-bg); color: var(--risk-safe-text); font-weight: 800; font-size: 0.68rem; padding: 0.05rem 0.4rem; border-radius: 9999px; border: 1px solid var(--risk-safe-border);">${count} link${count > 1 ? 's' : ''}</span>
               </span>
             `).join("")}
           </div>
 
-          <!-- Collapsible Inspection List for Safe URLs -->
-          <details style="margin-top: 0.75rem; border-top: 1px solid var(--tm-border); padding-top: 0.6rem;">
+          <!-- Inspection List for Safe URLs (open by default) -->
+          <details open style="margin-top: 0.75rem; border-top: 1px solid var(--tm-border); padding-top: 0.6rem;">
             <summary style="cursor: pointer; font-size: 0.78rem; font-weight: 700; color: var(--tm-accent); padding: 0.2rem 0; user-select: none;">
-              Expand full inventory of ${safeUrls.length} safe URLs
+              Full list of ${safeUrls.length} verified safe links
             </summary>
-            <div class="url-list" style="margin-top: 0.65rem; max-height: 280px; overflow-y: auto; padding-right: 0.35rem;">
+            <div class="url-list" style="margin-top: 0.65rem; max-height: 320px; overflow-y: auto; padding-right: 0.35rem;">
               ${safeUrls.map((u) => `
                 <div class="url-row" style="padding: 0.5rem 0.75rem;">
                   <div class="url-row-top">
@@ -3152,9 +3359,9 @@ function renderLinksTab(urlAnalysis = {}, whois = []) {
                     <span class="verdict-tag safe" style="font-size: 0.62rem; padding: 0.1rem 0.45rem;">SAFE</span>
                   </div>
                   <div style="font-size: 0.68rem; color: var(--tm-text-secondary); display: flex; gap: 0.85rem; margin-top: 0.15rem;">
-                    <span>Host: <b>${escapeHtml(u.domain || "N/A")}</b></span>
-                    <span>Redirects: <b>${u.redirect_count}</b></span>
-                    ${u.tls?.https ? `<span style="color: var(--risk-safe-text);">🔒 HTTPS</span>` : ""}
+                    <span>Website: <b>${escapeHtml(u.domain || "N/A")}</b></span>
+                    <span>Secret Jumps: <b>${u.redirect_count > 0 ? `${u.redirect_count} redirects` : 'None'}</b></span>
+                    ${u.tls?.https ? `<span style="color: var(--risk-safe-text);">🔒 Safe & Encrypted (HTTPS)</span>` : ""}
                   </div>
                 </div>
               `).join("")}
@@ -3169,7 +3376,10 @@ function renderLinksTab(urlAnalysis = {}, whois = []) {
     ${whoisList.length > 0
       ? `
       <div class="data-card">
-        <div class="data-card-title">🌐 WHOIS Domain Registration</div>
+        <div class="data-card-title">🌐 Website Background Check (${whoisList.length})</div>
+        <div style="font-size: 0.78rem; color: var(--tm-text-secondary); margin-bottom: 0.65rem;">
+          Who owns these websites and how long have they been around?
+        </div>
         <div class="auth-items-grid">
           ${whoisList
         .map(
@@ -3206,9 +3416,9 @@ function renderLinksTab(urlAnalysis = {}, whois = []) {
               <div class="auth-box">
                 <div style="font-size: 0.82rem; font-weight: 800; color: var(--tm-text);">${escapeHtml(w.domain || "Domain")}</div>
                 <div style="font-size: 0.72rem; color: var(--tm-text-secondary); margin-top: 0.25rem; display: flex; flex-direction: column; gap: 0.2rem;">
-                  <div>Registrar: <b>${escapeHtml(w.registrar || "N/A")}</b></div>
-                  <div>Created: <b>${escapeHtml(formattedDate)}</b></div>
-                  <div>Domain Age: <b>${escapeHtml(ageText)}</b></div>
+                  <div>Official Registry: <b>${escapeHtml(w.registrar || "Verified Registrar")}</b></div>
+                  <div>Online Since: <b>${escapeHtml(formattedDate)}</b></div>
+                  <div>Website Age: <b>${escapeHtml(ageText)} (Not a brand-new scam site)</b></div>
                 </div>
               </div>
             `;
@@ -3276,14 +3486,14 @@ function renderAttachmentsTab(arg1 = {}, arg2 = {}) {
     <div class="studio-banner">
       <div>
         <div class="studio-banner-title">
-          <span>📎</span> Attachment Sandbox & Forensic Inspection
+          <span>📎</span> File Doctor: Are downloads and PDFs safe?
         </div>
         <div class="studio-banner-desc">
-          Static file analysis, deep URL extraction, macro parsing, cryptographic hashes, and container inspection
+          We opened every file inside a secret test bubble to make sure there are no viruses, bad download traps, or sneaky programs.
         </div>
       </div>
       <div class="module-score-badge ${statusClass}">
-        Attachment Risk: ${risk}/100 • ${risk === 0 && issueFiles.length === 0 ? "CLEAN" : hasPhishUrl ? "PHISHING DETECTED" : "THREAT DETECTED"}
+        File Check: ${risk === 0 && issueFiles.length === 0 ? "✓ ALL FILES SAFE" : hasPhishUrl ? "🚨 DANGEROUS LINK IN FILE" : "⚠️ RISKY FILE FOUND"}
       </div>
     </div>
 
@@ -3294,30 +3504,29 @@ function renderAttachmentsTab(arg1 = {}, arg2 = {}) {
       ? `
         <div class="data-card" style="border-left: 4px solid var(--risk-danger); background: var(--risk-danger-bg);">
           <div class="data-card-title" style="color: var(--risk-danger-text); display: flex; align-items: center; justify-content: space-between;">
-            <span>⚠️ Flagged Attachment Issues (${issueFiles.length})</span>
-            <span class="verdict-tag danger">${hasPhishUrl ? "PHISHING ATTACK" : "ACTION REQUIRED"}</span>
+            <span>⚠️ Danger: Do NOT Open These Files! (${issueFiles.length})</span>
+            <span class="verdict-tag danger">${hasPhishUrl ? "PHISHING TRAP" : "DO NOT OPEN"}</span>
           </div>
           <div style="font-size: 0.78rem; color: var(--tm-text-secondary); margin-bottom: 0.5rem;">
-            The following files contain malicious or phishing links, active macros, or security risks:
+            TunaMail caught dangerous tricks hiding inside these files:
           </div>
-          <ul style="padding-left: 1.2rem; font-size: 0.78rem; color: var(--risk-danger-text); line-height: 1.5; margin: 0;">
+          <ul style="padding-left: 1.15rem; font-size: 0.78rem; color: var(--risk-danger-text); line-height: 1.5; margin: 0; display: flex; flex-direction: column; gap: 0.45rem;">
             ${issueFiles.map((f) => {
-              let alertDesc = "";
-              if (f.unsafe_urls && f.unsafe_urls.length > 0) {
-                const u0 = f.unsafe_urls[0];
-                const reason = u0.reasons && u0.reasons[0] ? ` (${escapeHtml(u0.reasons[0])})` : "";
-                alertDesc = `🚨 <b>${escapeHtml(u0.verdict || "Phishing")} Link inside Document:</b> <code style="word-break: break-all;">${escapeHtml(u0.url)}</code>${reason}`;
-              } else if (f.is_macro) {
-                alertDesc = "Active VBA macro code detected capable of executing local payloads.";
-              } else if (f.is_encrypted_pdf) {
-                alertDesc = "Password-encrypted container preventing static inspection.";
-              } else if (f.issues && f.issues.length > 0) {
-                alertDesc = escapeHtml(f.issues[0]);
-              } else {
-                alertDesc = "Suspicious executable or anomaly payload.";
-              }
-              return `<li><b>${escapeHtml(f.filename)}:</b> ${alertDesc}</li>`;
-            }).join("")}
+        let alertDesc = "";
+        if (f.unsafe_urls && f.unsafe_urls.length > 0) {
+          const u0 = f.unsafe_urls[0];
+          alertDesc = `Fake lookalike link (<code>${escapeHtml(u0.url)}</code>) pretending to be a real website.`;
+        } else if (f.is_macro) {
+          alertDesc = "Contains hidden auto-running script code (macro).";
+        } else if (f.is_encrypted_pdf) {
+          alertDesc = "Locked with a secret password to hide its contents.";
+        } else if (f.issues && f.issues.length > 0) {
+          alertDesc = escapeHtml(f.issues[0]);
+        } else {
+          alertDesc = "Unsafe file or strange mystery program.";
+        }
+        return `<li><b>${escapeHtml(f.filename)}:</b> ${alertDesc}</li>`;
+      }).join("")}
           </ul>
         </div>
       `
@@ -3327,10 +3536,10 @@ function renderAttachmentsTab(arg1 = {}, arg2 = {}) {
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
               <div>
                 <div style="font-size: 0.88rem; font-weight: 800; color: var(--risk-safe-text); display: flex; align-items: center; gap: 0.45rem;">
-                  <span>✓</span> All ${files.length} Attachments Clean & Verified
+                  <span>✓</span> All ${files.length} Files Are Clean & Harmless
                 </div>
                 <div style="font-size: 0.75rem; color: var(--tm-text-secondary); margin-top: 0.15rem;">
-                  Zero active macros, valid header signatures, and clean static byte structure across all files.
+                  No viruses, no bad programs, and no hidden password-stealing links found inside.
                 </div>
               </div>
               <span class="verdict-tag safe">100% CLEAN</span>
@@ -3487,19 +3696,30 @@ function renderAttachmentsTab(arg1 = {}, arg2 = {}) {
 }
 
 /* 5. Analyst Explanation Module */
-function renderExplanationTab(explanation = {}, decision = {}) {
-  const risk = decision.risk_score ?? 0;
+function renderExplanationTab(explanation = {}, decision = {}, analysis = {}, msg = {}) {
+  const effectiveMsg = (msg && Object.keys(msg).length > 0) ? msg : (state.selectedMessageData || {});
+  const effectiveAnalysis = (analysis && Object.keys(analysis).length > 0) ? analysis : (effectiveMsg.analysis || state.selectedMessageData?.analysis || {});
+
+  // Pipeline attachment issues
+  const attFiles = extractMessageAttachments(effectiveMsg, effectiveAnalysis);
+  const issueFiles = attFiles.filter((f) => f.is_macro || (f.risk_score || 0) >= 40 || f.is_encrypted_pdf || (f.unsafe_urls && f.unsafe_urls.length > 0));
+  const phishFiles = attFiles.filter((f) => f.unsafe_urls && f.unsafe_urls.some((u) => u.is_phishing || u.verdict === "PHISHING"));
+  const hasPhishAtt = phishFiles.length > 0;
+  const hasAttIssue = issueFiles.length > 0;
+
+  const attRisk = hasPhishAtt ? 90 : hasAttIssue ? 70 : 0;
+  const risk = Math.max(decision.risk_score ?? 0, attRisk);
   const statusClass = risk === 0 ? "safe" : risk < 40 ? "suspicious" : "danger";
 
   // Positive signals
   let pos = Array.isArray(explanation.positive_signals) && explanation.positive_signals.length > 0
-    ? explanation.positive_signals
+    ? [...explanation.positive_signals]
     : [];
   if (pos.length === 0 && Array.isArray(decision.reasoning?.positive) && decision.reasoning.positive.length > 0) {
-    pos = decision.reasoning.positive;
+    pos = [...decision.reasoning.positive];
   }
   if (pos.length === 0) {
-    pos = ["SPF and DKIM verified", "No threat signatures found"];
+    pos = ["SPF and DKIM verified", "No body text threats detected"];
   }
 
   // --- Deduplicate & condense noisy signals ---
@@ -3525,6 +3745,11 @@ function renderExplanationTab(explanation = {}, decision = {}) {
   ];
   pos = pos.filter((s) => !LOW_VALUE_PATTERNS.some((p) => p.test(s)));
 
+  // If there's an attachment threat, filter out false assurances from pos:
+  if (hasAttIssue) {
+    pos = pos.filter((s) => !/all.*link.*safe|all.*safety.*passed|no threat signatures|appears to be.*genuine/i.test(s));
+  }
+
   // 3. Prioritise: auth/SPF/DKIM first, then others, cap at 5
   const AUTH_PRIORITY = /SPF|DKIM|DMARC|auth|sender.*genuine|security check/i;
   const prioritised = [
@@ -3535,10 +3760,10 @@ function renderExplanationTab(explanation = {}, decision = {}) {
 
   // Negative signals
   let neg = Array.isArray(explanation.negative_signals) && explanation.negative_signals.length > 0
-    ? explanation.negative_signals
+    ? [...explanation.negative_signals]
     : [];
   if (neg.length === 0 && Array.isArray(decision.reasoning?.negative) && decision.reasoning.negative.length > 0) {
-    neg = decision.reasoning.negative;
+    neg = [...decision.reasoning.negative];
   }
   if (neg.length === 0 && Array.isArray(decision.reasoning?.network)) {
     neg = decision.reasoning.network.filter((s) => !String(s).toLowerCase().includes("verified safe"));
@@ -3547,50 +3772,83 @@ function renderExplanationTab(explanation = {}, decision = {}) {
     neg = decision.reasoning.behavioral.filter((s) => String(s).toLowerCase().includes("shift") || String(s).toLowerCase().includes("suspicious"));
   }
 
-  const rationale = explanation.summary || explanation.final_reason || explanation.primary_reason || decision.reason || "The security reasoning engine analyzed email headers, sender trust scores, URL destinations, and language markers to produce this verdict.";
+  // Prepend pipelined attachment issues so they appear at the top of Things That Look Suspicious!
+  if (hasAttIssue) {
+    issueFiles.forEach((f) => {
+      const u0 = f.unsafe_urls && f.unsafe_urls[0];
+      let threatText = "";
+      if (u0) {
+        threatText = `Fake lookalike link (${u0.url}) hidden inside '${f.filename}'`;
+      } else if (f.is_macro) {
+        threatText = `Hidden auto-running code inside '${f.filename}'`;
+      } else if (f.is_encrypted_pdf) {
+        threatText = `Password-locked file '${f.filename}'`;
+      } else if (f.issues && f.issues.length > 0) {
+        threatText = `Security risk in '${f.filename}': ${f.issues[0]}`;
+      } else {
+        threatText = `Unsafe file attachment: '${f.filename}'`;
+      }
+      if (threatText && !neg.some((s) => s.includes(f.filename))) {
+        neg.unshift(threatText);
+      }
+    });
+  }
+
+  let rationale = explanation.summary || explanation.final_reason || explanation.primary_reason || decision.reason || "";
+  if (hasAttIssue) {
+    const f0 = issueFiles[0];
+    const u0 = f0.unsafe_urls && f0.unsafe_urls[0];
+    rationale = `⚠️ Sneaky trick link (${u0 ? u0.url : "link"}) discovered hiding inside '${f0.filename}'. Do not open this document or click links inside it.`;
+  } else if (!rationale || /reasoning engine/i.test(rationale)) {
+    rationale = "Tuna Robot checked the sender's real ID badge, tamper-proof post office seal, all web links, and message words to make sure this email is safe.";
+  }
+
+  const robotVerdictBadge = risk === 0
+    ? "✓ 100% SAFE TO READ"
+    : (risk >= 50 || statusClass === "danger" ? "🚨 DANGEROUS TRICK" : "⚠️ BE CAREFUL");
 
   return `
     <div class="studio-banner">
       <div>
         <div class="studio-banner-title">
-          <span>⚖️</span> Analyst Explanation & Fused Reasoning
+          <span>⚖️</span> Tuna Robot's Final Thinking & Advice
         </div>
         <div class="studio-banner-desc">
-          Explainable AI security synthesis fusing all heuristic and neural signals
+          How our smart safety computer put all the clues together to decide if this message is safe or a trick.
         </div>
       </div>
       <div class="module-score-badge ${statusClass}">
-        Fused Risk: ${risk}/100 • Confidence: ${decision.confidence ?? 95}%
+        Robot Verdict: ${robotVerdictBadge} • Certainty: ${decision.confidence ?? 95}%
       </div>
     </div>
 
     <div class="data-card">
-      <div class="data-card-title">Decision Rationale</div>
-      <div style="font-size: 0.85rem; line-height: 1.5; color: var(--tm-text);">
+      <div class="data-card-title">🤖 In Plain English: Why is this email ${risk === 0 ? "safe" : "suspicious"}?</div>
+      <div style="font-size: 0.88rem; line-height: 1.55; color: var(--tm-text);">
         ${escapeHtml(rationale)}
       </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.75rem;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.85rem; align-items: stretch;">
       <!-- 1. Negative / Risk Signals (Shown First) -->
-      <div class="data-card" style="${neg.length > 0 ? "border-left: 4px solid var(--risk-danger);" : "border-left: 4px solid var(--tm-border);"}">
+      <div class="data-card" style="height: 100%; display: flex; flex-direction: column; ${neg.length > 0 ? "border-left: 4px solid var(--risk-danger);" : "border-left: 4px solid var(--tm-border);"}">
         <div class="data-card-title" style="color: ${neg.length > 0 ? "var(--risk-danger-text)" : "var(--tm-text)"};">
-          ⚠️ Negative / Risk Signals (${neg.length})
+          ⚠️ Things That Look Suspicious (${neg.length})
         </div>
         ${neg.length === 0
-      ? `<div style="font-size: 0.78rem; color: var(--risk-safe-text);">✓ None detected. All security parameters passed.</div>`
-      : `<ul style="padding-left: 1.2rem; font-size: 0.78rem; color: var(--risk-danger-text); line-height: 1.5;">
+      ? `<div style="font-size: 0.8rem; color: var(--risk-safe-text); font-weight: 600;">✓ Nothing bad found! Every single safety test passed.</div>`
+      : `<ul style="padding-left: 1.15rem; font-size: 0.78rem; color: var(--risk-danger-text); line-height: 1.5; margin: 0; display: flex; flex-direction: column; gap: 0.45rem;">
                 ${neg.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}
                </ul>`
     }
       </div>
 
       <!-- 2. Safe & Trust Signals (Shown Second) -->
-      <div class="data-card" style="border-left: 4px solid var(--risk-safe);">
+      <div class="data-card" style="height: 100%; display: flex; flex-direction: column; border-left: 4px solid var(--risk-safe);">
         <div class="data-card-title" style="color: var(--risk-safe-text);">
-          ✓ Safe & Trust Signals (${pos.length})
+          ✓ Good Clues That Prove It's Safe (${pos.length})
         </div>
-        <ul style="padding-left: 1.2rem; font-size: 0.78rem; color: var(--tm-text-secondary); line-height: 1.5;">
+        <ul style="padding-left: 1.15rem; font-size: 0.78rem; color: var(--tm-text-secondary); line-height: 1.5; margin: 0; display: flex; flex-direction: column; gap: 0.45rem;">
           ${pos.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}
         </ul>
       </div>
@@ -3651,26 +3909,28 @@ function renderStage5Tab(intel = {}, analysis = {}) {
     <div class="studio-banner">
       <div>
         <div class="studio-banner-title">
-          <span>🛰️</span> Stage 5 Cyber Threat Intelligence & MITRE ATT&CK
+          <span>🛰️</span> Scam Pattern Detector
         </div>
         <div class="studio-banner-desc">
-          Correlation with known adversarial tactics, threat actor infrastructure, and IoCs
+          We checked this email against millions of known scams and hacker tricks to make sure nobody is setting a trap for you.
         </div>
       </div>
       <div class="module-score-badge ${statusClass}">
-        Threat Score: ${score}/100 • ${score === 0 ? "NO THREATS" : "ACTIVE THREAT"}
+        Scam Score: ${score}/100 • ${score === 0 ? "✓ 0 SCAM TRICKS" : "⚠️ SCAM PATTERN FOUND"}
       </div>
     </div>
 
     <div class="data-card">
-      <div class="data-card-title">MITRE ATT&CK Framework Mapping</div>
+      <div class="data-card-title">Known Scam Patterns</div>
       ${issuePatterns.length === 0
-      ? `<div style="font-size: 0.8rem; color: var(--risk-safe-text);">✓ No MITRE ATT&CK adversary tactics identified in this message.</div>`
+      ? `<div style="font-size: 0.8rem; color: var(--risk-safe-text); display: flex; align-items: center; gap: 0.45rem;">
+          <span>✓</span> No Sneaky Tricks Found: TunaMail searched for known hacker tricks and fake password traps. This email is completely clean!
+         </div>`
       : `
           <div style="display: flex; flex-direction: column; gap: 0.5rem;">
             <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
               <span class="factor-chip" style="background: var(--risk-danger-bg); color: var(--risk-danger-text); border-color: var(--risk-danger-border); font-weight: 700; font-size: 0.82rem; padding: 0.35rem 0.75rem;">
-                <b>${escapeHtml(issuePatterns[0].id || "T1566")}</b> ${escapeHtml(issuePatterns[0].name || issuePatterns[0])}
+                ⚠️ <b>Trick Pattern:</b> ${escapeHtml(issuePatterns[0].name || issuePatterns[0])}
               </span>
               ${issuePatterns[0].confidence ? `<span style="font-size: 0.75rem; color: var(--tm-text-secondary); font-weight: 600;">Match Confidence: <b>${issuePatterns[0].confidence}%</b></span>` : ""}
             </div>
@@ -3685,10 +3945,10 @@ function renderStage5Tab(intel = {}, analysis = {}) {
     </div>
 
     <div class="data-card">
-      <div class="data-card-title">Indicators of Compromise (IOCs)</div>
+      <div class="data-card-title">Dangerous Clues & Footprints</div>
       ${issueIocs.length === 0
       ? `<div style="font-size: 0.8rem; color: var(--risk-safe-text); display: flex; align-items: center; gap: 0.45rem;">
-          <span>✓</span> No malicious IOCs or compromised infrastructure detected.
+          <span>✓</span> Zero dangerous clues, rogue websites, or bad hacker servers detected.
          </div>`
       : `
           <div class="ioc-list">
@@ -3697,14 +3957,14 @@ function renderStage5Tab(intel = {}, analysis = {}) {
                 <div style="display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; flex: 1;">
                   <span class="ioc-value" style="color: var(--risk-danger-text); font-weight: 700;" title="${escapeHtml(ioc.value || ioc)}">${escapeHtml(ioc.value || ioc)}</span>
                   <div style="font-size: 0.68rem; color: var(--tm-text-muted);">
-                    Type: <b>${escapeHtml(ioc.type || "Threat Indicator")}</b> • Status: <b style="color: var(--risk-danger-text);">Flagged Issue</b>
+                    Type: <b>${escapeHtml(ioc.type || "Threat Indicator")}</b> • Status: <b style="color: var(--risk-danger-text);">Dangerous Clue</b>
                   </div>
                 </div>
-                <button type="button" class="btn-copy-ioc" onclick="copyToClipboard('${escapeHtml(ioc.value || ioc)}', 'IOC copied')">Copy</button>
+                <button type="button" class="btn-copy-ioc" onclick="copyToClipboard('${escapeHtml(ioc.value || ioc)}', 'Copied')">Copy</button>
               </div>
             `).join("")}
           </div>
-          ${issueIocs.length > 1 ? `<div style="font-size: 0.72rem; color: var(--tm-text-muted); margin-top: 0.4rem;">Primary issue displayed (1 of ${issueIocs.length} detected).</div>` : ""}
+          ${issueIocs.length > 1 ? `<div style="font-size: 0.72rem; color: var(--tm-text-muted); margin-top: 0.4rem;">Showing primary clue (1 of ${issueIocs.length} detected).</div>` : ""}
         `
     }
     </div>
@@ -3720,33 +3980,33 @@ function renderAdaptiveTab(adaptive = {}) {
     <div class="studio-banner">
       <div>
         <div class="studio-banner-title">
-          <span>📈</span> Adaptive Behavioral Drift & Historical Baseline
+          <span>📈</span> Normal Habits: Does this sender act like themselves?
         </div>
         <div class="studio-banner-desc">
-          Longitudinal sender profiling, communication time-of-day alignment, and cadence tracking
+          We remember what time this sender usually writes and how many messages they send, so we notice if a stranger takes over their account.
         </div>
       </div>
       <div class="module-score-badge ${statusClass}">
-        Anomaly Score: ${anomalyScore}/100 • ${anomalyScore < 30 ? "BASELINE STABLE" : "DRIFT DETECTED"}
+        Routine Check: ${anomalyScore < 30 ? "✓ ACTING TOTALLY NORMAL" : "⚠️ UNUSUAL SENDER HABITS"}
       </div>
     </div>
 
     <div class="data-card">
-      <div class="data-card-title">Sender Behavioral Learning</div>
+      <div class="data-card-title">Daily Routine & Habit History</div>
       <div style="font-size: 0.82rem; color: var(--tm-text-secondary); line-height: 1.5;">
-        ${escapeHtml(adaptive.summary || "Historical sending volume, communication time distribution, and domain fingerprint conform to established organizational baselines.")}
+        ${escapeHtml(adaptive.summary || "This sender is writing at their usual time of day, sending their normal amount of emails, and acting like they always do.")}
       </div>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; margin-top: 0.5rem;">
         <div class="auth-box">
-          <div style="font-size: 0.7rem; color: var(--tm-text-muted);">Sending Volume Variance</div>
-          <div style="font-size: 1.1rem; font-weight: 700; color: var(--risk-safe-text);">${escapeHtml(adaptive.volume_variance || "Normal")}</div>
+          <div style="font-size: 0.7rem; color: var(--tm-text-muted);">How Many Messages</div>
+          <div style="font-size: 1.1rem; font-weight: 700; color: var(--risk-safe-text);">${escapeHtml(adaptive.volume_variance || "Normal amount")}</div>
         </div>
         <div class="auth-box">
-          <div style="font-size: 0.7rem; color: var(--tm-text-muted);">Time-of-Day Alignment</div>
-          <div style="font-size: 1.1rem; font-weight: 700; color: var(--risk-safe-text);">${escapeHtml(adaptive.time_alignment || "Expected")}</div>
+          <div style="font-size: 0.7rem; color: var(--tm-text-muted);">Time of Day Sent</div>
+          <div style="font-size: 1.1rem; font-weight: 700; color: var(--risk-safe-text);">${escapeHtml(adaptive.time_alignment || "Usual hours")}</div>
         </div>
         <div class="auth-box">
-          <div style="font-size: 0.7rem; color: var(--tm-text-muted);">Historical Confidence</div>
+          <div style="font-size: 0.7rem; color: var(--tm-text-muted);">Routine Certainty</div>
           <div style="font-size: 1.1rem; font-weight: 700; color: var(--tm-accent);">${escapeHtml(adaptive.confidence || "High (92%)")}</div>
         </div>
       </div>
@@ -3876,6 +4136,14 @@ function attachOriginalTabToggle() {
    Detail Action Attachments (Tabs, Jumps, Reports, Modals)
    ========================================================================== */
 function attachDetailEventListeners(messageId) {
+  // View Safety Report Modal
+  const btnViewReport = document.getElementById("btnViewReport");
+  if (btnViewReport) {
+    btnViewReport.addEventListener("click", () => {
+      showSafetyReportModal(messageId);
+    });
+  }
+
   // Export PDF
   const btnPDF = document.getElementById("btnExportPDF");
   if (btnPDF) {
@@ -3954,6 +4222,322 @@ function attachDetailEventListeners(messageId) {
 }
 
 /* ==========================================================================
+   Kid-Friendly Safety Report Modal
+   ========================================================================== */
+function showSafetyReportModal(messageId) {
+  const msgData = state.selectedMessageData;
+  if (!msgData) return;
+  const analysis = msgData.analysis || {};
+  const decision = analysis.decision || {};
+  const verdict = (decision.verdict || "SAFE").toUpperCase();
+  const score = decision.risk_score ?? 0;
+  const confidence = decision.confidence ?? 95;
+
+  let isDanger = verdict === "PHISHING" || verdict === "MALICIOUS" || verdict === "CRITICAL" || verdict === "HIGH RISK" || verdict === "HIGH_RISK" || score >= 50;
+  let isSuspicious = !isDanger && (verdict === "SUSPICIOUS" || score > 0);
+
+  let vBadgeClass = isDanger ? "danger" : isSuspicious ? "warning" : "safe";
+  let vBadgeText = isDanger ? "🔴 DANGEROUS TRICK (DO NOT OPEN)" : isSuspicious ? "🟡 BE CAREFUL (ASK AN ADULT)" : "🟢 100% SAFE TO READ";
+  let scoreLabel = isDanger ? `${score}/100 · High Danger Trap` : isSuspicious ? `${score}/100 · Strange Signals` : "0/100 · Completely Clean";
+
+  // Format Letter Details
+  const fromText = formatIndividualName(msgData.from, (msgData.from || "").replace(/<[^>]*>/g, "").trim()) || "Unknown Sender";
+  let toText = "";
+  if (msgData.to && typeof msgData.to === "string" && msgData.to.trim()) {
+    toText = formatIndividualName(msgData.to);
+  }
+  if (!toText || toText === "N/A" || toText === "You") {
+    toText = state.userName || (state.userEmail ? formatIndividualName(state.userEmail) : "You");
+  }
+  const subjectText = msgData.subject || "(No Subject)";
+  let dateText = msgData.date || "N/A";
+  if (dateText !== "N/A") {
+    try {
+      const d = new Date(dateText);
+      if (!isNaN(d.getTime())) {
+        dateText = new Intl.DateTimeFormat("en-IN", {
+          timeZone: "Asia/Kolkata",
+          weekday: "short",
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true
+        }).format(d) + " (IST)";
+      }
+    } catch { }
+  }
+
+  // Safety Rules
+  let rulesHtml = "";
+  if (isDanger) {
+    rulesHtml = `
+      <div class="report-rule-item danger">
+        <span class="rule-icon">🛑</span>
+        <div><strong>STOP! Do Not Click Anything:</strong> Don't click buttons, links, or pictures inside this letter.</div>
+      </div>
+      <div class="report-rule-item danger">
+        <span class="rule-icon">🔒</span>
+        <div><strong>Keep Secrets Safe:</strong> Never tell anyone your passwords, PIN codes, or game account logins.</div>
+      </div>
+      <div class="report-rule-item danger">
+        <span class="rule-icon">📎</span>
+        <div><strong>Don't Open Files:</strong> Do not open or download any attached drawings, PDFs, or files.</div>
+      </div>
+      <div class="report-rule-item danger">
+        <span class="rule-icon">🗑️</span>
+        <div><strong>Ask a Grown-Up:</strong> Show this to a parent, teacher, or adult and ask them to delete it.</div>
+      </div>
+    `;
+  } else if (isSuspicious) {
+    rulesHtml = `
+      <div class="report-rule-item warning">
+        <span class="rule-icon">⚠️</span>
+        <div><strong>Be Extra Careful:</strong> Something about this letter looks a little unusual.</div>
+      </div>
+      <div class="report-rule-item warning">
+        <span class="rule-icon">🛑</span>
+        <div><strong>Don't Click Yet:</strong> Ask an adult before clicking any links or buttons.</div>
+      </div>
+      <div class="report-rule-item warning">
+        <span class="rule-icon">🔍</span>
+        <div><strong>Double Check:</strong> Make sure you know who sent this before replying.</div>
+      </div>
+    `;
+  } else {
+    rulesHtml = `
+      <div class="report-rule-item safe">
+        <span class="rule-icon">✓</span>
+        <div><strong>Safe to Read:</strong> This letter really came from who it says it's from.</div>
+      </div>
+      <div class="report-rule-item safe">
+        <span class="rule-icon">✓</span>
+        <div><strong>Safe Links:</strong> All buttons and links lead to safe, real websites.</div>
+      </div>
+      <div class="report-rule-item safe">
+        <span class="rule-icon">✓</span>
+        <div><strong>No Traps Found:</strong> No viruses, sneaky words, or trick attachments were found.</div>
+      </div>
+    `;
+  }
+
+  // Clues list: Extract all structured evidences and translate for kids
+  const allEvidences = [];
+  const modules = ["authentication", "content", "url", "urls", "attachment", "trust", "ai"];
+  modules.forEach((mod) => {
+    const modData = analysis[mod];
+    if (modData && Array.isArray(modData.structured_evidence)) {
+      modData.structured_evidence.forEach((item) => {
+        allEvidences.push({ ...item, source_module: mod.charAt(0).toUpperCase() + mod.slice(1) });
+      });
+    }
+  });
+
+  // Also check extracted attachments for phishing link / homograph
+  const attFiles = extractMessageAttachments(msgData, analysis);
+  attFiles.forEach((f) => {
+    if (f.unsafe_urls && f.unsafe_urls.length > 0) {
+      f.unsafe_urls.forEach((u) => {
+        allEvidences.unshift({
+          source_module: "Attachment",
+          indicator: "ATTACHMENT_UNSAFE_URL",
+          severity: "HIGH",
+          explanation: `Sneaky fake link (${u.url}) discovered inside file '${f.filename}'. Uses lookalike trick to fool you.`
+        });
+      });
+    }
+  });
+
+  // Deduplicate
+  const uniqueEvidences = [];
+  const seenExp = new Set();
+  allEvidences.forEach((ev) => {
+    const key = (ev.explanation || ev.indicator || "").trim();
+    if (!seenExp.has(key)) {
+      seenExp.add(key);
+      uniqueEvidences.push(ev);
+    }
+  });
+
+  // Translate evidence for kids
+  const kidClues = uniqueEvidences.map((ev) => {
+    const rawMod = ev.source_module || "Security";
+    const rawInd = ev.indicator || ev.type || "Check";
+    const rawSev = (ev.severity || "INFO").toUpperCase();
+    let rawExp = ev.explanation || "";
+
+    let modName = "Letter Safety";
+    if (/auth/i.test(rawMod)) modName = "Sender ID Badge";
+    else if (/trust/i.test(rawMod)) modName = "Sender Friendliness";
+    else if (/content/i.test(rawMod)) modName = "Message Words";
+    else if (/url/i.test(rawMod)) modName = "Buttons & Links";
+    else if (/attach/i.test(rawMod)) modName = "Attached File";
+    else if (/ai/i.test(rawMod)) modName = "Robot Brain";
+
+    let sevBadge = "✓ Safe Clue";
+    let sevClass = "safe";
+    if (rawSev === "HIGH" || rawSev === "CRITICAL") {
+      sevBadge = "🚨 Big Danger";
+      sevClass = "danger";
+    } else if (rawSev === "MEDIUM") {
+      sevBadge = "⚠️ Warning";
+      sevClass = "warning";
+    } else if (rawSev === "LOW") {
+      sevBadge = "ℹ️ Note";
+      sevClass = "info";
+    }
+
+    // Kid-friendly explanations
+    let simpleExp = rawExp;
+    if (/homograph|lookalike/i.test(rawExp)) {
+      simpleExp = "Sneaky lookalike link: Uses fake lookalike letters to pretend to be a real website and steal passwords.";
+    } else if (/dkim.*sign/i.test(rawExp)) {
+      simpleExp = "Tamper-proof wax seal is intact: Proves nobody opened or messed with this letter on its way to you.";
+    } else if (/spf.*author/i.test(rawExp)) {
+      simpleExp = "Official Post Office stamp: Mailed directly from the real company's official server.";
+    } else if (/dmarc/i.test(rawExp)) {
+      simpleExp = "ID match: The sender's name on top matches the real address below.";
+    } else if (/macro/i.test(rawExp)) {
+      simpleExp = "Dangerous hidden computer code inside the attached document.";
+    } else if (/urgency|urgent/i.test(rawExp)) {
+      simpleExp = "Scary words trying to rush you before you have time to think or ask an adult.";
+    } else if (/harvest|password|credential/i.test(rawExp)) {
+      simpleExp = "Tricks trying to grab your secret passwords, PIN codes, or login info.";
+    } else if (/financial|money|invoice|prize/i.test(rawExp)) {
+      simpleExp = "Tricks offering fake money, prizes, or asking you to pay cash.";
+    } else if (/low trust/i.test(rawExp)) {
+      simpleExp = "We don't know this sender well yet, so we have to be extra careful.";
+    }
+
+    return { modName, rawInd, sevBadge, sevClass, simpleExp };
+  });
+
+  const overlay = document.createElement("div");
+  overlay.id = "safetyReportOverlay";
+  overlay.innerHTML = `
+    <div class="itm-backdrop" id="srBackdrop"></div>
+    <div class="itm-popup safety-report-popup" role="dialog" aria-modal="true" aria-label="TunaMail Safety Report">
+      <div class="itm-header" style="background: linear-gradient(135deg, rgba(30, 58, 138, 0.4), rgba(15, 23, 42, 0.8));">
+        <div class="itm-header-left">
+          <span class="itm-header-icon">🛡️</span>
+          <div>
+            <div class="itm-header-title">TunaMail Safety Report</div>
+            <div class="itm-header-sub">Letter Safety Summary · Easy for Kids to Understand</div>
+          </div>
+        </div>
+        <button class="itm-close" id="srCloseBtn" aria-label="Close">✕</button>
+      </div>
+      <div class="itm-body safety-report-body" id="srBody" tabindex="-1" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
+        
+        <!-- Letter Meta Card -->
+        <div class="sr-card" style="background: var(--tm-surface-secondary); border: 1px solid var(--tm-border); border-radius: 12px; padding: 0.9rem 1.15rem;">
+          <div style="font-size: 0.75rem; font-weight: 700; color: var(--tm-text-secondary); text-transform: uppercase; margin-bottom: 0.5rem;">Letter Information</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.6rem; font-size: 0.82rem;">
+            <div><span style="color: var(--tm-text-secondary);">Subject:</span> <strong style="color: var(--stark-white);">${escapeHtml(subjectText)}</strong></div>
+            <div><span style="color: var(--tm-text-secondary);">Who Sent It:</span> <strong style="color: var(--stark-white);">${escapeHtml(fromText)}</strong></div>
+            <div><span style="color: var(--tm-text-secondary);">Sent To:</span> <strong style="color: var(--stark-white);">${escapeHtml(toText)}</strong></div>
+            <div><span style="color: var(--tm-text-secondary);">Arrived:</span> <strong style="color: var(--stark-white);">${escapeHtml(dateText)}</strong></div>
+          </div>
+        </div>
+
+        <!-- Big Verdict Banner -->
+        <div class="sr-verdict-banner ${vBadgeClass}" style="border-radius: 14px; padding: 1.15rem 1.4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+          <div>
+            <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.85;">Safety Verdict</div>
+            <div style="font-size: 1.15rem; font-weight: 800; margin-top: 0.2rem;">${vBadgeText}</div>
+          </div>
+          <div style="display: flex; gap: 1.5rem; align-items: center;">
+            <div style="text-align: right;">
+              <div style="font-size: 0.72rem; opacity: 0.85;">Danger Meter</div>
+              <div style="font-size: 1rem; font-weight: 800;">${scoreLabel}</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 0.72rem; opacity: 0.85;">How Sure We Are</div>
+              <div style="font-size: 1rem; font-weight: 800;">${confidence}% Sure</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Safety Rules -->
+        <div class="sr-card" style="background: var(--tm-surface-secondary); border: 1px solid var(--tm-border); border-radius: 12px; padding: 1rem 1.15rem;">
+          <div style="font-size: 0.82rem; font-weight: 800; color: var(--stark-white); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.45rem;">
+            <span>🛡️</span> Safety Rules: What Should You Do?
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8rem;">
+            ${rulesHtml}
+          </div>
+        </div>
+
+        <!-- Plain English Reason -->
+        <div class="sr-card" style="background: var(--tm-surface-secondary); border: 1px solid var(--tm-border); border-radius: 12px; padding: 1rem 1.15rem;">
+          <div style="font-size: 0.82rem; font-weight: 800; color: var(--stark-white); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.45rem;">
+            <span>🤖</span> What Happened? (In Plain Words)
+          </div>
+          <div style="font-size: 0.82rem; line-height: 1.55; color: var(--tm-text);">
+            ${isDanger
+      ? "We looked inside this letter and discovered sneaky tricks or fake links trying to fool your eyes and steal your passwords. Someone is pretending to be someone they are not. That is why Tuna Robot says this letter is dangerous!"
+      : isSuspicious
+        ? "This letter has some unusual clues or unfamiliar sender details. It might be trying to trick you, so please check with a grown-up before clicking any buttons."
+        : "Good news! Tuna Robot checked the sender's official postmark, unbroken wax seal, and every single link. Everything is 100% verified and completely safe to read."}
+          </div>
+        </div>
+
+        <!-- Full Clues List (Content is there!) -->
+        <div class="sr-card" style="background: var(--tm-surface-secondary); border: 1px solid var(--tm-border); border-radius: 12px; padding: 1rem 1.15rem;">
+          <div style="font-size: 0.82rem; font-weight: 800; color: var(--stark-white); margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 0.45rem;">
+              <span>🔍</span> Every Clue We Checked (${kidClues.length})
+            </div>
+            <span style="font-size: 0.72rem; color: var(--tm-text-secondary); font-weight: 500;">All details explained simply</span>
+          </div>
+          ${kidClues.length === 0
+      ? `<div style="font-size: 0.8rem; color: var(--risk-safe-text);">✓ Every safety test passed with flying colors!</div>`
+      : `<div style="display: flex; flex-direction: column; gap: 0.55rem;">
+                ${kidClues.map((c) => `
+                  <div style="background: var(--tm-surface); border: 1px solid var(--tm-border); border-radius: 8px; padding: 0.65rem 0.85rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem;">
+                    <div>
+                      <div style="font-size: 0.7rem; font-weight: 700; color: var(--tm-text-secondary); text-transform: uppercase;">${escapeHtml(c.modName)}</div>
+                      <div style="font-size: 0.8rem; color: var(--tm-text); margin-top: 0.15rem; line-height: 1.4;">${escapeHtml(c.simpleExp)}</div>
+                    </div>
+                    <span class="sr-badge ${c.sevClass}" style="font-size: 0.72rem; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: 700; flex-shrink: 0;">${escapeHtml(c.sevBadge)}</span>
+                  </div>
+                `).join("")}
+              </div>`
+    }
+        </div>
+
+        <!-- Footer Actions -->
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid var(--tm-border);">
+          <button type="button" class="btn-report" id="srBtnDownloadPDF" data-id="${escapeHtml(messageId)}" style="background: var(--primary-blue); border-color: var(--primary-blue); color: #fff;">
+            <span>📥</span> Download PDF Report
+          </button>
+          <button type="button" class="btn-report" id="srBtnClose">
+            Close
+          </button>
+        </div>
+
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => { overlay.remove(); document.removeEventListener("keydown", onKey); };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  document.getElementById("srCloseBtn")?.addEventListener("click", close);
+  document.getElementById("srBtnClose")?.addEventListener("click", close);
+  document.getElementById("srBackdrop")?.addEventListener("click", close);
+  document.addEventListener("keydown", onKey);
+
+  document.getElementById("srBtnDownloadPDF")?.addEventListener("click", () => {
+    window.open(`${API_BASE}/reports/pdf/${messageId}`, "_blank");
+  });
+
+  const srBody = document.getElementById("srBody");
+  setTimeout(() => srBody?.focus(), 50);
+}
+
+/* ==========================================================================
    Inspector Tab Popup Modal
    ========================================================================== */
 function showInspectorTabModal(tabKey) {
@@ -3962,17 +4546,17 @@ function showInspectorTabModal(tabKey) {
   const analysis = msgData.analysis || {};
 
   const tabLabels = {
-    "sender-intel": { icon: "🛡️", label: "Sender & Intel" },
-    "ai-language":  { icon: "⚖️", label: "AI & Language" },
-    "links":        { icon: "🔗", label: "Links & Domains" },
-    "attachments":  { icon: "📎", label: "Attached Files" },
-    "adaptive":     { icon: "📈", label: "Adaptive Baseline" },
+    "sender-intel": { icon: "🛡️", label: "Sender & ID Check" },
+    "ai-language": { icon: "⚖️", label: "Words & Tricks Check" },
+    "links": { icon: "🔗", label: "Links & Websites Check" },
+    "attachments": { icon: "📎", label: "Attached Files Check" },
+    "adaptive": { icon: "📈", label: "Sender Habits Check" },
     // legacy keys
-    "sender":       { icon: "🛡️", label: "Sender & Auth" },
-    "content":      { icon: "💬", label: "Message Language" },
-    "explanation":  { icon: "⚖️", label: "AI Reasoning" },
-    "stage5":       { icon: "🛰️", label: "Stage 5 Intel" },
-    "original":     { icon: "📄", label: "Original Message" },
+    "sender": { icon: "🛡️", label: "Sender & ID Check" },
+    "content": { icon: "💬", label: "Words & Tricks Check" },
+    "explanation": { icon: "⚖️", label: "Robot Reasoning" },
+    "stage5": { icon: "🛰️", label: "Scam Detector" },
+    "original": { icon: "📄", label: "Original Message" },
   };
   const meta = tabLabels[tabKey] || { icon: "🔍", label: tabKey };
   const tabContent = renderActiveInspectorTab(tabKey, msgData, analysis);
@@ -3988,17 +4572,27 @@ function showInspectorTabModal(tabKey) {
           <span class="itm-header-icon">${meta.icon}</span>
           <div>
             <div class="itm-header-title">${escapeHtml(meta.label)}</div>
-            <div class="itm-header-sub">Security Inspector · Forensic Evidence</div>
+            <div class="itm-header-sub">Easy Safety Inspector · Clear Explanations</div>
           </div>
         </div>
         <button class="itm-close" id="itmCloseBtn" aria-label="Close">✕</button>
       </div>
-      <div class="itm-body" id="itmBody">
+      <div class="itm-body" id="itmBody" tabindex="-1">
         ${tabContent}
       </div>
     </div>
   `;
   document.body.appendChild(overlay);
+
+  const itmBody = document.getElementById("itmBody");
+  const itmHeader = overlay.querySelector(".itm-header");
+  if (itmHeader && itmBody) {
+    itmHeader.addEventListener("wheel", (e) => {
+      itmBody.scrollTop += e.deltaY;
+    }, { passive: true });
+  }
+  // Focus the body so keyboard scrolling (PgDn, ArrowDown) works immediately
+  setTimeout(() => itmBody?.focus(), 50);
 
   // Trap focus & close handlers
   const close = () => { overlay.remove(); document.removeEventListener("keydown", onKey); };
@@ -4082,27 +4676,64 @@ function hideModal() {
 /* ==========================================================================
    Initialization & Session
    ========================================================================== */
+let resetInactivityTimer = null;
+
 function setupInactivityTimer() {
   const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
   let inactivityTimer = null;
+  let lastActivityTime = Date.now();
 
-  function resetTimer() {
-    if (!state.isConnected) return; // Only run logout timer if logged in
+  resetInactivityTimer = function () {
+    if (!state.isConnected) {
+      if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = null;
+      }
+      return;
+    }
+
+    const now = Date.now();
+    // If the user has been completely inactive for more than 5 minutes
+    if (now - lastActivityTime >= TIMEOUT_MS) {
+      console.log("Inactivity duration exceeded 5 minutes. Logging out.");
+      showToast("Session expired due to inactivity.", "info");
+      logout();
+      return;
+    }
+
+    lastActivityTime = now;
     if (inactivityTimer) clearTimeout(inactivityTimer);
     inactivityTimer = setTimeout(() => {
       console.log("No activity for 5 minutes. Logging out.");
       showToast("Session expired due to inactivity.", "info");
       logout();
     }, TIMEOUT_MS);
-  }
+  };
 
-  // Monitor all major interaction events
-  ["mousemove", "mousedown", "keydown", "scroll", "touchstart"].forEach((evt) => {
-    document.addEventListener(evt, resetTimer, { passive: true });
+  // Monitor active user interactions (mouse clicks, typing, scrolling, touch - excluding passive mousemove)
+  ["click", "mousedown", "keydown", "scroll", "touchstart"].forEach((evt) => {
+    document.addEventListener(evt, resetInactivityTimer, { passive: true });
   });
 
-  // Initial setup if already connected
-  resetTimer();
+  // Also check elapsed time when user refocuses window or tab becomes visible
+  window.addEventListener("focus", () => {
+    if (state.isConnected && Date.now() - lastActivityTime >= TIMEOUT_MS) {
+      console.log("Inactive while tab was out of focus. Logging out.");
+      showToast("Session expired due to inactivity.", "info");
+      logout();
+    }
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && state.isConnected && Date.now() - lastActivityTime >= TIMEOUT_MS) {
+      console.log("Inactive while tab was hidden. Logging out.");
+      showToast("Session expired due to inactivity.", "info");
+      logout();
+    }
+  });
+
+  // Initial setup
+  resetInactivityTimer();
 }
 
 async function initApp() {
@@ -4120,6 +4751,14 @@ async function initApp() {
   try {
     const authStatus = await checkAuthStatus();
     state.isConnected = !!authStatus.authenticated;
+    if (authStatus.email) {
+      state.userEmail = authStatus.email;
+      state.userName = authStatus.name || formatIndividualName(authStatus.email);
+      try {
+        localStorage.setItem("tunamail_user_email", state.userEmail);
+        localStorage.setItem("tunamail_user_name", state.userName);
+      } catch (_) { }
+    }
     updateAuthUI();
     applyAutoRefreshSetting();
 

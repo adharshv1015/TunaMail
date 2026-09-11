@@ -123,6 +123,22 @@
     {
       "timestamp": "2026-09-10T10:56:15.013060",
       "score": 0
+    },
+    {
+      "timestamp": "2026-09-11T04:42:03.202648",
+      "score": 0
+    },
+    {
+      "timestamp": "2026-09-11T05:01:53.701958",
+      "score": 0
+    },
+    {
+      "timestamp": "2026-09-11T05:41:15.687121",
+      "score": 0
+    },
+    {
+      "timestamp": "2026-09-11T06:14:53.362236",
+      "score": 0
     }
   ],
   "security@getgitguardian.com": [
@@ -163,6 +179,14 @@
     {
       "timestamp": "2026-09-10T11:00:51.360213",
       "score": 0
+    },
+    {
+      "timestamp": "2026-09-11T05:43:04.393971",
+      "score": 0
+    },
+    {
+      "timestamp": "2026-09-11T06:03:41.076690",
+      "score": 0
     }
   ],
   "notification@smartrecruiters.com": [
@@ -174,6 +198,30 @@
   "indeedapply@indeed.com": [
     {
       "timestamp": "2026-09-10T12:12:21.064353",
+      "score": 0
+    },
+    {
+      "timestamp": "2026-09-11T04:30:45.572590",
+      "score": 0
+    },
+    {
+      "timestamp": "2026-09-11T05:45:07.862783",
+      "score": 0
+    },
+    {
+      "timestamp": "2026-09-11T06:13:52.151289",
+      "score": 0
+    }
+  ],
+  "admindGhlZm9jdXNvcmdhbmlzYXRpb24uY29t@naukri.com": [
+    {
+      "timestamp": "2026-09-11T04:13:19.820882",
+      "score": 0
+    }
+  ],
+  "informationnc@naukri.com": [
+    {
+      "timestamp": "2026-09-11T04:41:25.490288",
       "score": 0
     }
   ]

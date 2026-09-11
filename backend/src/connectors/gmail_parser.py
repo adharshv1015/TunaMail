@@ -30,13 +30,9 @@ class GmailParser:
                 "threadId"
             ),
 
-            "from": headers.get(
-                "From"
-            ),
+            "from": headers.get("From") or headers.get("from") or headers.get("sender") or headers.get("Sender") or "",
 
-            "to": headers.get(
-                "To"
-            ),
+            "to": headers.get("To") or headers.get("to") or headers.get("Delivered-To") or headers.get("delivered-to") or headers.get("X-Original-To") or headers.get("x-original-to") or "",
 
             "subject": headers.get(
                 "Subject"

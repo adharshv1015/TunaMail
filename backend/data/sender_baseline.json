@@ -6,9 +6,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 31,
+    "messages_analyzed": 35,
     "first_seen": "2026-09-02T05:03:54.012630",
-    "last_seen": "2026-09-10T10:56:15.016311"
+    "last_seen": "2026-09-11T06:14:53.365993"
   },
   "security@getgitguardian.com": {
     "normal_domains": [
@@ -69,9 +69,9 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 1,
+    "messages_analyzed": 3,
     "first_seen": "2026-09-10T11:00:51.364085",
-    "last_seen": "2026-09-10T11:00:51.364095"
+    "last_seen": "2026-09-11T06:03:41.080378"
   },
   "notification@smartrecruiters.com": {
     "normal_domains": [
@@ -91,8 +91,30 @@
     "normal_authentication": {
       "spf": "pass"
     },
-    "messages_analyzed": 1,
+    "messages_analyzed": 4,
     "first_seen": "2026-09-10T12:12:21.067369",
-    "last_seen": "2026-09-10T12:12:21.067380"
+    "last_seen": "2026-09-11T06:13:52.155545"
+  },
+  "admindGhlZm9jdXNvcmdhbmlzYXRpb24uY29t@naukri.com": {
+    "normal_domains": [
+      "naukri.com"
+    ],
+    "normal_authentication": {
+      "spf": "pass"
+    },
+    "messages_analyzed": 1,
+    "first_seen": "2026-09-11T04:13:19.823990",
+    "last_seen": "2026-09-11T04:13:19.824005"
+  },
+  "informationnc@naukri.com": {
+    "normal_domains": [
+      "naukri.com"
+    ],
+    "normal_authentication": {
+      "spf": "pass"
+    },
+    "messages_analyzed": 1,
+    "first_seen": "2026-09-11T04:41:25.494978",
+    "last_seen": "2026-09-11T04:41:25.494997"
   }
 }

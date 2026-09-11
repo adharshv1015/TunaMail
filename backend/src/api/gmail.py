@@ -1090,7 +1090,7 @@ def list_messages(
                 "id": msg_id,
                 "thread_id": msg.get("threadId"),
                 "from": headers.get("from") or headers.get("sender") or "",
-                "to": headers.get("to", ""),
+                "to": headers.get("to") or headers.get("delivered-to") or headers.get("x-original-to") or "",
                 "subject": headers.get("subject") or meta.get("snippet", "")[:60] or "(No Subject)",
                 "date": headers.get("date", ""),
                 "snippet": meta.get("snippet", ""),

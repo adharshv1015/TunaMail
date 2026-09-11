@@ -73,13 +73,14 @@
   },
   "team@mail.notion.so": {
     "sender": "team@mail.notion.so",
-    "messages_seen": 1,
-    "legitimate_count": 1,
+    "messages_seen": 2,
+    "legitimate_count": 2,
     "suspicious_count": 0,
     "phishing_count": 0,
-    "reputation": "UNKNOWN",
+    "reputation": "NEW",
     "seen_message_ids": [
-      "1a089b018987a0d7"
+      "1a089b018987a0d7",
+      "1a08ed67ccf28917"
     ]
   },
   "notification@smartrecruiters.com": {
@@ -95,13 +96,36 @@
   },
   "indeedapply@indeed.com": {
     "sender": "indeedapply@indeed.com",
+    "messages_seen": 2,
+    "legitimate_count": 2,
+    "suspicious_count": 0,
+    "phishing_count": 0,
+    "reputation": "NEW",
+    "seen_message_ids": [
+      "1a08aadbd8e7baa4",
+      "1a08eac4b26d00fe"
+    ]
+  },
+  "admindGhlZm9jdXNvcmdhbmlzYXRpb24uY29t@naukri.com": {
+    "sender": "admindGhlZm9jdXNvcmdhbmlzYXRpb24uY29t@naukri.com",
     "messages_seen": 1,
     "legitimate_count": 1,
     "suspicious_count": 0,
     "phishing_count": 0,
     "reputation": "UNKNOWN",
     "seen_message_ids": [
-      "1a08aadbd8e7baa4"
+      "1a08ea1ed2be59ab"
+    ]
+  },
+  "informationnc@naukri.com": {
+    "sender": "informationnc@naukri.com",
+    "messages_seen": 1,
+    "legitimate_count": 1,
+    "suspicious_count": 0,
+    "phishing_count": 0,
+    "reputation": "UNKNOWN",
+    "seen_message_ids": [
+      "1a08e87a4fc8ae8f"
     ]
   }
 }

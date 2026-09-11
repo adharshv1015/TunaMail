@@ -1,8 +1,8 @@
 {
   "gmail.com": {
-    "messages_analyzed": 31,
+    "messages_analyzed": 35,
     "first_seen": "2026-09-02T05:03:54.016388",
-    "last_seen": "2026-09-10T10:56:15.019371"
+    "last_seen": "2026-09-11T06:14:53.368506"
   },
   "getgitguardian.com": {
     "messages_analyzed": 1,
@@ -25,14 +25,14 @@
     "last_seen": "2026-09-10T10:54:48.995235"
   },
   "naukri.com": {
-    "messages_analyzed": 1,
+    "messages_analyzed": 3,
     "first_seen": "2026-09-10T10:56:04.976668",
-    "last_seen": "2026-09-10T10:56:04.976678"
+    "last_seen": "2026-09-11T04:41:25.497818"
   },
   "mail.notion.so": {
-    "messages_analyzed": 1,
+    "messages_analyzed": 3,
     "first_seen": "2026-09-10T11:00:51.366877",
-    "last_seen": "2026-09-10T11:00:51.366885"
+    "last_seen": "2026-09-11T06:03:41.088982"
   },
   "smartrecruiters.com": {
     "messages_analyzed": 1,
@@ -40,8 +40,8 @@
     "last_seen": "2026-09-10T12:12:02.367362"
   },
   "indeed.com": {
-    "messages_analyzed": 1,
+    "messages_analyzed": 4,
     "first_seen": "2026-09-10T12:12:21.069795",
-    "last_seen": "2026-09-10T12:12:21.069804"
+    "last_seen": "2026-09-11T06:13:52.158347"
   }
 }

@@ -104,7 +104,8 @@
   },
   "team@mail.notion.so": {
     "timestamps": [
-      1789018258.891945
+      1789018258.891945,
+      1789085590.53797
     ],
     "url_domains": [
       "fonts.googleapis.com",
@@ -132,7 +133,8 @@
   },
   "indeedapply@indeed.com": {
     "timestamps": [
-      1789022550.565121
+      1789022550.565121,
+      1789081258.488445
     ],
     "url_domains": [
       "www.indeed.com",
@@ -146,6 +148,46 @@
       "subscriptions.indeed.com",
       "engage.indeed.com",
       "fonts.googleapis.com"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "admindGhlZm9jdXNvcmdhbmlzYXRpb24uY29t@naukri.com": {
+    "timestamps": [
+      1789080206.42032
+    ],
+    "url_domains": [
+      "logs.naukri.com",
+      "fonts.googleapis.com",
+      "fonts.gstatic.com",
+      "www.naukri.com",
+      "w10.naukri.com",
+      "img.naukimg.com",
+      "www.ambitionbox.com",
+      "my.naukri.com",
+      "www.ieplads.com",
+      "www.facebook.com",
+      "twitter.com",
+      "www.instagram.com",
+      "w5.naukri.com",
+      "company.naukri.com",
+      "www.thefocusorganisation.com"
+    ],
+    "auth_summary": [
+      "SPF:pass DKIM:pass DMARC:pass"
+    ]
+  },
+  "informationnc@naukri.com": {
+    "timestamps": [
+      1789081888.85922
+    ],
+    "url_domains": [
+      "fonts.googleapis.com",
+      "fonts.gstatic.com",
+      "logs.naukri.com",
+      "www.ieplads.com",
+      "cm.naukri.com"
     ],
     "auth_summary": [
       "SPF:pass DKIM:pass DMARC:pass"
